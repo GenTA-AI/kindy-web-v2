@@ -1,0 +1,2 @@
+base: main
+# docs repo — no build; trivial gate (codex edits + draft PR)
