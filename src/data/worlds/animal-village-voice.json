@@ -1,0 +1,82 @@
+{
+  "act.read_face.intro": {
+    "file": "/audio/village/act.read_face.intro.mp3",
+    "durationSec": 7.01
+  },
+  "act.read_face.praise": {
+    "file": "/audio/village/act.read_face.praise.mp3",
+    "durationSec": 4.85
+  },
+  "act.guess_feeling.intro": {
+    "file": "/audio/village/act.guess_feeling.intro.mp3",
+    "durationSec": 7.57
+  },
+  "act.guess_feeling.praise": {
+    "file": "/audio/village/act.guess_feeling.praise.mp3",
+    "durationSec": 7.81
+  },
+  "act.find_hidden.intro": {
+    "file": "/audio/village/act.find_hidden.intro.mp3",
+    "durationSec": 6.57
+  },
+  "act.find_hidden.praise": {
+    "file": "/audio/village/act.find_hidden.praise.mp3",
+    "durationSec": 4.69
+  },
+  "act.match_treat.intro": {
+    "file": "/audio/village/act.match_treat.intro.mp3",
+    "durationSec": 5.41
+  },
+  "act.match_treat.praise": {
+    "file": "/audio/village/act.match_treat.praise.mp3",
+    "durationSec": 3.61
+  },
+  "act.finish_pattern.intro": {
+    "file": "/audio/village/act.finish_pattern.intro.mp3",
+    "durationSec": 6.89
+  },
+  "act.finish_pattern.praise": {
+    "file": "/audio/village/act.finish_pattern.praise.mp3",
+    "durationSec": 6.01
+  },
+  "act.sort_habitat.intro": {
+    "file": "/audio/village/act.sort_habitat.intro.mp3",
+    "durationSec": 4.89
+  },
+  "act.sort_habitat.praise": {
+    "file": "/audio/village/act.sort_habitat.praise.mp3",
+    "durationSec": 4.01
+  },
+  "act.match_home.intro": {
+    "file": "/audio/village/act.match_home.intro.mp3",
+    "durationSec": 4.57
+  },
+  "act.match_home.praise": {
+    "file": "/audio/village/act.match_home.praise.mp3",
+    "durationSec": 3.69
+  },
+  "act.decorate_gift.intro": {
+    "file": "/audio/village/act.decorate_gift.intro.mp3",
+    "durationSec": 6.13
+  },
+  "act.decorate_gift.praise": {
+    "file": "/audio/village/act.decorate_gift.praise.mp3",
+    "durationSec": 4.33
+  },
+  "sess.kkumi-day.intro.0": {
+    "file": "/audio/village/sess.kkumi-day.intro.0.mp3",
+    "durationSec": 4.17
+  },
+  "sess.kkumi-day.intro.1": {
+    "file": "/audio/village/sess.kkumi-day.intro.1.mp3",
+    "durationSec": 2.29
+  },
+  "sess.kkumi-day.transition": {
+    "file": "/audio/village/sess.kkumi-day.transition.mp3",
+    "durationSec": 5.13
+  },
+  "sess.kkumi-day.closing": {
+    "file": "/audio/village/sess.kkumi-day.closing.mp3",
+    "durationSec": 6.45
+  }
+}

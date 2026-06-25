@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  /* --font-pretendard is injected by next/font/local in src/app/fonts.ts. */
+  --font-mono-stack: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-pretendard);
+  --font-mono: var(--font-mono-stack);
+}
+
+/* R3 디자인 시스템 (크림 + 세이지 책정령 모리). 정본 = kindy-web/DESIGN.md.
+   유틸리티 생성: bg-cream, text-sage, border-line, bg-sagebg 등. 보라(violet) 폐기. */
+@theme {
+  --color-cream: #F4EAD2;
+  --color-surface: #FBF7EC;
+  --color-deep: #E9DBBE;
+  --color-sage: #46763F;
+  --color-saged: #2E5129;
+  --color-sages: #93B589;
+  --color-sagebg: #E4EDDF;
+  --color-ink: #231F18;
+  --color-ink2: #534B40;
+  --color-ink3: #8A8070;
+  --color-line: #E0D4BB;
+  --color-gentle: #159C84;
+  --color-gold: #C9871E;
+}
+
+/* 보라(violet) 팔레트 → R3 세이지 리매핑. 부모·아이 화면 46개 파일의 violet-* 사용을
+   편집 없이 일괄 세이지로 통일(브랜드 색 = landing과 동일 계열).
+   플레인 :root (unlayered) 라 Tailwind 기본 violet(@layer theme) 보다 우선해 override 됨. */
+:root {
+  --color-violet-50:  #EDF2E7;
+  --color-violet-100: #DCE7D4;
+  --color-violet-200: #C2D5B9;
+  --color-violet-300: #9DBE96;
+  --color-violet-400: #79A271;
+  --color-violet-500: #46763F;
+  --color-violet-600: #335A2E;
+  --color-violet-700: #284821;
+  --color-violet-800: #1E351A;
+  --color-violet-900: #162714;
+}
+
+/* 모리 둥둥 (R3 모션 — 차분). prefers-reduced-motion 은 motion-safe 로 존중. */
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes twinkle { 0%, 100% { opacity: .25; transform: scale(.9); } 50% { opacity: .7; transform: scale(1.15); } }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-pretendard);
+}
+
+/* DESIGN.md L122: keyboard-visible focus ring on every interactive element. */
+/* Existing focus:ring-* utilities on inputs continue to work; this fills the gap */
+/* for buttons and links that ship without an explicit focus class. */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #93B589; /* sage-soft (R3) */
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* ───────────────────────────────────────────────────────────────────────── */
+/* Juice — 아이 눈높이 재미 토대. confetti/별 팡 + 캐릭터 환호 + 탭 바운스 + 흔들림. */
+/* 라이브러리 없이 가볍게. prefers-reduced-motion 존중(아래에서 모두 비활성). */
+/* ───────────────────────────────────────────────────────────────────────── */
+
+@keyframes juice-pop {
+  0% { transform: scale(0.2); opacity: 0; }
+  60% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes juice-cheer {
+  0% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-14px) scale(1.08) rotate(-4deg); }
+  60% { transform: translateY(-6px) scale(1.04) rotate(3deg); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes juice-bounce {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.9); }
+  70% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes juice-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes juice-confetti-fall {
+  0% { transform: translate3d(0, -12px, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--juice-dx, 0), 120px, 0) rotate(540deg); opacity: 0; }
+}
+
+@keyframes juice-star-burst {
+  0% { transform: translate(-50%, -50%) scale(0.3); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--juice-dx, 0)), calc(-50% + var(--juice-dy, 0))) scale(1); opacity: 0; }
+}
+
+.juice-pop { animation: juice-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.juice-cheer { animation: juice-cheer 0.7s ease-in-out; }
+.juice-bounce { animation: juice-bounce 0.28s ease-out; }
+.juice-shake { animation: juice-shake 0.45s ease-in-out; }
+
+.juice-confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  will-change: transform, opacity;
+  animation: juice-confetti-fall 1.1s ease-in forwards;
+}
+
+.juice-star-piece {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-size: 22px;
+  will-change: transform, opacity;
+  animation: juice-star-burst 0.7s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .juice-pop,
+  .juice-cheer,
+  .juice-bounce,
+  .juice-shake,
+  .juice-confetti-piece,
+  .juice-star-piece {
+    animation: none !important;
+  }
+  .juice-confetti-piece,
+  .juice-star-piece { display: none !important; }
+}

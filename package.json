@@ -1,0 +1,43 @@
+{
+  "name": "eduvid-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "smoke:director": "tsx --env-file=.env.local scripts/smoke-director.ts",
+    "smoke:refs": "tsx --env-file=.env.local scripts/smoke-refs.ts",
+    "smoke:s01": "tsx --env-file=.env.local scripts/smoke-s01.ts",
+    "smoke:s01-lipsync": "tsx --env-file=.env.local scripts/smoke-s01-lipsync.ts",
+    "smoke:native15s": "tsx --env-file=.env.local scripts/smoke-native15s.ts",
+    "smoke:extend15s": "tsx --env-file=.env.local scripts/smoke-extend15s.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "@fal-ai/client": "^1.9.5",
+    "@google/genai": "^1.51.0",
+    "@supabase/auth-js": "^2.103.0",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.103.0",
+    "@tosspayments/tosspayments-sdk": "^2.7.0",
+    "inngest": "^4.2.0",
+    "next": "^16.2.3",
+    "qrcode.react": "^4.2.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.3",
+    "tailwindcss": "^4",
+    "tsx": "^4.21.0",
+    "typescript": "^5"
+  }
+}

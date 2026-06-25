@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kindy IR Deck — Seed Round</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    background: #0a0a0a;
+    color: #1a1a2e;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  .slide {
+    display: none;
+    width: 1280px;
+    height: 720px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* Navigation */
+  .nav {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 100;
+    background: rgba(0,0,0,0.6);
+    padding: 8px 16px;
+    border-radius: 20px;
+  }
+  .nav button {
+    background: rgba(255,255,255,0.3);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .nav button:hover { background: rgba(255,255,255,0.5); }
+  .nav button.current { background: #4361ee; }
+  .page-info {
+    position: fixed;
+    bottom: 24px;
+    right: 40px;
+    color: rgba(255,255,255,0.4);
+    font-size: 12px;
+    z-index: 100;
+  }
+
+  /* Common slide styles */
+  .s-bg {
+    width: 100%; height: 100%;
+    padding: 48px 64px;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8ecf8 100%);
+  }
+  .s-tag {
+    display: inline-block;
+    background: #4361ee;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+  }
+  .s-title {
+    font-size: 36px;
+    font-weight: 900;
+    color: #1a1a2e;
+    line-height: 1.3;
+    margin-bottom: 8px;
+  }
+  .s-subtitle {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+  .s-footer {
+    position: absolute;
+    bottom: 20px;
+    left: 64px;
+    font-size: 11px;
+    color: #aaa;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .s-footer .logo { font-weight: 700; color: #4361ee; }
+
+  /* Tables */
+  table { border-collapse: collapse; width: 100%; }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 13px;
+    border-bottom: 1px solid #dde;
+  }
+  th {
+    background: #e8ecf8;
+    font-weight: 600;
+    color: #4361ee;
+    font-size: 12px;
+  }
+
+  /* Cards */
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #4361ee;
+    margin-bottom: 8px;
+  }
+
+  /* Metrics */
+  .metric {
+    text-align: center;
+    padding: 16px;
+  }
+  .metric .num {
+    font-size: 32px;
+    font-weight: 900;
+    color: #4361ee;
+  }
+  .metric .label {
+    font-size: 11px;
+    color: #888;
+    margin-top: 4px;
+  }
+
+  /* Phase tags */
+  .phase-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .phase-now { background: #4361ee; color: white; }
+  .phase-next { background: #dde5ff; color: #4361ee; }
+  .phase-future { background: #f0f0f0; color: #888; }
+
+  /* Grid helpers */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+  .flex-grow { flex: 1; }
+
+  /* Status badges */
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-done { background: #d4edda; color: #155724; }
+  .badge-progress { background: #fff3cd; color: #856404; }
+  .badge-plan { background: #e8ecf8; color: #4361ee; }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: TITLE -->
+<div class="slide active" id="s1">
+  <div class="s-bg" style="justify-content: center; align-items: flex-start;">
+    <span class="s-tag">Seed Round</span>
+    <h1 style="font-size: 64px; font-weight: 900; color: #1a1a2e; margin-bottom: 16px;">Kindy</h1>
+    <p style="font-size: 28px; font-weight: 700; color: #1a1a2e; line-height: 1.4;">
+      아이의 감성을 이해하는<br/>초개인화 영상 플랫폼
+    </p>
+    <p style="font-size: 16px; color: #666; margin-top: 12px;">교육에서 시작해서, 아이의 정서 건강까지.</p>
+    <div style="margin-top: 40px; font-size: 15px; color: #888;">
+      2억 원 시드 라운드 &nbsp;|&nbsp; Post-val &#8361;20억 &nbsp;|&nbsp; 2026
+    </div>
+    <div class="s-footer"><span class="logo">kindy.ai</span></div>
+  </div>
+</div>
+
+<!-- SLIDE 2: PROBLEM -->
+<div class="slide" id="s2">
+  <div class="s-bg">
+    <span class="s-tag">PROBLEM</span>
+    <h2 class="s-title">모든 아이가 같은 영상을 본다.</h2>
+    <p class="s-subtitle">한국 부모는 초등 자녀에게 월 평균 44만 원을 사교육에 쓴다.<br/>그런데 콘텐츠는 여전히 획일적이다.</p>
+    <div class="grid-2" style="flex:1;">
+      <div>
+        <table>
+          <tr><th>기존 서비스</th><th>현실 분석</th></tr>
+          <tr><td>YouTube Kids</td><td>개인화 제로, 교육적 의도 없음</td></tr>
+          <tr><td>학원 (월 44만 원)</td><td>비싸도 획일적 커리큘럼</td></tr>
+          <tr><td>링고키즈 / 밀크T</td><td>"맞춤형" = 난이도 조절뿐</td></tr>
+          <tr><td>꿈틀꿈틀</td><td>얼굴 합성 = 표면적 개인화</td></tr>
+        </table>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center;">
+        <div class="card" style="text-align: center; max-width: 320px;">
+          <p style="font-size: 15px; font-weight: 600; color: #1a1a2e; line-height: 1.6;">
+            공주를 좋아하는 아이와<br/>우주를 좋아하는 아이가<br/><strong style="color: #4361ee;">같은 영상을 본다.</strong>
+          </p>
+          <p style="font-size: 12px; color: #888; margin-top: 8px;">비용 때문에 하나만 만드니까</p>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top: auto; background: #1a1a2e; color: white; padding: 16px 24px;">
+      <p style="font-size: 14px; font-weight: 600; text-align: center;">
+        <span style="color: #ffd166;">더 큰 문제:</span> 정서적으로 불안한 아이에게는 '잘 만든 교육 영상'도 소용없다.<br/>
+        아이의 <strong>감정 상태</strong>에 맞는 톤과 속도가 먼저 필요하다.
+      </p>
+    </div>
+    <div class="s-footer"><span class="logo">kindy.ai</span></div>
+  </div>
+</div>
+
+<!-- SLIDE 3: SOLUTION -->
+<div class="slide" id="s3">
+  <div class="s-bg">
+    <span class="s-tag">SOLUTION</span>
+    <h2 class="s-title">Kindy는 아이 한 명만을 위한 영상을 만든다</h2>
+    <p class="s-subtitle">"무엇을 가르칠까"가 아니라, "어떤 느낌으로 가르칠까"를 개인화한다</p>
+    <div class="grid-2" style="flex: 1;">
+      <div class="card">
+        <p class="card-title">기존 "개인화"</p>
+        <ul style="font-size: 13px; color: #666; line-height: 2; list-style: none;">
+          <li>← 난이도 조절</li>
+          <li>← 얼굴 합성 + 이름 삽입</li>
+          <li>← 같은 영상, 표면적 변형</li>
+          <li>← 정적 — 시간이 지나도 그대로</li>
+        </ul>
+      </div>
+      <div class="card" style="border: 2px solid #4361ee;">
+        <p class="card-title">Kindy</p>
+        <ul style="font-size: 13px; color: #1a1a2e; line-height: 2; list-style: none; font-weight: 500;">
+          <li>→ 콘텐츠 스타일 자체를 변경</li>
+          <li>→ 색감, 속도, 감정 톤, 캐릭터 분위기 전체 조절</li>
+          <li>→ 매번 새로운 영상 생성</li>
+          <li>→ 볼수록 정교해지는 개인화 (flywheel)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top: 16px; background: #e8ecf8; border: none;">
+      <p style="font-size: 13px; color: #4361ee; font-weight: 600;">
+        GACS-3 엔진: 시청 행동 · 감정 반응 · 학습 성취도 → 영상 생성 프롬프트 자동 최적화
+      </p>
+    </div>
+    <div class="s-footer"><span class="logo">kindy.ai</span></div>
+  </div>
+</div>
+
+<!-- SLIDE 4: HOW IT WORKS -->
+<div class="slide" id="s4">
+  <div class="s-bg">
+    <span class="s-tag">HOW IT WORKS</span>
+    <h2 class="s-title">볼수록 정교해지는 개인화 루프</h2>
+    <p class="s-subtitle">아이의 데이터가 쌓일수록 — 다음 영상은 더 정확해진다</p>
+    <div class="grid-2" style="flex: 1;">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="card" style="padding: 14px 20px; display: flex; align-items: center; gap: 16px;">
+          <span style="font-size: 24px; font-weight: 900; color: #4361ee;">01</span>
+          <div><p style="font-size: 13px; font-weight: 600;">부모가 아이 정보 입력</p><p style="font-size: 11px; color: #888;">선호 스타일, 나이, 관심사 — 10초 완료</p></div>
+        </div>
+        <div class="card" style="padding: 14px 20px; display: flex; align-items: center; gap: 16px;">
+          <span style="font-size: 24px; font-weight: 900; color: #4361ee;">02</span>
+          <div><p style="font-size: 13px; font-weight: 600;">AI가 맞춤 교육 영상 생성</p><p style="font-size: 11px; color: #888;">GACS-3 엔진이 아이만을 위한 1-2분 영상 제작</p></div>
+        </div>
+        <div class="card" style="padding: 14px 20px; display: flex; align-items: center; gap: 16px;">
+          <span style="font-size: 24px; font-weight: 900; color: #4361ee;">03</span>
+          <div><p style="font-size: 13px; font-weight: 600;">시청 데이터 자동 수집</p><p style="font-size: 11px; color: #888;">반복 구간, 이탈 지점, 집중 시간</p></div>
+        </div>
+        <div class="card" style="padding: 14px 20px; display: flex; align-items: center; gap: 16px;">
+          <span style="font-size: 24px; font-weight: 900; color: #4361ee;">04</span>
+          <div><p style="font-size: 13px; font-weight: 600;">퀴즈 + 이모지 피드백</p><p style="font-size: 11px; color: #888;">학습 효과 확인 + 아이의 감정 반응 수집</p></div>
+        </div>
+        <div class="card" style="padding: 14px 20px; display: flex; align-items: center; gap: 16px;">
+          <span style="font-size: 24px; font-weight: 900; color: #4361ee;">05</span>
+          <div><p style="font-size: 13px; font-weight: 600;">GACS-3가 다음 영상에 자동 반영</p><p style="font-size: 11px; color: #888;">모든 데이터가 프롬프트 최적화에 연결</p></div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <p style="font-size: 14px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px;">제품 구성</p>
+        <div class="card">
+          <p style="font-size: 13px; font-weight: 700;">온보딩</p>
+          <p style="font-size: 12px; color: #666;">스타일 선택 + 나이별 커리큘럼 자동 매칭</p>
+        </div>
+        <div class="card">
+          <p style="font-size: 13px; font-weight: 700;">영상 플레이어</p>
+          <p style="font-size: 12px; color: #666;">집중도 바 — 반복 구간과 이탈 지점을 시각화</p>
+        </div>
+        <div class="card">
+          <p style="font-size: 13px; font-weight: 700;">부모 대시보드</p>
+          <p style="font-size: 12px; color: #666;">시청 통계, 학습 진도, 개인화 인사이트 한눈에</p>
+        </div>
+        <div style="margin-top: auto;">
+          <span class="badge badge-done">MVP 개발 완료</span>
+          <span class="badge badge-progress" style="margin-left: 8px;">무료 사용자 피드백 수집 중</span>
+        </div>
+      </div>
+    </div>
+    <div class="s-footer"><span class="logo">kindy.ai</span></div>
+  </div>
+</div>
+
+<!-- SLIDE 5: TRACTION -->
+<div class="slide" id="s5">
+  <div class="s-bg">
+    <span class="s-tag">TRACTION</span>
+    <h2 class="s-title">시장은 이미 반응하고 있다</h2>
+    <p class="s-subtitle">수요 신호 확인 완료 · 기술 검증 완료</p>
+    <div class="grid-2" style="flex: 1;">
+      <div class="card">
+        <p class="card-title">확인된 수요 신호</p>
+        <div style="font-size: 13px; line-height: 2; color: #333;">
+          <p><strong>아이 반응 "더 길었으면 좋겠대"</strong><br/><span style="color: #888; font-size: 12px;">맞춤 영상을 반복 시청 — 높은 몰입도 확인</span></p>
+          <p style="margin-top: 8px;"><strong>부모 반응 "다른 사람들도 쓰면 좋겠다"</strong><br/><span style="color: #888; font-size: 12px;">지인 추천 의사 자발적 표현 — 바이럴 잠재력 확인</span></p>
+          <p style="margin-top: 8px;"><strong>집중도 체감 상승</strong><br/><span style="color: #888; font-size: 12px;">선호 스타일 영상 시청 시 집중력 확인 (직접 관찰)</span></p>
+        </div>
+      </div>
+      <div class="card">
+        <p class="card-title">기술 검증 완료</p>
+        <div style="font-size: 13px; line-height: 2; color: #333;">
+          <p><strong>AI 영상 생성 파이프라인 작동</strong><br/><span style="color: #888; font-size: 12px;">veo3 + 나노바나나프로 기반 — 안정적 운영 확인</span></p>
+          <p style="margin-top: 8px;"><strong>GACS-3 엔진 MVP 구현 완료</strong><br/><span style="color: #888; font-size: 12px;">시청 행동 · 감정 반응 · 학습 성취도 → 프롬프트 최적화</span></p>
+          <p style="margin-top: 8px;"><strong>영상 생성 모델 비종속 설계</strong><br/><span style="color: #888; font-size: 12px;">모델이 바뀌어도 개인화 엔진은 유지 — 비용 하락의 자동 수혜</span></p>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 16px; margin-top: 16px;">
+      <div style="flex:1; text-align: center;"><span class="badge badge-done">MVP 개발 완료 ✓</span></div>
+      <div style="flex:1; text-align: center;"><span class="badge badge-progress">무료 사용자 피드백 수집 중 ✓</span></div>
+      <div style="flex:1; text-align: center;"><span class="badge badge-plan">유료 전환 테스트 진행 중 →</span></div>
+    </div>
+    <div class="s-footer"><span class="logo">kindy.ai</span></div>
+  </div>
+</div>
+
+<!-- SLIDE 6: MARKET -->
+<div class="slide" id="s6">
+  <div class="s-bg">
+    <span class="s-tag">MARKET OPPORTUNITY</span>
+    <h2 class="s-title">지금이 최적의 타이밍이다</h2>
+    <p class="s-subtitle">글로벌 AI 교육 시장 분석</p>
+    <div class="grid-3" style="margin-bottom: 20px;">
+      <div class="card" style="text-align: center;">
+        <p style="font-size: 11px; color: #4361ee; font-weight: 600;">TAM</p>
+        <p style="font-size: 36px; font-weight: 900; color: #1a1a2e;">$20B+</p>
+        <p style="font-size: 11px; color: #888;">글로벌 AI 교육 콘텐츠 시장 (2027)</p>
+        <p style="font-size: 10px; color: #aaa;">CAGR 31.2% — Grand View Research</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <p style="font-size: 11px; color: #4361ee; font-weight: 600;">SAM</p>
+        <p style="font-size: 36px; font-weight: 900; color: #1a1a2e;">$2B</p>
+        <p style="font-size: 11px; color: #888;">아시아 유아 개인화 교육 시장</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <p style="font-size: 11px; color: #4361ee; font-weight: 600;">SOM</p>
+        <p style="font-size: 36px; font-weight: 900; color: #1a1a2e;">&#8361;30억→100억</p>
+        <p style="font-size: 11px; color: #888;">한국 유치원~초등 저학년 (Phase 1→2)</p>
+      </div>
+    </div>
+    <p style="font-size: 12px; color: #888; text-align: center; margin-bottom: 20px;">"아시아 태평양이 가장 빠르게 성장하는 시장" — Precedence Research, 2025</p>
+    <div style="background: #1a1a2e; border-radius: 12px; padding: 20px 28px;">
+      <p style="font-size: 13px; font-weight: 700; color: white; margin-bottom: 12px;">WHY NOW 왜 지금인가</p>
+      <div class="grid-4">
+        <div style="text-align: center;">
+          <p style="font-size: 24px; font-weight: 900; color: #4361ee;">1/2</p>
+          <p style="font-size: 11px; color: #ccc;">영상 생성 비용</p>
+          <p style="font-size: 10px; color: #888;">6개월마다 절반으로 감소</p>
+        </div>
+        <div style="text-align: center;">
+          <p style="font-size: 24px; font-weight: 900; color: #4361ee;">$4.2B</p>
+          <p style="font-size: 11px; color: #ccc;">EdTech 투자 규모</p>
+          <p style="font-size: 10px; color: #888;">2025년, AI 학습 플랫폼 집중</p>
+        </div>
+        <div style="text-align: center;">
+          <p style="font-size: 24px; font-weight: 900; color: #4361ee;">14건</p>
+          <p style="font-size: 11px; color: #ccc;">AI 교육 M&A</p>
+          <p style="font-size: 10px; color: #888;">2024-2025, exit 경로 존재</p>
+        </div>
+        <div style="text-align: center;">
+          <p style="font-size: 24px; font-weight: 900; color: #4361ee;">2026.01</p>
+          <p style="font-size: 11px; color: #ccc;">한국 AI 기본법 시행</p>
+          <p style="font-size: 10px; color: #888;">규제 프레임워크 확립</p>
+        </div>
+      </div>
+    </div>
+    <div class="s-footer"><span class="logo">kindy.ai</span></div>
+  </div>
+</div>
+
+<!-- SLIDE 7: BUSINESS MODEL -->
+<div class="slide" id="s7">
+  <div class="s-bg">
+    <span class="s-tag">BUSINESS MODEL</span>
+    <h2 class="s-title">구독 수익이 저절로 개선된다</h2>
+    <p class="s-subtitle">AI 영상 생성 비용이 절반씩 떨어질 때마다, 마진이 올라간다. 가격 인상 없이.</p>
+    <div class="grid-2" style="margin-bottom: 20px;">
+      <div>
+        <p style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">구독 티어</p>
+        <div class="card" style="margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p style="font-weight: 600;">Free tier · 무료</p>
+              <p style="font-size: 12px; color: #888;">맞춤 영상 3개 체험</p>
+            </div>
+            <p style="font-size: 18px; font-weight: 700; color: #888;">&#8361;0</p>
+          </div>
+        </div>
+        <div class="card" style="border: 2px solid #4361ee;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p style="font-weight: 600;">Paid tier · 유료 <span class="badge badge-progress" style="font-size: 10px;">테스트 중</span></p>
+              <p style="font-size: 12px; color: #888;">주 3개 맞춤 영상 + 대시보드 + 퀴즈</p>
+            </div>
+            <p style="font-size: 18px; font-weight: 700; color: #4361ee;">&#8361;50,000-70,000 / 월</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">단위 경제 (영상 생성 비용 하락 효과)</p>
+        <table>
+          <tr><th></th><th>지금</th><th>6개월 후</th></tr>
+          <tr><td>영상 1개 비용</td><td>3,000-7,000원</td><td>1,500-3,000원</td></tr>
+          <tr><td>COGS (월)</td><td>3.4-8.4만 원</td><td>1.7-3.4만 원</td></tr>
+          <tr><td>공헌이익</td><td>-3.4만~+3.6만 원</td><td>+1.6만~+5.3만 원</td></tr>
+        </table>
+        <p style="font-size: 11px; color: #888; margin-top: 8px;">* 구독 가격 유지 (5-7만 원) — AI 비용만 하락</p>
+      </div>
+    </div>
+    <p style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">확장 경로</p>
+    <div class="grid-4">
+      <div class="card" style="text-align: center; padding: 14px;">
+        <span class="phase-now" style="font-size: 10px;">NOW</span>
+        <p style="font-size: 13px; font-weight: 600; margin-top: 6px;">B2C 구독</p>
+        <p style="font-size: 11px; color: #888;">개인 가정 타깃</p>
+      </div>
+      <div class="card" style="text-align: center; padding: 14px;">
+        <span class="phase-next" style="font-size: 10px;">Phase 2</span>
+        <p style="font-size: 13px; font-weight: 600; margin-top: 6px;">B2G 공공교육</p>
+        <p style="font-size: 11px; color: #888;">교육청 / 공공기관</p>
+      </div>
+      <div class="card" style="text-align: center; padding: 14px;">
+        <span class="phase-next" style="font-size: 10px;">Phase 2</span>
+        <p style="font-size: 13px; font-weight: 600; margin-top: 6px;">B2B 학원 제휴</p>
+        <p style="font-size: 11px; color: #888;">교육 업계 네트워크</p>
+      </div>
+      <div class="card" style="text-align: center; padding: 14px;">
+        <span class="phase-future" style="font-size: 10px;">Phase 2-3</span>
+        <p style="font-size: 13px; font-weight: 600; margin-top: 6px;">정서 웰니스 구독</p>
+        <p style="font-size: 11px; color: #888;">교육 + 정서 통합 티어</p>
+      </div>
+    </div>
+    <div class="s-footer"><span class="logo">kindy.ai</span></div>
+  </div>
+</div>
+
+<!-- SLIDE 8: TEAM -->
+<div class="slide" id="s8">
+  <div class="s-bg">
+    <span class="s-tag">TEAM & WHY US</span>
+    <h2 class="s-title">이 팀이 만들어야 하는 이유</h2>
+    <div class="grid-2" style="flex: 1; margin-top: 8px;">
+      <div>
+        <p style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">기술 역량</p>
+        <div class="card" style="margin-bottom: 12px;">
+          <ul style="font-size: 12px; color: #333; line-height: 2.2; list-style: disc; padding-left: 16px;">
+            <li>AI 영상 자동화 다수 프로젝트 수행 경험</li>
+            <li>이미지/영상 감정 수치화 기술 보유 — GACS-3의 기반</li>
+            <li>GACS-3 엔진 자체 개발 — 프롬프트 레벨 초개인화</li>
+            <li>영상 생성 모델 비종속 설계 — 비용 하락의 자동 수혜 구조</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <p style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">교육 인프라</p>
+        <div class="card" style="margin-bottom: 12px;">
+          <ul style="font-size: 12px; color: #333; line-height: 2.2; list-style: disc; padding-left: 16px;">
+            <li><strong>IOE (UCL)</strong> 출신 연구진 — 세계 1위 교육대학원, 학문적 신뢰 기반</li>
+            <li>실제 교육 현장 네트워크 보유 — 학원 업계, B2G/B2B 진입에 직접 활용</li>
+            <li>누리과정 + 초등 교육과정 기반 커리큘럼 설계 역량</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <p style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">경쟁 해자 (MOAT)</p>
+    <div class="grid-3">
+      <div class="card" style="text-align: center; padding: 16px;">
+        <p style="font-size: 13px; font-weight: 700;">GACS-3 엔진</p>
+        <p style="font-size: 11px; color: #4361ee; font-weight: 600;">모방 난이도: 높음</p>
+        <p style="font-size: 11px; color: #888; margin-top: 4px;">데이터 축적이 전제된 프롬프트 레벨 개인화</p>
+      </div>
+      <div class="card" style="text-align: center; padding: 16px;">
+        <p style="font-size: 13px; font-weight: 700;">아이별 감성 데이터</p>
+        <p style="font-size: 11px; color: #4361ee; font-weight: 600;">모방 난이도: 매우 높음</p>
+        <p style="font-size: 11px; color: #888; margin-top: 4px;">시간 자체가 해자 — 후발주자가 따라올 수 없음</p>
+      </div>
+      <div class="card" style="text-align: center; padding: 16px;">
+        <p style="font-size: 13px; font-weight: 700;">IOE 연구진 + 현장 네트워크</p>
+        <p style="font-size: 11px; color: #4361ee; font-weight: 600;">모방 난이도: 높음</p>
+        <p style="font-size: 11px; color: #888; margin-top: 4px;">관계와 신뢰 기반 — 복제 불가능한 인적 자산</p>
+      </div>
+    </div>
+    <div class="s-footer"><span class="logo">kindy.ai</span></div>
+  </div>
+</div>
+
+<!-- SLIDE 9: CORE TEAM -->
+<div class="slide" id="s9">
+  <div class="s-bg">
+    <span class="s-tag">CORE TEAM</span>
+    <h2 class="s-title">Kindy를 만드는 사람들</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 16px; flex: 1;">
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 50%; background: #4361ee; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px;">J</div>
+          <div>
+            <p style="font-weight: 700; font-size: 14px;">이종원</p>
+            <p style="font-size: 11px; color: #4361ee; font-weight: 600;">CEO</p>
+          </div>
+        </div>
+        <p style="font-size: 11px; color: #666; line-height: 1.6;">
+          UCL Computer Science<br/>
+          Goldsmiths, Univ. of London Digital Arts Computing<br/>
+          문화체육관광부 2026 공공도서관 문운영지원사업 공연연구 개발 경력 5년<br/>
+          <strong>GACS 핵심 엔진 개발</strong>
+        </p>
+      </div>
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 50%; background: #6c7ae0; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px;">C</div>
+          <div>
+            <p style="font-weight: 700; font-size: 14px;">이철재</p>
+            <p style="font-size: 11px; color: #4361ee; font-weight: 600;">CSO / Co-CEO</p>
+          </div>
+        </div>
+        <p style="font-size: 11px; color: #666; line-height: 1.6;">
+          홍익대학교 건축학 박사<br/>
+          호서대학교 교수<br/>
+          국책사업 15년 경력
+        </p>
+      </div>
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 50%; background: #6c7ae0; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px;">P</div>
+          <div>
+            <p style="font-weight: 700; font-size: 14px;">표상준</p>
+            <p style="font-size: 11px; color: #4361ee; font-weight: 600;">CTO</p>
+          </div>
+        </div>
+        <p style="font-size: 11px; color: #666; line-height: 1.6;">
+          Penn State University 통계학 학사<br/>
+          미국 법인 SK, LG 등 대기업 데이터 분석 및 개발 업무<br/>
+          데이터 분석 경력 다수
+        </p>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 50%; background: #a0aec0; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px;">S</div>
+          <div>
+            <p style="font-weight: 700; font-size: 14px;">김수은</p>
+            <p style="font-size: 11px; color: #4361ee; font-weight: 600;">CMO</p>
+          </div>
+        </div>
+        <p style="font-size: 11px; color: #666; line-height: 1.6;">George Washington University 생명과학 전공<br/>플랫폼 마케팅 7년 경력<br/>바이오 + 마케팅 전문가</p>
+      </div>
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 50%; background: #a0aec0; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px;">J</div>
+          <div>
+            <p style="font-weight: 700; font-size: 14px;">심준구</p>
+            <p style="font-size: 11px; color: #888; font-weight: 600;">재무고문</p>
+          </div>
+        </div>
+        <p style="font-size: 11px; color: #666; line-height: 1.6;">George Washington University MBA<br/>대기업·중견기업 CFO 10년<br/>벤처캐피탈 출자 및 인큐베이션 5년<br/>대기업 SK, 동국제강 신사업개발팀장 역임</p>
+      </div>
+    </div>
+    <div class="s-footer"><span class="logo">kindy.ai</span></div>
+  </div>
+</div>
+
+<!-- SLIDE 10: ROADMAP -->
+<div class="slide" id="s10">
+  <div class="s-bg">
+    <span class="s-tag">ROADMAP</span>
+    <h2 class="s-title">교육에서 정서로, 정서에서 웰니스로</h2>
+    <p class="s-subtitle">같은 엔진. 같은 데이터. 점점 깊어지는 가치.</p>
+    <div class="grid-3" style="flex: 1; margin-top: 8px;">
+      <div class="card" style="border-top: 4px solid #4361ee;">
+        <span class="phase-now">PHASE 1 (현재)</span>
+        <p style="font-size: 16px; font-weight: 700; margin-top: 8px;">초개인화 교육</p>
+        <ul style="font-size: 12px; color: #666; line-height: 2; list-style: disc; padding-left: 16px; margin-top: 8px;">
+          <li>MVP 운영 중</li>
+          <li>과학탐구 + 영어 커리큘럼</li>
+          <li>3-8세 아동 대상</li>
+          <li>유료 전환 테스트 진행 중</li>
+        </ul>
+        <p style="font-size: 11px; color: #4361ee; font-weight: 600; margin-top: 12px;">시드 투자 유치 목표</p>
+      </div>
+      <div class="card" style="border-top: 4px solid #a0aec0;">
+        <span class="phase-next">PHASE 2 (시드 후 6개월)</span>
+        <p style="font-size: 16px; font-weight: 700; margin-top: 8px;">정서 + 교육 통합</p>
+        <ul style="font-size: 12px; color: #666; line-height: 2; list-style: disc; padding-left: 16px; margin-top: 8px;">
+          <li>감성 좌표 도입</li>
+          <li>웰니스 콘텐츠 추가</li>
+          <li>IOE 연구진 공동 검증</li>
+          <li>B2G / B2B 확장 시작</li>
+        </ul>
+        <p style="font-size: 11px; color: #666; font-weight: 600; margin-top: 12px;">"학습 + 마음 건강" 통합 서비스</p>
+      </div>
+      <div class="card" style="border-top: 4px solid #e2e8f0;">
+        <span class="phase-future">PHASE 3 (열린 가능성)</span>
+        <p style="font-size: 16px; font-weight: 700; margin-top: 8px;">Mental Health 웰니스</p>
+        <ul style="font-size: 12px; color: #666; line-height: 2; list-style: disc; padding-left: 16px; margin-top: 8px;">
+          <li>ADHD / 불안장애 등 특수 아동</li>
+          <li>감성 좌표 고도화</li>
+          <li>병원 / 연구소 파트너십</li>
+          <li>임상 데이터 기반 확장</li>
+        </ul>
+        <p style="font-size: 11px; color: #888; font-weight: 600; margin-top: 12px;">열린 가능성</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top: 16px; background: #e8ecf8; border: none; text-align: center; padding: 14px;">
+      <p style="font-size: 13px; color: #4361ee;">
+        Phase 1 → 2 전환 근거: "이 아이는 부드러운 톤에 집중한다" → "불안할 때 부드러운 톤 + 느린 호흡이 효과적이다"
+      </p>
+    </div>
+    <div class="s-footer"><span class="logo">kindy.ai</span></div>
+  </div>
+</div>
+
+<!-- SLIDE 11: ASK -->
+<div class="slide" id="s11">
+  <div class="s-bg">
+    <span class="s-tag">INVESTMENT</span>
+    <h2 class="s-title">시드 라운드 투자 제안</h2>
+    <div style="display: flex; gap: 24px; margin-bottom: 16px;">
+      <div>
+        <p style="font-size: 40px; font-weight: 900; color: #4361ee;">2억 원</p>
+      </div>
+      <div style="font-size: 14px; color: #666; line-height: 1.8; padding-top: 8px;">
+        Post-money valuation <strong style="color: #1a1a2e;">20억 원</strong> · 지분 <strong style="color: #1a1a2e;">10%</strong>
+      </div>
+    </div>
+    <div class="grid-2" style="flex: 1;">
+      <div>
+        <p style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">자금 사용 계획</p>
+        <div style="margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <span style="font-size: 20px; font-weight: 900; color: #4361ee;">40%</span>
+            <span style="font-size: 13px; font-weight: 600;">팀 운영: 8,000만 원</span>
+          </div>
+          <div style="height: 8px; background: #e8ecf8; border-radius: 4px;"><div style="height: 100%; width: 40%; background: #4361ee; border-radius: 4px;"></div></div>
+          <p style="font-size: 11px; color: #888; margin-top: 2px;">핵심 인력 (개발 + 교육 설계) 6개월</p>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <span style="font-size: 20px; font-weight: 900; color: #4361ee;">25%</span>
+            <span style="font-size: 13px; font-weight: 600;">영상 생성 비용: 5,000만 원</span>
+          </div>
+          <div style="height: 8px; background: #e8ecf8; border-radius: 4px;"><div style="height: 100%; width: 25%; background: #4361ee; border-radius: 4px;"></div></div>
+          <p style="font-size: 11px; color: #888; margin-top: 2px;">무료 + 유료 사용자 콘텐츠 생성</p>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <span style="font-size: 20px; font-weight: 900; color: #4361ee;">20%</span>
+            <span style="font-size: 13px; font-weight: 600;">마케팅: 4,000만 원</span>
+          </div>
+          <div style="height: 8px; background: #e8ecf8; border-radius: 4px;"><div style="height: 100%; width: 20%; background: #4361ee; border-radius: 4px;"></div></div>
+          <p style="font-size: 11px; color: #888; margin-top: 2px;">인스타그램 광고, 육아 커뮤니티, 콘텐츠</p>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <span style="font-size: 20px; font-weight: 900; color: #4361ee;">15%</span>
+            <span style="font-size: 13px; font-weight: 600;">인프라 + 연구: 3,000만 원</span>
+          </div>
+          <div style="height: 8px; background: #e8ecf8; border-radius: 4px;"><div style="height: 100%; width: 15%; background: #4361ee; border-radius: 4px;"></div></div>
+          <p style="font-size: 11px; color: #888; margin-top: 2px;">서버/인프라 + IOE 공동 연구 착수</p>
+        </div>
+      </div>
+      <div>
+        <p style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">6개월 마일스톤</p>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="card" style="padding: 10px 16px; display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 16px; font-weight: 900; color: #4361ee;">1</span>
+            <div><p style="font-size: 12px; font-weight: 600;">1개월</p><p style="font-size: 11px; color: #888;">MVP 정식 런칭 + 인스타 광고 시작</p></div>
+          </div>
+          <div class="card" style="padding: 10px 16px; display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 16px; font-weight: 900; color: #4361ee;">2</span>
+            <div><p style="font-size: 12px; font-weight: 600;">2개월</p><p style="font-size: 11px; color: #888;">무료 사용자 100명 + 유료 전환 테스트 완료</p></div>
+          </div>
+          <div class="card" style="padding: 10px 16px; display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 16px; font-weight: 900; color: #4361ee;">3</span>
+            <div><p style="font-size: 12px; font-weight: 600;">3개월</p><p style="font-size: 11px; color: #888;">유료 고객 30명 + MRR &#8361;150-210만</p></div>
+          </div>
+          <div class="card" style="padding: 10px 16px; display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 16px; font-weight: 900; color: #4361ee;">4</span>
+            <div><p style="font-size: 12px; font-weight: 600;">4개월</p><p style="font-size: 11px; color: #888;">GACS-3 개인화 효과 데이터 검증</p></div>
+          </div>
+          <div class="card" style="padding: 10px 16px; display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 16px; font-weight: 900; color: #4361ee;">5</span>
+            <div><p style="font-size: 12px; font-weight: 600;">5개월</p><p style="font-size: 11px; color: #888;">Phase 2 웰니스 콘텐츠 프로토타입</p></div>
+          </div>
+          <div class="card" style="padding: 10px 16px; display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 16px; font-weight: 900; color: #4361ee;">6</span>
+            <div><p style="font-size: 12px; font-weight: 600;">6개월</p><p style="font-size: 11px; color: #888;">MAU 500+ / MRR &#8361;500만+ / Pre-A 준비</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top: 12px; text-align: center; background: #1a1a2e; color: white; padding: 14px;">
+      <p style="font-size: 14px;">
+        <strong>Kindy는 아이의 감성을 이해하는 AI 엔진을 만들고 있습니다.</strong><br/>
+        교육으로 시작하지만, 모든 아이의 정서 건강을 다루는 플랫폼이 됩니다.
+      </p>
+    </div>
+    <div class="s-footer"><span class="logo">kindy.ai</span></div>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav" id="nav"></div>
+<div class="page-info" id="pageInfo"></div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const nav = document.getElementById('nav');
+  const pageInfo = document.getElementById('pageInfo');
+  let current = 0;
+
+  // Build nav
+  slides.forEach((_, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = i + 1;
+    btn.onclick = () => goTo(i);
+    nav.appendChild(btn);
+  });
+
+  function goTo(n) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, slides.length - 1));
+    slides[current].classList.add('active');
+    updateNav();
+  }
+
+  function updateNav() {
+    nav.querySelectorAll('button').forEach((btn, i) => {
+      btn.classList.toggle('current', i === current);
+    });
+    pageInfo.textContent = `${current + 1} / ${slides.length}`;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
+    if (e.key === 'ArrowLeft') goTo(current - 1);
+  });
+
+  updateNav();
+</script>
+</body>
+</html>

@@ -1,107 +1,174 @@
-# Design System — Kindy (R3)
+# eduvid 디자인 시스템
 
-> 정본 디자인 시스템. 모든 UI는 여기 토큰을 따른다. `eduvid/DESIGN.md`(2026-04, 보라)를 **대체** — Lane C에서 동기화.
-> 브랜드 앵커: `IP_북메이트_캐릭터바이블.md` (R3 = 크림+세이지 책정령 **모리**).
+이 문서는 디자인 토큰과 원칙을 담는다. 모든 UI는 여기 정의된 토큰을 따라야 한다.
 
-## Product Context
-- **무엇:** 아이 반응에 맞춰 매주 진화하는 초개인화 영상 모험 (5~10세 정서+창의).
-- **누구:** 5~10세 아이(딜라이트·몰입) + 부모(따뜻하되 데이터 기반 신뢰). **이중 청중.**
-- **공간:** 키즈 에듀테크 (B2G 도서관·어린이집 → 가정 B2C).
-- **타입:** 웹앱(아이 플레이어 + 부모 대시보드 + 키오스크) · 모바일 우선.
+> **R3 갱신 (2026-06-22):** 색을 **보라 → 크림+세이지(책정령 모리)**로 전환. 정본 = `~/dev/kindy-web/DESIGN.md`. 토큰은 `src/app/globals.css`의 `@theme` 블록(`bg-cream`·`text-sage`·`border-line` 등). 옛 violet 팔레트는 폐기.
 
-## 기억시킬 것 (Memorable Thing)
-부모의 **"이게 우리 아이예요"** — 콘텐츠가 진짜 우리 아이를 위한 것이라는 느낌. **모든 결정이 이걸 섬긴다.**
-시그니처로 이걸 *시각화*: **기분-시프트 팔레트** — 액센트 색이 그 아이 콘텐츠 무드(GACS 4톤)에 따라 변한다. 색이 그 아이의 여정에 따라 바뀌니, 초개인화가 화면에 박힌다.
+## 브랜드 포지셔닝
 
-## Aesthetic Direction
-- **방향:** 따뜻하고 영리한 수집형 아트토이 부드러움 (R3: Pop-Mart/라부부급 크림+세이지 모리). "똑똑하고 세련된."
-- **데코:** intentional — 크림 종이결, 부드러운 그림자, **펼친 책-귀 모티프**(둥근 큰 라운드), 떠다니는 글자·별(창의) + 가슴 하트빛(정서).
-- **무드:** 프리미엄하되 따뜻 · 차분한 듀오링고급 폴리시 · 유치-싸구려 아님 · 차가운 SaaS 아님.
-- **모리 보이스:** 호기심·다정·영리. 정답 강요 X("틀려도 괜찮아, 같이 해보자"). 친근한 반말, 짧고 따뜻.
+- **톤:** 부모에게 따뜻하지만 데이터 기반, 아이 친화적이지만 유치하지 않음
+- **감성 목표:** "이게 우리 아이예요" 인정의 순간 (magical moment)
+- **반대편:** 차가운 SaaS 대시보드, 유치한 kids 앱 (무지개 색상 남발), 기술자 스러운 AI 생성 티
 
-## Typography
-- **Display/Hero (아이·브랜드):** Pretendard 800 (ExtraBold) — 굵고 둥근 인상.
-- **H2/H3 (섹션·카드):** Pretendard 700.
-- **Body (부모·신뢰):** Pretendard 500 / 400 — 깔끔·신뢰. 한글 최적.
-- **Data/Tables:** Pretendard 600 + `tabular-nums` (완주율·가격·횟수).
-- **로딩:** `https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css`
-- **스택:** `"Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif`
-- **스케일:** Hero `clamp(30px,5vw,46px)`/1.15 · H3 20px/1.4 · Body 16px/1.5 · Meta 13px · Data 15px. letter-spacing 헤드라인 -.02em.
-- 따뜻함은 색·형태·모리가 담당(폰트는 중립). 한글 제품이라 Pretendard 유지(슬롭 아님).
+## 색상 (R3 — 크림 + 세이지 · globals.css `@theme` 토큰)
 
-## Color
-베이스(크림+세이지)는 **고정 = 브랜드**. 기분 4톤은 **아껴 쓰는 액센트이자 콘텐츠 무드 시프트**. **보라는 금지색 아님 — '모험(mystery)' 액센트 하나.** (옛 DESIGN.md의 "보라 외 색 금지"는 폐기.)
+| 이름 | HEX | Tailwind 유틸 | 용도 |
+|-----|-----|---------|------|
+| Cream | `#F4EAD2` | `bg-cream` | 페이지 배경 |
+| Surface | `#FBF7EC` | `bg-surface` | 카드·강조 구역 |
+| Cream-deep | `#E9DBBE` | `bg-deep` | 더블 배경·키오스크 프레임 |
+| Sage (primary) | `#46763F` | `bg-sage` `text-sage` `fill-sage` | 주 CTA·모리·활성 |
+| Sage-deep | `#2E5129` | `bg-saged` `text-saged` | hover·강조 텍스트 |
+| Sage-soft | `#93B589` | `bg-sages` | 보조 액센트·포커스링 |
+| Sage-bg | `#E4EDDF` | `bg-sagebg` | 히어로 비주얼 배경 |
+| Ink | `#231F18` | `text-ink` `fill-ink` | 제목·본문 (웜 차콜) |
+| Ink-2 | `#534B40` | `text-ink2` | 보조 텍스트 |
+| Ink-3 | `#8A8070` | `text-ink3` | 메타·캡션 |
+| Line | `#E0D4BB` | `border-line` | 구분선·테두리 (웜) |
+| Gentle | `#159C84` | `text-gentle` `fill-gentle` | 모리 하트빛·기분 액센트 |
+| Gold | `#C9871E` | `text-gold` | 별·반짝임 액센트 |
 
-### 베이스 (고정)
-| 토큰 | HEX | 용도 |
-|---|---|---|
-| `--cream` | `#F4EAD2` | 배경 |
-| `--surface` | `#E9DBBE` | 카드·강조 구역 |
-| `--cream-deep` | `#DECDA9` | 더블 배경·키오스크 프레임 |
-| `--sage` | `#46763F` | **primary** · 모리 본체 · 주 CTA |
-| `--sage-deep` | `#2E5129` | hover · 강조 텍스트 |
-| `--sage-soft` | `#93B589` | 보조 액센트 · 선택 상태 |
+**기분 4톤 (액센트 · GACS 무드 시프트):** gentle `#159C84` · lively `#EC9E0C` · mystery `#6446C2` · warm `#DA4E80`. **보라는 mystery 액센트 하나(전역 primary 아님).**
+**시맨틱:** success `#3F8139` · warning `#CC7E1E` · error `#C84E36`(소프트코랄, 아이에게 강한 빨강 금지) · info `#3C8FBE`.
 
-### 중립 (웜그레이 — 쿨 아님)
-| 토큰 | HEX | 용도 |
-|---|---|---|
-| `--ink` | `#231F18` | 제목·본문 |
-| `--ink-2` | `#534B40` | 보조 텍스트 |
-| `--ink-3` | `#8A8070` | 메타·캡션 |
-| `--border` | `#D6C7A8` | 구분선·테두리 |
+**규칙:** 무지개 남발 금지 · 베이스는 크림+세이지 고정 · 한 화면 1무드 · 보라는 mystery일 때만.
 
-### 기분 4톤 (액센트 · GACS 무드 시프트)
-| 기분 | 메인 | 보조 | 분위기 |
-|---|---|---|---|
-| gentle 차분 | `#159C84` | `#3BA8CC` | 민트·하늘 |
-| lively 신남 | `#EC9E0C` | `#E5662F` | 노랑·코랄 |
-| mystery 모험 | `#6446C2` | `#222C5E` | 보라·남색 + 별가루 |
-| warm 포근 | `#DA4E80` | `#E8823F` | 분홍·복숭아 |
-> 캐릭터 본체(크림+세이지)는 고정, **하트빛·분위기·표정만** 기분에 따라 변함. 액센트는 한 화면에 1무드만.
+## 타이포그래피
 
-### 시맨틱
-success `#3F8139` · warning `#CC7E1E` · error `#C84E36`(소프트코랄, **아이에게 강한 빨강 금지**) · info `#3C8FBE`.
+**폰트:** `Pretendard Variable` (웹폰트), 폴백 `Pretendard → -apple-system → system-ui → sans-serif`. Korean/Latin 동시 최적화.
 
-### 다크 모드
-| 토큰 | HEX |
-|---|---|
-| `--cream` | `#201D17` |
-| `--surface` | `#2A261F` |
-| `--ink` | `#F2ECE0` |
-| `--ink-2` | `#C3BBAC` |
-| `--border` | `#39342A` |
-| `--sage` | `#9DBE98` |
-| `--sage-deep` | `#BCD4B6` |
-> 기분 4톤은 다크에서 채도 10~15% 낮춰 사용.
+| 역할 | 크기 | Weight | Line-height | 예 |
+|-----|-----|--------|-------------|----|
+| Hero H1 | 24-28px | 800 (extrabold) | 1.3 | 감정 헤드라인 "서연이는 부드럽고..." |
+| H2 | 18-20px | 700 (bold) | 1.4 | 섹션 제목 "취향 프로파일" |
+| H3 / Card title | 15-16px | 700 (bold) | 1.5 | 카드 제목 "과학탐구 12주" |
+| Body | 14px | 500 (medium) | 1.5 | 본문, 설명 |
+| Meta | 12-13px | 500-600 | 1.4 | 부가 정보 |
+| Caption | 10-11px | 700 (bold) | 1.3 | UPPERCASE 라벨 (tracking-wider) |
+
+**한글 최적화:** Pretendard는 한글-영문 동시 balance 우수. 기본 font-size 14px 이상 유지 (한글 가독성).
+
+## Radius
+
+| 토큰 | 값 | Tailwind | 용도 |
+|-----|---|---------|------|
+| sm | 12px | rounded-xl | 작은 칩, secondary 버튼 |
+| md | 16px | rounded-2xl | **기본 카드**, primary 버튼 |
+| lg | 24px | rounded-3xl | 큰 hero 카드, modal top |
+| pill | 9999px | rounded-full | 배지, 아바타, nav active 점 |
+
+**규칙:** radius-md를 기본. 큰 hero 요소만 lg. 라운드 덜 중요한 요소는 rounded-lg (8px).
+
+## Shadow
+
+| 토큰 | 값 | 용도 |
+|-----|---|------|
+| card | `shadow-sm` (rgba(0,0,0,0.05) 0 1px 2px) | 일반 카드 |
+| elevated | `shadow-md` | 모달, 오버레이 |
+| cta | `shadow-lg shadow-violet-200/60` | 주요 CTA 버튼 |
+| modal | `shadow-2xl` | 드로어 모달 top |
 
 ## Spacing
-- **베이스:** 8px. 스케일: 2xs(2) xs(4) sm(8) md(16) lg(24) xl(32) 2xl(48) 3xl(64).
-- **밀도:** 아이 화면 = spacious(큰 타깃·여백) / 부모 화면 = comfortable.
 
-## Layout
-- **접근:** hybrid — 아이 = 단일 집중(포스터형, 영상 1개·모리·크롬 0) / 부모 = 차분 앱(카드 최소, 별·새싹 진단).
-- **그리드:** 모바일 우선(375). 웹 max-width ~1040.
-- **Border radius:** sm `10px` · md `18px` · lg `28px` · xl `40px` · full `999px`. **펼친 책-귀 모티프 = 관대한 라운드.** 카드·버튼이 둥근 책-귀 실루엣을 echo.
-- **그림자:** 부드럽게. `0 10px 34px rgba(94,122,90,.12), 0 2px 8px rgba(46,42,36,.05)`.
-- **탭타깃:** 아이 ≥56px, 일반 ≥44px.
+모바일 컨테이너: `max-w-[375px] mx-auto px-6`. 섹션 간격:
+- **Tight:** 12-16px (카드 내 요소)
+- **Normal:** 20-24px (섹션 내 블록)
+- **Loose:** 32-40px (섹션 간)
 
-## Motion
-- **접근:** intentional — 차분 + 포인트 딜라이트.
-- 모리 둥둥(gentle float) · 별 반짝(twinkle) · 탭 시 squash-stretch(아이) · 하트 펄스(정서).
-- **무드 시프트:** `.45s ease`.
-- **Easing:** enter ease-out · exit ease-in · move ease-in-out. **Duration:** micro 80ms · short 200ms · medium 400ms.
-- `prefers-reduced-motion` 존중.
+## 애니메이션
 
-## 가드레일 (위반 = 버그 — R3 바이블 + 핵심 #1·#3)
-- 무지개 남발 ✕ · 디테일 과밀 ✕ · 사람 닮게 ✕ · 무서운 요소 ✕ · 멍한/뻐드렁니 ✕.
-- 아이 화면: AI·광고·결제 노출 0 · 프롬프트/에러/영어 토큰 누출 0 · 강한 빨강 ✕.
-- 긍정-온리: 점수·등급·백분위·또래비교 ✕ → **별(강점)·새싹(자랄 점)** 정성 시각.
-- AI 표기는 부모 화면에만(법). 아이는 "AI"가 아니라 "최적화되는 기분"만.
+- **Transition default:** `cubic-bezier(0.16, 1, 0.3, 1)` (swift-ease), 200-300ms
+- **Bar fill:** 800ms swift-ease (취향 프로파일 바 채움)
+- **Modal slide-up:** 300ms swift-ease
+- **Button active:** `scale-[0.98]` on press
+- **Selected card:** `scale-[1.02]` + shadow
 
-## Decisions Log
-| 날짜 | 결정 | 근거 |
-|---|---|---|
-| 2026-06-22 | R3 정본 디자인 시스템 생성 | /design-consultation. 바이블(크림+세이지 모리) + office-hours 무드 + 프리뷰 승인 |
-| 2026-06-22 | 보라 = mystery 액센트(전역 primary 아님) | 옛 eduvid DESIGN.md(보라 전역)의 R3 충돌·AI슬롭 해소 |
-| 2026-06-22 | 팔레트 진하게(파스텔→보석톤·딥세이지) | 대표 피드백 "너무 흐림" |
-| 2026-06-22 | 기분-시프트 팔레트 = 초개인화 시각화 | "이게 우리 아이예요" memorable thing |
+원칙: 딱 한 번 이상 필요한 곳에만 animation. 장식 animation 금지.
+
+## 컴포넌트 기본값
+
+### 버튼
+
+**Primary:** `px-6 py-4 bg-violet-500 hover:bg-violet-600 text-white font-bold text-base rounded-2xl shadow-lg shadow-violet-200/60 active:scale-[0.98] transition`
+
+**Secondary:** `px-6 py-3 bg-violet-50 border border-violet-100 text-violet-600 font-bold rounded-xl hover:bg-violet-100`
+
+**Tertiary/link:** `text-sm text-gray-500 hover:text-gray-700 underline underline-offset-2 font-medium`
+
+### 카드
+
+```
+<div class="bg-white rounded-2xl p-5 shadow-sm">
+  ...
+</div>
+```
+
+액센트 카드 (강조):
+```
+<div class="bg-violet-50 border border-violet-100 rounded-2xl p-4">
+  ...
+</div>
+```
+
+### 취향 프로파일 바
+
+`h-[7px] bg-violet-50 rounded-full overflow-hidden`
+내부: `h-full rounded-full` + `background: linear-gradient(90deg, #79A271 0%, #335A2E 100%)` (상위) 또는 `linear-gradient(90deg, #C2D5B9 0%, #79A271 100%)` (중간) 또는 `#d1d5db` (하위). R3 세이지.
+
+## 접근성 기준
+
+- **최소 폰트:** 본문 14px, 한글 고려
+- **터치 타겟:** 44px × 44px minimum (py-3 이상 버튼)
+- **명도 대비:**
+  - gray-900 on white: 16.1 (AAA)
+  - violet-500 text on white: 4.7 (AA)
+  - gray-400 on white: 2.8 ❌ AA fail — meta 텍스트 전용, 핵심 정보 금지
+  - white on violet-500: 4.6 (AA)
+- **포커스 링:** `focus-within:ring-2 focus-within:ring-violet-300 focus-within:ring-offset-2`
+- **키보드 탐색:** 모든 interactive 요소에 tab order
+
+## AI Slop 회피 룰
+
+1. 퍼플 그라디언트는 헤더 1개에만. 배경에 범람 금지.
+2. 아이콘 in colored circles 반복 배치 금지 (SaaS 템플릿 티).
+3. 중앙 정렬은 감정 헤드라인/hero/CTA에만. 목록/데이터는 left align.
+4. 3-column symmetric feature grid 금지 (→ 1개 큰 스토리 카드 + FAQ).
+5. 장식용 SVG blob, 파도, floating circle 금지.
+6. 이모지는 아이콘 대용 OK (🔬 🔤) but 제목 강조용 금지 (❌ "🚀 빠른 시작").
+7. Generic hero 카피 금지: "Welcome to", "Your all-in-one", "Unlock the power of"
+
+## 디자인 토큰 (CSS 변수 참조용, 구현 시 적용)
+
+```css
+:root {
+  --color-primary: #46763F;       /* R3 sage */
+  --color-primary-dark: #2E5129;  /* sage-deep */
+  --color-primary-light: #93B589; /* sage-soft */
+  --color-accent-bg: #EDF2E7;     /* sage tint */
+  --color-accent-border: #DCE7D4; /* sage-100 */
+  --color-text-primary: #231F18;  /* warm ink */
+  --color-text-secondary: #534B40;
+  --color-text-meta: #8A8070;
+  --color-border: #E0D4BB;        /* warm line */
+  --color-surface: #FBF7EC;       /* cream surface */
+
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-cta: 0 10px 25px -5px rgba(70,118,63,0.3);
+
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  --ease-swift: cubic-bezier(0.16, 1, 0.3, 1);
+}
+```
+
+## 참조
+
+- **최신 목업:** `~/.gstack/projects/eduvid/designs/mockups-20260417/*-FINAL.html`
+- **승인 토큰:** `~/.gstack/projects/eduvid/designs/mockups-20260417/approved.json`
+- **설계문서:** `~/.gstack/projects/eduvid/jongwonlee-main-design-20260417-174556.md`
+
+기본적으로 모든 신규 UI는 여기 토큰으로 시작. 토큰 변경은 DESIGN.md를 먼저 업데이트.
