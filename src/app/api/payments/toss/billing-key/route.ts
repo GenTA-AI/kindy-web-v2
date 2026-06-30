@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { supabase } from '@/lib/supabase';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
+import { encryptBillingKey } from '@/lib/billing-crypto';
 import {
   issueBillingKey,
   chargeBillingKey,
@@ -75,7 +76,8 @@ export async function POST(request: NextRequest) {
     .insert({
       parent_id: parentId,
       provider: 'toss',
-      billing_key: issued.billingKey,
+      // 평문 금지 — AES-256-GCM 앱레벨 암호화 후 저장(복호화는 charge 시점에만).
+      billing_key: encryptBillingKey(issued.billingKey),
       card_summary: cardSummaryOf(issued),
     })
     .select('id, card_summary')
