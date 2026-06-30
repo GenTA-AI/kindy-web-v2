@@ -53,6 +53,8 @@ export default function SubscribeClient({
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // 정기결제 사전 명시 동의(전자상거래법·여신전문금융업법). 카드 등록 전 필수.
+  const [billingConsent, setBillingConsent] = useState(false);
 
   const hasTossClientKey = Boolean(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
   const isSubscribed =
@@ -79,6 +81,11 @@ export default function SubscribeClient({
       if (!businessComplete) {
         throw new Error('결제 준비가 끝나면 바로 시작할 수 있어요.');
       }
+      if (!billingConsent) {
+        throw new Error('매월 자동 결제 동의에 체크해 주세요.');
+      }
+      // 정기결제 동의를 서버에 기록(법적 증적). 실패해도 결제 흐름은 막지 않는다.
+      await fetch('/api/subscription/consent', { method: 'POST' }).catch(() => {});
       const tossPayments = await loadTossPayments(clientKey);
       const payment = tossPayments.payment({ customerKey: parentId });
       await payment.requestBillingAuth({
@@ -293,9 +300,24 @@ export default function SubscribeClient({
                 아래에서 다시 시작할 수 있어요.
               </div>
             )}
+            {checkoutReady && (
+              <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-2xl border border-line bg-white px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={billingConsent}
+                  onChange={(e) => setBillingConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-saged"
+                />
+                <span className="text-xs font-semibold leading-relaxed text-ink2">
+                  매월 {krw(PRICE_KRW)}이 등록한 카드로 <strong className="font-black text-ink">자동 결제</strong>되는
+                  정기결제에 동의합니다. 첫 달은 카드 등록 즉시 결제되고, 이후 매월 같은 날 자동 결제돼요.
+                  언제든 해지할 수 있고, 환불·청약철회는 아래 안내를 따릅니다.
+                </span>
+              </label>
+            )}
             <button
               onClick={startCardRegistration}
-              disabled={pending !== null || !checkoutReady}
+              disabled={pending !== null || !checkoutReady || !billingConsent}
               className="w-full rounded-2xl bg-saged px-6 py-4 text-base font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.98] disabled:opacity-60"
             >
               {pending === 'card'
@@ -315,6 +337,13 @@ export default function SubscribeClient({
           <p>
             구독 시 매월 {krw(PRICE_KRW)}이 등록된 카드로 자동 결제돼요. 해지하면 현재 결제 기간이
             끝나는 날까지 이용할 수 있고, 다음 결제는 일어나지 않아요.
+          </p>
+          <p>
+            <strong className="font-black text-ink2">청약철회·환불 안내</strong> · 결제일로부터 7일 이내,
+            콘텐츠를 이용하지 않았다면 청약철회(전액 환불)를 요청할 수 있어요. 이미 이용을 시작한
+            디지털 콘텐츠는 「전자상거래법」 제17조에 따라 청약철회가 제한될 수 있어요. 환불은 고객센터
+            ({businessInfo.email})로 요청하면 영업일 기준 3일 이내 처리돼요. 정기결제는 다음 결제일
+            전에 해지하면 추가 청구가 없어요.
           </p>
           {businessComplete ? (
             <p>
