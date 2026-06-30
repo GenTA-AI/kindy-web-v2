@@ -7,6 +7,23 @@ import type { LibraryVideo } from '../src/types/library';
 type LibrarySeed = Omit<LibraryVideo, 'id' | 'view_count' | 'created_at'>;
 
 const stubLibrary: LibrarySeed[] = [
+  // 실제 재생 가능한 모리 동물마을 영상(번들 자산). 운영자가 이 스크립트를 돌리면
+  // /library 에 진짜 published 영상이 1편 들어간다 — "발행 가능 경로"의 실동작 예시.
+  // 아래 'stub-*' GCS URL 항목들은 옛 브랜드(미리) 더미 — 실콘텐츠로 교체 대상.
+  {
+    title: '모리와 사라진 반짝빛',
+    description: '별빛 축제 아침, 꾸미의 반짝빛이 사라졌어요. 모리와 함께 단서를 찾아볼까요?',
+    topic: 'animal-village',
+    age_band: 5,
+    style_tags: ['mori', 'animal-village'],
+    duration_sec: 15,
+    video_url: '/demo-videos/mori-starlight-seed.mp4',
+    thumbnail_url: '/ip/generated/mori-village-hero.png',
+    subtitles_url: '/demo-videos/mori-starlight-seed.vtt',
+    character_name: '모리',
+    published: true,
+    featured: true,
+  },
   {
     title: '미리와 함께하는 별자리 이야기',
     description: '북두칠성을 따라가며 별의 모양을 배워봐요',
