@@ -41,7 +41,7 @@ export default function SampleLibraryPage() {
           <Link href={`/sample/library/${video.id}`} className="block transition hover:bg-mist active:scale-[0.99]">
             <div className="relative aspect-video bg-mist">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={video.thumbnail_url ?? '/ip/mori-reference-no-a.jpg'} alt={video.title} className="h-full w-full object-cover" />
+              <img src={video.thumbnail_url ?? '/ip/mori-reference-no-a.jpg'} alt={video.title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
               <span className="absolute bottom-3 right-3 rounded-full bg-ink/82 px-3 py-1 text-xs font-black text-white">
                 {formatDuration(video.duration_sec)}
               </span>

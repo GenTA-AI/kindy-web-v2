@@ -8,6 +8,8 @@ import MoriCharacter from '@/components/MoriCharacter';
 
 const START_HREF = '/auth/login?next=/onboarding';
 const SAMPLE_REPORT_HREF = '/sample/report';
+const DEMO_HREF = '/demo/ai-diagnosis';
+const PRICE_LINE = '무료 영상 3편 체험 후, 계속 이어가려면 멤버십 월 25,000원 · 언제든 해지';
 
 function StartCtaBlock({ className = '' }: { className?: string }) {
   const router = useRouter();
@@ -17,21 +19,21 @@ function StartCtaBlock({ className = '' }: { className?: string }) {
     <div className={className}>
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link
-          href={START_HREF}
+          href={DEMO_HREF}
           className="inline-flex min-h-14 items-center justify-center rounded-full bg-saged px-7 text-base font-extrabold text-white shadow-[0_14px_28px_-14px_rgba(35,49,38,.55)] transition hover:bg-ink active:scale-[0.98]"
+        >
+          1분 체험 먼저 보기
+        </Link>
+        <Link
+          href={START_HREF}
+          className="inline-flex min-h-14 items-center justify-center rounded-full border border-line bg-white px-7 text-base font-extrabold text-ink transition hover:border-sages hover:bg-mist active:scale-[0.98]"
         >
           무료로 시작하기
         </Link>
-        <Link
-          href={SAMPLE_REPORT_HREF}
-          className="inline-flex min-h-14 items-center justify-center rounded-full border border-line bg-white px-7 text-base font-extrabold text-ink transition hover:border-sages hover:bg-mist active:scale-[0.98]"
-        >
-          기록 예시 보기
-        </Link>
       </div>
-      <p className="mt-3 text-sm font-bold text-sage">보호자 계정 1분 · 영상 3편과 첫 놀이 기록 무료</p>
+      <p className="mt-3 text-sm font-bold text-sage">로그인 없이 바로 체험 · 보호자 계정 1분이면 무료로 시작</p>
       <p className="mt-1 text-xs font-semibold leading-relaxed text-ink3">
-        아이 화면에는 광고, 결제 버튼, 자동재생 압박이 보이지 않아요.
+        {PRICE_LINE}. 아이 화면에는 광고·결제 버튼·자동재생 압박이 보이지 않아요.
       </p>
       <button
         type="button"
@@ -341,7 +343,7 @@ export default function Home() {
               모리의 짧은 이야기를 보고, 바로 이어지는 질문과 놀이를 해요. 끝나면 보호자는 아이가 무엇을 자세히 봤고 어떤 놀이가 잘 맞았는지 확인합니다.
             </p>
             <p className="mt-4 max-w-[34rem] text-base font-bold leading-relaxed text-saged">
-              처음 보는 분도 “영상 학습 + 놀이형 확인 + 부모 기록”으로 바로 이해할 수 있게 만들었습니다.
+              영상으로 배우고, 놀이로 확인하고, 부모는 오늘을 기록으로 봅니다.
             </p>
             <StartCtaBlock className="mt-8" />
             <a href="#entry-flow" className="mt-4 inline-flex min-h-11 items-center text-sm font-black text-saged underline underline-offset-[4px] hover:text-ink">
@@ -516,6 +518,9 @@ export default function Home() {
               </Link>
               <span className="text-sm font-bold text-white/72">설치 없이 웹에서 시작</span>
             </div>
+            <p className="mt-5 text-sm font-semibold text-white/80">
+              무료 영상 3편 체험 후, 계속 이어가려면 멤버십 월 25,000원 · 언제든 해지
+            </p>
           </div>
         </section>
 

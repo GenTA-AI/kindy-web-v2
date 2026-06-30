@@ -41,7 +41,7 @@ export default function LibraryCard({ video, childId, completedToday = false }: 
       <div className="relative aspect-video bg-mist">
         {video.thumbnail_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={video.thumbnail_url} alt={video.title} className="h-full w-full object-cover" />
+          <img src={video.thumbnail_url} alt={video.title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(circle_at_50%_35%,#FFFFFF_0%,#F2F5EF_48%,#E6EDE4_100%)] px-3 text-center">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl shadow-sm">M</span>

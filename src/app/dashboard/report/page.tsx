@@ -466,6 +466,11 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
             >
               {dashboardLabel}
             </Link>
+            {sampleMode && (
+              <span className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-black text-white ring-1 ring-white/30">
+                ● 예시 데이터 · 실제 우리 아이 기록이 아니에요
+              </span>
+            )}
             <p className="mt-7 text-xs font-black uppercase tracking-[.16em] text-white/70">
               {sampleMode ? '기록 예시' : '이번 주 모리 기록'}
             </p>

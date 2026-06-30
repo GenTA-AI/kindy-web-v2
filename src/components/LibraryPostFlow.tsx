@@ -114,6 +114,15 @@ export default function LibraryPostFlow({ libraryVideoId, childId, childAge }: P
     return '장면 단서';
   };
 
+  // 단서 질문 focus → C6 생각도구. 전부 '관찰'로 쏠려 부모 리포트 C6 지도가
+  // 한쪽으로 기우는 것을 막는다. 개수=규칙 찾기, 움직임=머릿속에 그려보기.
+  const focusObjective = (focus: AttentionQuestion['focus']): string => {
+    if (focus === 'count') return 'creativity_pattern';
+    if (focus === 'action') return 'creativity_imagine';
+    // appearance, detail = 자세히 관찰하기
+    return 'creativity_observe';
+  };
+
   const feedbackLine = (question: AttentionQuestion, answerIdx: number) => {
     if (answerIdx === question.correctAnswer) {
       return '찾았다! 단서를 잘 봤어요.';
@@ -130,7 +139,7 @@ export default function LibraryPostFlow({ libraryVideoId, childId, childAge }: P
     const result: GameRoundResult = {
       game_type: 'Q_quiz',
       difficulty: 1,
-      objective_code: 'creativity_observe',
+      objective_code: focusObjective(question.focus),
       standard_anchor: '예술경험',
       score: correct ? 1 : 0,
       max_score: 1,
