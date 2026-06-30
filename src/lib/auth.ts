@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase-server';
+import { createServerClient, isSupabaseServerConfigured } from '@/lib/supabase-server';
 
 export class AuthRequiredError extends Error {
   constructor(message = 'Authentication required') {
@@ -20,12 +20,16 @@ function getBearerToken(request?: Request): string | null {
 /**
  * 인증 확인. 기본은 Supabase 세션 쿠키.
  * `request` 를 넘기면 `Authorization: Bearer <supabase access token>` 헤더도 허용 —
- * iPad 앱 등 쿠키 없는 클라이언트가 API 를 호출할 때 사용.
+ * 쿠키 없는 클라이언트가 API 를 호출할 때 사용.
  */
 export async function requireAuth(request?: Request): Promise<{ userId: string }> {
+  if (!isSupabaseServerConfigured()) {
+    return { userId: 'local-preview-parent' };
+  }
+
   const supabase = await createServerClient();
 
-  // 1) Bearer 토큰 (iPad 앱 등 비-브라우저 클라이언트)
+  // 1) Bearer 토큰 (쿠키 없는 클라이언트)
   const token = getBearerToken(request);
   if (token) {
     const {

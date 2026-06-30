@@ -12,6 +12,10 @@ function getSupabasePublicEnv() {
   return { supabaseUrl, supabaseAnonKey };
 }
 
+export function isSupabaseServerConfigured(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
 export async function createServerClient() {
   const { supabaseUrl, supabaseAnonKey } = getSupabasePublicEnv();
   const cookieStore = await cookies();

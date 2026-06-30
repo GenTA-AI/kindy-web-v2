@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import type { DecoratePalette } from '@/data/worlds/animal-village';
 import type { GameRoundResult, GameRoundSpec } from '@/types/game';
 
@@ -50,6 +50,7 @@ export default function DecorateGame({
   const completedRef = useRef(false);
   const idRef = useRef(0);
   const spokeRef = useRef(false);
+  const canFinish = placed.length > 0;
 
   useEffect(() => {
     startedAtRef.current = Date.now();
@@ -81,7 +82,7 @@ export default function DecorateGame({
   }
 
   const finish = () => {
-    if (completedRef.current) return;
+    if (completedRef.current || !canFinish) return;
     completedRef.current = true;
     setDone(true);
     onFinish?.();
@@ -121,22 +122,23 @@ export default function DecorateGame({
           className="relative block h-56 w-full overflow-hidden rounded-2xl border-2 border-rose-100 sm:h-72 lg:h-[26rem] lg:flex-1"
           style={{ background: BG_MAP[bg] ?? 'linear-gradient(135deg,#DCE7D4,#EAF1E0)' }}
         >
-          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-6xl opacity-90 lg:text-8xl" aria-hidden="true">
-            🎁
-          </span>
+          <GiftIllustration />
           {placed.map((p) => (
-            <span
+            <DecorMark
               key={p.id}
-              className="juice-pop absolute -translate-x-1/2 -translate-y-1/2 text-3xl lg:text-5xl"
+              token={p.glyph}
+              className="juice-pop absolute -translate-x-1/2 -translate-y-1/2"
               style={{ left: `${p.left}%`, top: `${p.top}%` }}
-              aria-hidden="true"
-            >
-              {p.glyph}
-            </span>
+            />
           ))}
           {!activeGlyph && !done && (
             <span className="absolute inset-x-0 bottom-3 text-center text-xs font-bold text-rose-500 sm:text-sm">
-              오른쪽에서 모양·스티커를 고르고 선물을 톡 눌러봐!
+              모양·스티커를 고르고 선물을 톡 눌러봐!
+            </span>
+          )}
+          {activeGlyph && placed.length === 0 && !done && (
+            <span className="absolute inset-x-0 bottom-3 text-center text-xs font-bold text-rose-500 sm:text-sm">
+              선물 위 원하는 곳을 톡 눌러 장식을 놓아봐!
             </span>
           )}
         </button>
@@ -158,11 +160,15 @@ export default function DecorateGame({
                     setBg(c.token);
                     onChoose?.();
                   }}
-                  className={`juice-bounce h-12 w-12 rounded-xl text-2xl transition active:scale-90 lg:h-14 lg:w-14 lg:text-3xl ${
+                  className={`juice-bounce h-12 w-12 rounded-xl transition active:scale-90 lg:h-14 lg:w-14 ${
                     bg === c.token ? 'ring-4 ring-rose-200' : 'ring-1 ring-rose-100'
                   }`}
                 >
-                  <span aria-hidden="true">{c.token}</span>
+                  <span
+                    aria-hidden="true"
+                    className="block h-full w-full rounded-xl"
+                    style={{ background: BG_MAP[c.token] ?? 'linear-gradient(135deg,#DCE7D4,#EAF1E0)' }}
+                  />
                 </button>
               ))}
             </div>
@@ -180,11 +186,11 @@ export default function DecorateGame({
                   aria-pressed={activeGlyph === s.token}
                   disabled={done}
                   onClick={() => setActiveGlyph(s.token)}
-                  className={`juice-bounce h-12 w-12 rounded-xl text-2xl transition active:scale-90 lg:h-14 lg:w-14 lg:text-3xl ${
+                  className={`juice-bounce flex h-12 w-12 items-center justify-center rounded-xl transition active:scale-90 lg:h-14 lg:w-14 ${
                     activeGlyph === s.token ? 'bg-rose-100 ring-4 ring-rose-200' : 'bg-rose-50 ring-1 ring-rose-100'
                   }`}
                 >
-                  <span aria-hidden="true">{s.token}</span>
+                  <DecorMark token={s.token} />
                 </button>
               ))}
             </div>
@@ -194,17 +200,76 @@ export default function DecorateGame({
 
       {done ? (
         <p className="mt-4 text-center text-sm font-black text-rose-600 sm:text-lg">
-          🎉 {childName}의 작품! {successMsg}
+          {childName}의 작품! {successMsg}
         </p>
       ) : (
-        <button
-          type="button"
-          onClick={finish}
-          className="mt-5 min-h-[52px] w-full rounded-2xl bg-rose-500 px-5 py-3 text-base font-black text-white shadow-lg shadow-rose-200 transition hover:bg-rose-600 active:scale-[0.99] lg:min-h-[60px] lg:text-lg"
-        >
-          내 선물 완성하기
-        </button>
+        <div className="mt-5">
+          {!canFinish && (
+            <p className="mb-2 text-center text-sm font-bold text-rose-500">
+              장식을 하나 놓으면 모리가 작품으로 기록해줄게.
+            </p>
+          )}
+          <button
+            type="button"
+            disabled={!canFinish}
+            onClick={finish}
+            className="min-h-[52px] w-full rounded-2xl bg-rose-500 px-5 py-3 text-base font-black text-white shadow-lg shadow-rose-200 transition hover:bg-rose-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-rose-100 disabled:text-rose-400 disabled:shadow-none lg:min-h-[60px] lg:text-lg"
+          >
+            {canFinish ? '내 선물 완성하기' : '장식을 하나 놓아봐'}
+          </button>
+        </div>
       )}
     </section>
   );
+}
+
+function GiftIllustration() {
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute left-1/2 top-1/2 flex h-28 w-32 -translate-x-1/2 -translate-y-1/2 items-end justify-center lg:h-40 lg:w-44"
+    >
+      <span className="absolute bottom-0 h-[72%] w-full rounded-2xl bg-white/75 shadow-lg ring-2 ring-white/80" />
+      <span className="absolute bottom-0 h-[72%] w-[20%] bg-rose-300/75" />
+      <span className="absolute bottom-[46%] h-[18%] w-full bg-rose-300/75" />
+      <span className="absolute bottom-[66%] left-[24%] h-[28%] w-[24%] -rotate-12 rounded-full border-[10px] border-rose-300/75 bg-transparent lg:border-[14px]" />
+      <span className="absolute bottom-[66%] right-[24%] h-[28%] w-[24%] rotate-12 rounded-full border-[10px] border-rose-300/75 bg-transparent lg:border-[14px]" />
+    </span>
+  );
+}
+
+function DecorMark({
+  token,
+  className = '',
+  style,
+}: {
+  token: string;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const mark = decorMark(token);
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-2xl font-black text-rose-500 shadow-sm ring-1 ring-rose-100 lg:h-12 lg:w-12 lg:text-3xl ${className}`}
+      style={style}
+    >
+      {mark}
+    </span>
+  );
+}
+
+function decorMark(token: string): string {
+  const normalized = token.replace(/\ufe0f/g, '');
+  const marks: Record<string, string> = {
+    '⭐': '★',
+    '❤️': '♥',
+    '🌸': '✿',
+    '🔶': '◆',
+    '🎀': '∞',
+    '✨': '✦',
+    '🌟': '✶',
+    '🍓': '●',
+  };
+  return marks[token] ?? marks[normalized] ?? '•';
 }

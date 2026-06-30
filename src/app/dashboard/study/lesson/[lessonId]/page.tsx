@@ -10,7 +10,7 @@ type LessonWithDerivedStatus = LessonWithProgress & { derived_status?: string };
 
 function LoadingScreen() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-violet-50">
+    <div className="flex min-h-screen items-center justify-center bg-sagebg">
       <p className="text-sm font-medium text-gray-400">로딩 중...</p>
     </div>
   );
@@ -49,7 +49,7 @@ function LessonPageContent() {
         if (cancelled) return;
 
         if (!res.ok) {
-          setError('차시 정보를 불러오지 못했어요.');
+          setError('활동 정보를 불러오지 못했어요.');
           setLesson(null);
           return;
         }
@@ -60,10 +60,10 @@ function LessonPageContent() {
           .find((item) => item.id === lessonId) as LessonWithDerivedStatus | undefined;
 
         setLesson(found ?? null);
-        setError(found ? null : '차시를 찾을 수 없어요.');
+        setError(found ? null : '활동을 찾을 수 없어요.');
       } catch {
         if (!cancelled) {
-          setError('차시 정보를 불러오지 못했어요.');
+          setError('활동 정보를 불러오지 못했어요.');
           setLesson(null);
         }
       } finally {
@@ -82,14 +82,14 @@ function LessonPageContent() {
 
   if (error || !lesson) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-violet-50 px-6">
+      <div className="flex min-h-screen items-center justify-center bg-sagebg px-6">
         <div className="text-center">
-          <p className="text-sm font-medium text-gray-500">{error ?? '차시를 찾을 수 없어요.'}</p>
+          <p className="text-sm font-medium text-gray-500">{error ?? '활동을 찾을 수 없어요.'}</p>
           <Link
             href={`/dashboard/study/${encodeURIComponent(syllabusId)}?childId=${encodeURIComponent(childId)}`}
-            className="mt-4 inline-flex min-h-[44px] items-center rounded-xl bg-violet-500 px-6 text-sm font-bold text-white transition hover:bg-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
+            className="mt-4 inline-flex min-h-[44px] items-center rounded-xl bg-saged px-6 text-sm font-bold text-white transition hover:bg-saged focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
           >
-            진도표로 돌아가기
+            학습표로 돌아가기
           </Link>
         </div>
       </div>

@@ -1,6 +1,6 @@
-// 국어·독서 5-7세 미취학 커리큘럼 콘텐츠 데이터.
+// 국어·독서 5-7세 미취학 학습 과정 콘텐츠 데이터.
 // scripts/seed-syllabus.ts 가 이 데이터를 읽어 syllabus/units/lessons 를 채운다.
-// 차시 진행: 한글 인지 -> 자음·모음 -> 낱말 읽기 -> 짧은 문장·독해.
+// 활동 진행: 한글 인지 -> 자음·모음 -> 낱말 읽기 -> 짧은 문장·독해.
 
 export interface SeedLesson {
   title: string;
@@ -34,7 +34,7 @@ export const KOREAN_PRESCHOOL_SYLLABUS: SeedSyllabus = {
   level_code: 'K-READ-1',
   title: '국어·독서 — 한글 떼기 첫걸음 (5-7세)',
   description:
-    '소리와 글자에 친해지는 것부터 짧은 이야기를 읽는 것까지, 미취학 아이의 한글·독서 4단원 커리큘럼.',
+    '소리와 글자에 친해지는 것부터 짧은 이야기를 읽는 것까지, 미취학 아이의 한글·독서 4단원 학습 과정.',
   units: [
     {
       title: '1단원 · 한글이랑 친해지기',

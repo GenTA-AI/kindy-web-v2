@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import LibraryPlayer from '@/components/LibraryPlayer';
+import MoriCharacter from '@/components/MoriCharacter';
 import EmotionExpressionGame from '@/components/game/EmotionExpressionGame';
 import PuzzleGame from '@/components/game/PuzzleGame';
 import HiddenFriendGame from '@/components/game/HiddenFriendGame';
@@ -13,6 +15,7 @@ import { emitGameEvent } from '@/lib/game/events-client';
 import { nextDifficulty, planRound } from '@/lib/game/engine';
 import { applyReward, rewardForRound } from '@/lib/game/rewards';
 import { aggregateSelActivities, dialogueStarters } from '@/lib/game/sel-report';
+import { withJosa } from '@/lib/josa';
 import { useVoice } from '@/lib/useVoice';
 import {
   CHARACTERS,
@@ -35,24 +38,20 @@ import type {
 type SessionContext = 'home' | 'kiosk';
 type SessionStage = 'intro' | 'video' | 'transition' | 'round' | 'gate' | 'complete';
 
-// 시즌 "나만의 이야기" 진행: 이번 세션 = 1칸. 시즌 총 칸수 prop 이 없으면 placeholder 5칸.
-const STORYBOOK_TOTAL_SLOTS_FALLBACK = 5;
-const STORYBOOK_SESSION_SLOTS = 1;
-
 // 부모 대화 스타터 정적 폴백(SEL 프레이밍 · 효능/점수 클레임 없음).
 const DIALOGUE_STARTER_FALLBACK =
   '오늘 이야기에서 친구를 어떻게 도와줄 수 있을지 같이 얘기해보세요.';
 
 const ACT_COPY: Record<SessionAct, { kicker: string; videoLead: string; transition: string }> = {
   emotion: {
-    kicker: '1막 · 마음 이야기',
-    videoLead: '먼저 오늘의 마음 이야기를 볼까요?',
-    transition: '오늘의 마음을 함께 살펴봐요.',
+    kicker: '첫 번째 문 · 마음 단서',
+    videoLead: '모리와 친구 마음을 천천히 살펴볼까요?',
+    transition: '마음 단서를 함께 살펴봐요.',
   },
   creativity: {
-    kicker: '2막 · 나만의 방법',
-    videoLead: '이제 나만의 방법을 찾아볼까?',
-    transition: '이제 나만의 방법을 만들어볼까?',
+    kicker: '두 번째 문 · 나만의 방법',
+    videoLead: '이제 아이만의 방법을 찾아볼까요?',
+    transition: '이제 나만의 방법을 만들어볼까요?',
   },
 };
 
@@ -72,7 +71,7 @@ interface SessionShellProps {
   villageSession?: VillageSession;
 }
 
-const REPROMPT_DELAY_MS = 8000;
+const REPROMPT_DELAY_MS = 15000;
 const INITIAL_COLLECTION: CollectionState = {
   total_stars: 0,
   stickers: [],
@@ -170,7 +169,7 @@ function useContingentReprompt(activeKey: string | null) {
 }
 
 function rewardSummary(delta: RewardDelta | null): string {
-  if (!delta) return '이번 판 보상을 정리하고 있어요.';
+  if (!delta) return '오늘 놀이 기록을 정리하고 있어요.';
 
   const parts = [
     delta.stars > 0 ? `별 ${delta.stars}개` : null,
@@ -178,7 +177,7 @@ function rewardSummary(delta: RewardDelta | null): string {
     delta.collection_unlocks.length > 0 ? `컬렉션 ${uniqueCount(delta.collection_unlocks)}칸` : null,
   ].filter(Boolean);
 
-  return parts.length > 0 ? parts.join(' · ') : '끝까지 해낸 기록이 남았어요.';
+  return parts.length > 0 ? parts.join(' · ') : '끝까지 살펴본 기록이 남았어요.';
 }
 
 function durationLabel(seconds: number): string {
@@ -233,8 +232,9 @@ export default function SessionShell({
   const [difficulty, setDifficulty] = useState(() => rounds[0]?.params.difficulty ?? 1);
   const [collectionState, setCollectionState] = useState<CollectionState>(INITIAL_COLLECTION);
   const [lastDelta, setLastDelta] = useState<RewardDelta | null>(null);
-  const [lastResult, setLastResult] = useState<GameRoundResult | null>(null);
   const [completedRounds, setCompletedRounds] = useState(0);
+  const [isSavingRound, setIsSavingRound] = useState(false);
+  const [recordingIssue, setRecordingIssue] = useState(false);
   // 부모 대화 스타터 생성을 위해 세션 동안 누적하는 라운드 결과.
   const [roundResults, setRoundResults] = useState<GameRoundResult[]>([]);
   const gameSessionIdRef = useRef<string | null>(null);
@@ -264,6 +264,9 @@ export default function SessionShell({
   const activeRoundKey = stage === 'round' && currentRound
     ? `${sessionKey}:${currentRound.round_index}:${currentRound.game_type}`
     : null;
+  const childQuery = childId ? `?childId=${encodeURIComponent(childId)}` : '';
+  const reportHref = childQuery ? `/dashboard/report${childQuery}` : null;
+  const libraryHref = childQuery ? `/library${childQuery}` : null;
   const { markResponded, reprompted, repromptVisible } = useContingentReprompt(activeRoundKey);
   const currentVideoIndex = currentAct ? actVideoIndex(actCursor) : -1;
   const currentVideo = currentVideoIndex >= 0 ? playableVideos[currentVideoIndex] : null;
@@ -321,10 +324,10 @@ export default function SessionShell({
 
   const emitCompletionOnce = useCallback(
     async (state: CollectionState, sessionIdOverride?: string | null) => {
-      if (completedSessionRef.current) return;
+      if (completedSessionRef.current) return true;
       completedSessionRef.current = true;
 
-      await emitSessionEvent(
+      const result = await emitSessionEvent(
         {
           type: 'game_completed',
           payload: {
@@ -336,6 +339,7 @@ export default function SessionShell({
         },
         sessionIdOverride,
       );
+      return result.ok;
     },
     [emitSessionEvent, rounds.length],
   );
@@ -343,6 +347,7 @@ export default function SessionShell({
   const handleRoundComplete = useCallback(
     async (rawResult: GameRoundResult) => {
       if (!currentRound) return;
+      setIsSavingRound(true);
 
       const result: GameRoundResult = {
         ...rawResult,
@@ -359,7 +364,6 @@ export default function SessionShell({
 
       setCollectionState(nextState);
       setLastDelta(delta);
-      setLastResult(resultWithReward);
       setCompletedRounds(nextRoundCount);
       setRoundResults((prev) => [...prev, resultWithReward]);
       setDifficulty(nextDifficulty(difficulty, resultWithReward));
@@ -371,31 +375,38 @@ export default function SessionShell({
       if (currentActivity) speakLine(activityVoiceId(currentActivity.id, 'praise'), praise);
       setStage('gate');
 
-      const roundEvent = await emitSessionEvent({
-        type: 'game_round_completed',
-        round_index: currentRound.round_index,
-        result: resultWithReward,
-      });
-      const activeSessionId = roundEvent.game_session_id ?? gameSessionIdRef.current;
+      try {
+        const roundEvent = await emitSessionEvent({
+          type: 'game_round_completed',
+          round_index: currentRound.round_index,
+          result: resultWithReward,
+        });
+        if (!roundEvent.ok) setRecordingIssue(true);
+        const activeSessionId = roundEvent.game_session_id ?? gameSessionIdRef.current;
 
-      if (collectionCount(nextState) > collectionCount(previousState)) {
-        await emitSessionEvent(
-          {
-            type: 'collection_progress',
-            round_index: currentRound.round_index,
-            payload: {
-              delta,
-              total_stars: nextState.total_stars,
-              stickers_count: nextState.stickers.length,
-              collection_count: collectionCount(nextState),
+        if (collectionCount(nextState) > collectionCount(previousState)) {
+          const collectionEvent = await emitSessionEvent(
+            {
+              type: 'collection_progress',
+              round_index: currentRound.round_index,
+              payload: {
+                delta,
+                total_stars: nextState.total_stars,
+                stickers_count: nextState.stickers.length,
+                collection_count: collectionCount(nextState),
+              },
             },
-          },
-          activeSessionId,
-        );
-      }
+            activeSessionId,
+          );
+          if (!collectionEvent.ok) setRecordingIssue(true);
+        }
 
-      if (isFinalRound) {
-        await emitCompletionOnce(nextState, activeSessionId);
+        if (isFinalRound) {
+          const completionOk = await emitCompletionOnce(nextState, activeSessionId);
+          if (!completionOk) setRecordingIssue(true);
+        }
+      } finally {
+        setIsSavingRound(false);
       }
     },
     [
@@ -422,8 +433,6 @@ export default function SessionShell({
     }
 
     setLastDelta(null);
-    setLastResult(null);
-
     // 같은 막 안의 다음 라운드 → 영상 없이 바로 라운드.
     if (!isLastRoundOfAct) {
       setRoundCursor((value) => value + 1);
@@ -488,21 +497,22 @@ export default function SessionShell({
   }, [stage, isVillage, villageSession, speakLine]);
 
   function gateButtonLabel(): string {
-    if (isFinalRound) return '획득물 요약 보기';
+    if (isFinalRound) return '오늘 기록 보기';
     if (isLastRoundOfAct && hasNextAct) {
-      return actVideoIndex(actCursor + 1) >= 0 ? '다음 영상 볼래' : '이제 나만의 방법 만들기';
+      return actVideoIndex(actCursor + 1) >= 0 ? '다음 문 열래' : '나만의 방법 만들래';
     }
-    return '다음 놀이 할래';
+    return '다음 단서 볼래';
   }
 
   if (rounds.length === 0) {
     return (
-      <main className="min-h-screen bg-violet-50 px-6 py-10">
+      <main className="min-h-screen bg-cream px-6 py-10">
         <section className="mx-auto max-w-md rounded-3xl bg-white p-6 text-center shadow-sm">
-          <p className="text-sm font-bold text-violet-500">놀이 준비 중</p>
-          <h1 className="mt-2 text-2xl font-black text-gray-900">오늘 라운드가 아직 없어요</h1>
-          <p className="mt-3 text-sm font-medium leading-relaxed text-gray-500">
-            곧 영상 뒤에 이어질 놀이를 불러올게요.
+          <MoriCharacter className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-line bg-white" imageClassName="scale-125" label="모리" withGlow={false} />
+          <p className="mt-4 text-sm font-bold text-sage">이야기 준비 중</p>
+          <h1 className="mt-2 text-2xl font-black text-ink">오늘 볼 이야기를 고르고 있어요</h1>
+          <p className="mt-3 text-sm font-medium leading-relaxed text-ink2">
+            모리가 곧 이어질 놀이 문을 찾고 있어요.
           </p>
         </section>
       </main>
@@ -517,32 +527,26 @@ export default function SessionShell({
     // (b) 부모 대화 스타터: 세션 누적 라운드 결과로 1개 생성, 없으면 정적 폴백.
     const sessionStarters = dialogueStarters(aggregateSelActivities(roundResults));
     const dialogueStarter = sessionStarters[0] ?? DIALOGUE_STARTER_FALLBACK;
-    // (a) "나만의 이야기" 진행: 이번 세션 = 1칸 (시즌 총 칸수 placeholder).
-    const storybookTotal = STORYBOOK_TOTAL_SLOTS_FALLBACK;
-    const storybookFilled = Math.min(STORYBOOK_SESSION_SLOTS, storybookTotal);
-
     return (
-      <main className="min-h-screen bg-violet-50 px-6 pb-24 pt-10">
+      <main className="min-h-screen bg-cream px-6 pb-24 pt-10">
         <JuiceBurst fireKey={juiceKey} variant="confetti" />
         <div className="mx-auto max-w-md space-y-4 lg:max-w-2xl">
           {/* 동물 마을 클로저 — 도와준 친구의 환한 마무리 + 음성. */}
           {isVillage && villageSession && (
-            <section className="rounded-3xl bg-gradient-to-br from-amber-400 to-amber-300 p-6 text-center text-amber-950 shadow-sm">
-              <div className="text-5xl" aria-hidden="true">
-                {CHARACTERS[villageSession.closing.narratorId].emoji}🎉
-              </div>
+            <section className="rounded-3xl bg-sagebg p-6 text-center text-saged shadow-sm">
+              <MoriCharacter className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-white bg-white" imageClassName="scale-125" label="모리" withGlow={false} />
               <h1 className="mt-3 text-2xl font-black leading-snug">{villageSession.closing.line}</h1>
             </section>
           )}
           <section className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-violet-500">획득물 요약</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-sage">오늘 놀이는 여기까지</p>
             <h1 className="mt-2 text-2xl font-black leading-tight text-gray-900">
-              {childName}의 오늘 세션
+              {childName}의 오늘 놀이가 끝났어요
             </h1>
             <div className="mt-5 grid grid-cols-3 gap-2">
-              <div className="rounded-2xl bg-violet-50 p-3 text-center">
-                <p className="text-xl font-black text-violet-700">{collectionState.total_stars}</p>
-                <p className="mt-1 text-xs font-bold text-violet-500">별</p>
+              <div className="rounded-2xl bg-sagebg p-3 text-center">
+                <p className="text-xl font-black text-saged">{collectionState.total_stars}</p>
+                <p className="mt-1 text-xs font-bold text-sage">빛</p>
               </div>
               <div className="rounded-2xl bg-amber-50 p-3 text-center">
                 <p className="text-xl font-black text-amber-700">{collectionState.stickers.length}</p>
@@ -550,37 +554,42 @@ export default function SessionShell({
               </div>
               <div className="rounded-2xl bg-emerald-50 p-3 text-center">
                 <p className="text-xl font-black text-emerald-700">{collectionCount(collectionState)}</p>
-                <p className="mt-1 text-xs font-bold text-emerald-600">컬렉션</p>
+                <p className="mt-1 text-xs font-bold text-emerald-600">꽃</p>
               </div>
             </div>
             <p className="mt-5 text-sm font-semibold leading-relaxed text-gray-600">
-              영상 {watchedVideoCount}번, 놀이 {completedRounds}번을 마쳤어요.
+              이야기 문 {watchedVideoCount}번, 단서 놀이 {completedRounds}번을 지나왔어요. 이제 보호자에게 보여줄 준비가 됐어요.
             </p>
           </section>
 
           {/* (a) 나만의 이야기 진행 칸 */}
           <section className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-violet-500">나만의 이야기</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-sage">나만의 이야기 나무</p>
             <h2 className="mt-2 text-lg font-black leading-snug text-gray-900">
-              오늘 이야기 완성! 🧩 나만의 이야기가 한 칸 채워졌어요
+              오늘 이야기가 한 칸 자랐어요
             </h2>
-            <div className="mt-4 flex gap-1.5" aria-label={`나만의 이야기 ${storybookTotal}칸 중 ${storybookFilled}칸`}>
-              {Array.from({ length: storybookTotal }, (_, i) => (
-                <div
-                  key={i}
-                  className={`h-2.5 flex-1 rounded-full ${i < storybookFilled ? 'bg-violet-500' : 'bg-violet-100'}`}
-                />
-              ))}
+            <div className="mt-4 rounded-full bg-mist p-1" aria-label="오늘 이야기 완료">
+              <div className="h-2.5 rounded-full bg-saged" />
             </div>
             <p className="mt-3 text-xs font-medium leading-relaxed text-gray-500">
-              이번 시즌 이야기책이 한 칸씩 채워지고 있어요.
+              다음 이야기는 보호자와 함께 고르면 이어집니다.
             </p>
           </section>
 
-          {/* (b) 부모 대화 스타터 1개 */}
+          <section className="rounded-3xl border border-line bg-white p-6 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-wider text-clay">잠깐 쉬는 문</p>
+            <h2 className="mt-2 text-lg font-black leading-snug text-gray-900">
+              모리는 오늘 여기서 멈출게요
+            </h2>
+            <p className="mt-3 text-sm font-semibold leading-relaxed text-gray-600">
+              다음 이야기는 보호자가 기록을 보고 함께 골라요.
+            </p>
+          </section>
+
+          {/* (b) 보호자 대화 스타터 1개 */}
           <section className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-violet-500">오늘 이렇게 물어보세요</p>
-            <p className="mt-3 rounded-2xl bg-violet-50 p-4 text-sm font-semibold leading-relaxed text-gray-700">
+            <p className="text-xs font-bold uppercase tracking-wider text-sage">보호자와 나눌 말</p>
+            <p className="mt-3 rounded-2xl bg-sagebg p-4 text-sm font-semibold leading-relaxed text-gray-700">
               {dialogueStarter}
             </p>
             <p className="mt-3 text-xs font-medium leading-relaxed text-gray-400">
@@ -589,15 +598,45 @@ export default function SessionShell({
           </section>
 
           {/* (c) 다음 이야기 예고 (open loop) */}
-          <section className="rounded-3xl bg-gradient-to-br from-violet-500 to-violet-400 p-6 text-white shadow-sm">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-violet-100">다음 이야기</p>
+          <section className="rounded-3xl bg-saged p-6 text-white shadow-sm">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-white/70">다음 이야기</p>
             <h2 className="mt-2 text-lg font-black leading-snug">
-              다음엔 새로운 모험이 {childName}를 기다려요
+              다음 문은 보호자와 함께 열어요
             </h2>
-            <p className="mt-2 text-sm font-medium leading-relaxed text-violet-100">
-              다음 이야기에서 또 새로운 친구와 만나요.
+            <p className="mt-2 text-sm font-medium leading-relaxed text-white/78">
+              모리가 {withJosa(childName, '에게')} 잘 맞는 이야기를 기록장에 남겨둘게요.
             </p>
           </section>
+
+          {recordingIssue && (
+            <section className="rounded-3xl border border-clay/30 bg-white p-5 shadow-sm">
+              <p className="text-sm font-black text-clay">기록 연결을 한 번 더 확인해 주세요</p>
+              <p className="mt-2 text-xs font-semibold leading-relaxed text-gray-500">
+                놀이 화면은 끝났지만 연결이 느려 기록 반영이 늦을 수 있어요. 보호자 기록에서 새로고침하면 다시 확인할 수 있습니다.
+              </p>
+            </section>
+          )}
+
+          {(reportHref || libraryHref) && (
+            <nav className="grid gap-3 sm:grid-cols-2" aria-label="세션 완료 후 이동">
+              {reportHref && (
+                <Link
+                  href={reportHref}
+                  className="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-saged px-5 text-center text-base font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
+                >
+                  보호자에게 보여주기
+                </Link>
+              )}
+              {libraryHref && (
+                <Link
+                  href={libraryHref}
+                  className="inline-flex min-h-[52px] items-center justify-center rounded-2xl border border-line bg-white px-5 text-center text-base font-black text-saged transition hover:bg-mist active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
+                >
+                  보호자와 이야기 고르기
+                </Link>
+              )}
+            </nav>
+          )}
 
           <RewardMeta state={collectionState} lastDelta={lastDelta} totalSlots={totalSlots} />
         </div>
@@ -606,21 +645,21 @@ export default function SessionShell({
   }
 
   return (
-    <main className="relative min-h-screen bg-violet-50 px-4 pb-24 pt-4 sm:px-6 lg:pb-10">
+    <main className="relative min-h-screen bg-cream px-4 pb-24 pt-4 sm:px-6 lg:pb-10">
       {/* 정답/완료 별 팡(juice) — 전체 화면 오버레이, 조작 방해 없음. */}
       <JuiceBurst fireKey={juiceKey} variant="confetti" />
       {/* 아이패드 가로(landscape) 우선: 넓은 컨테이너 + 상단 바. 세로도 반응형 유지. */}
       <div className="mx-auto max-w-md lg:max-w-5xl">
-        <header className="mb-4 rounded-3xl bg-white p-4 shadow-sm sm:p-5">
+        <header className="mb-4 rounded-3xl border border-line bg-white p-4 shadow-sm sm:p-5">
           {/* 가로: 제목 + 진행 칩 + 음소거를 한 줄 상단 바로. 세로: 쌓임. */}
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center justify-between gap-3 lg:justify-start">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-violet-500">
-                  {isVillage ? '동물 마을' : 'Kindy Play'}
+                <p className="text-xs font-bold uppercase tracking-wider text-sage">
+                  {isVillage ? `${childName}의 이야기 숲` : 'Kindy Play'}
                 </p>
                 <h1 className="mt-1 text-xl font-black leading-tight text-gray-900 sm:text-2xl">
-                  {isVillage ? villageSession?.title ?? '동물 마을' : `${childName}의 영상 놀이`}
+                  {isVillage ? villageSession?.title ?? '오늘의 이야기' : `${childName}의 영상 놀이`}
                 </h1>
               </div>
               {voiceSupported && (
@@ -629,26 +668,16 @@ export default function SessionShell({
                   onClick={toggleMute}
                   aria-pressed={muted}
                   aria-label={muted ? '소리 켜기' : '소리 끄기'}
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-50 text-2xl transition hover:bg-violet-100 lg:hidden"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sagebg text-2xl transition hover:bg-mist lg:hidden"
                 >
                   <span aria-hidden="true">{muted ? '🔇' : '🔊'}</span>
                 </button>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <div className="grid flex-1 grid-cols-3 gap-2 text-center lg:flex lg:flex-none lg:gap-3">
-                <div className="rounded-2xl bg-violet-50 px-4 py-3">
-                  <p className="text-lg font-black text-violet-700">{completedRounds}/{rounds.length}</p>
-                  <p className="mt-1 text-xs font-bold text-violet-500">라운드</p>
-                </div>
-                <div className="rounded-2xl bg-amber-50 px-4 py-3">
-                  <p className="text-lg font-black text-amber-700">{collectionState.total_stars}</p>
-                  <p className="mt-1 text-xs font-bold text-amber-600">별</p>
-                </div>
-                <div className="rounded-2xl bg-emerald-50 px-4 py-3">
-                  <p className="text-lg font-black text-emerald-700">{collectionCount(collectionState)}</p>
-                  <p className="mt-1 text-xs font-bold text-emerald-600">모음</p>
-                </div>
+              <div className="rounded-full bg-sagebg px-4 py-3 text-center">
+                <p className="text-lg font-black text-saged">{completedRounds}/{rounds.length}</p>
+                <p className="mt-0.5 text-[11px] font-black text-sage">오늘 단서</p>
               </div>
               {voiceSupported && (
                 <button
@@ -656,35 +685,51 @@ export default function SessionShell({
                   onClick={toggleMute}
                   aria-pressed={muted}
                   aria-label={muted ? '소리 켜기' : '소리 끄기'}
-                  className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-full bg-violet-50 text-2xl transition hover:bg-violet-100 lg:flex"
+                  className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-full bg-sagebg text-2xl transition hover:bg-mist lg:flex"
                 >
                   <span aria-hidden="true">{muted ? '🔇' : '🔊'}</span>
                 </button>
               )}
             </div>
           </div>
+          {isVillage && (
+            <div
+              aria-label={`오늘 단서 ${completedRounds}개 완료`}
+              aria-valuemax={rounds.length}
+              aria-valuemin={0}
+              aria-valuenow={completedRounds}
+              className="mt-4 h-2 overflow-hidden rounded-full bg-sagebg"
+              role="progressbar"
+            >
+              <div
+                className="h-full rounded-full bg-saged transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.round((completedRounds / Math.max(1, rounds.length)) * 100))}%` }}
+              />
+            </div>
+          )}
         </header>
 
         {/* 아이패드 가로 권장 힌트 — 세로(좁은 화면)에서만, 가로 화면에선 숨김. */}
         {isVillage && (
-          <div className="mb-4 rounded-2xl bg-violet-100/70 px-4 py-2 text-center text-xs font-bold text-violet-700 portrait:block landscape:hidden lg:hidden">
-            태블릿을 가로로 돌리면 더 크고 편하게 즐길 수 있어요 📱↔️
+          <div className="mb-4 rounded-2xl bg-sagebg px-4 py-2 text-center text-xs font-bold text-saged portrait:block landscape:hidden lg:hidden">
+            화면을 가로로 보면 숲길이 더 넓게 보여요
           </div>
         )}
 
         {stage === 'intro' && (
-          <section className="mx-auto rounded-3xl bg-white p-6 text-center shadow-sm sm:p-8 lg:max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-wider text-violet-500">오늘의 이야기</p>
+          <section className="mx-auto rounded-3xl border border-line bg-white p-6 text-center shadow-sm sm:p-8 lg:max-w-2xl">
+            <MoriCharacter className="mx-auto h-28 w-28 overflow-hidden rounded-full border border-line bg-white" imageClassName="scale-125" label="모리" withGlow={false} />
+            <p className="mt-4 text-xs font-bold uppercase tracking-wider text-sage">오늘의 이야기</p>
             {isVillage && villageSession ? (
               <>
-                <div className="mt-2 text-5xl" aria-hidden="true">
-                  {CHARACTERS[villageSession.heroCharacter].emoji}
-                </div>
                 <h2 className="mt-3 text-2xl font-black leading-tight text-gray-900">{villageSession.title}</h2>
+                <p className="mt-2 text-sm font-bold leading-relaxed text-gray-500">
+                  {withJosa(childName, '와/과')} 모리가 오늘의 문을 함께 열어요.
+                </p>
                 <div className="mt-4 space-y-2 text-left">
                   {villageSession.intro.map((scene, i) => (
-                    <div key={i} className="rounded-2xl bg-violet-50 p-3">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-violet-500">
+                    <div key={i} className="rounded-2xl bg-mist p-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-sage">
                         {CHARACTERS[scene.narratorId].name}
                       </p>
                       <p className="mt-0.5 text-sm font-bold text-gray-800">{scene.line}</p>
@@ -695,14 +740,14 @@ export default function SessionShell({
             ) : (
               <>
                 <h2 className="mt-2 text-2xl font-black leading-tight text-gray-900">
-                  {childName}, 오늘 이야기를 만나러 가요
+                  {childName}, 오늘 이야기를 들어볼까요?
                 </h2>
                 <p className="mt-3 text-sm font-medium leading-relaxed text-gray-500">
-                  이야기를 보고 함께 놀이하며 생각하는 힘을 키워요.
+                  모리와 이야기를 보고, 한 가지씩 살펴보고, 내 방법을 만들어봐요.
                 </p>
                 {introVideo && (
-                  <div className="mt-5 rounded-2xl bg-violet-50 p-4 text-left">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-violet-500">
+                  <div className="mt-5 rounded-2xl bg-mist p-4 text-left">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-sage">
                       {ACT_COPY.emotion.kicker}
                     </p>
                     <p className="mt-1 text-base font-black leading-snug text-gray-900">{introVideo.title}</p>
@@ -718,15 +763,15 @@ export default function SessionShell({
                 }
                 startSession();
               }}
-              className="mt-6 inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-violet-600 px-6 text-base font-black text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
+              className="mt-6 inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-saged px-6 text-base font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
             >
-              시작할래
+              문 열래
             </button>
           </section>
         )}
 
         {stage === 'video' && currentVideo && (
-          <section aria-labelledby="session-video-title" className="mx-auto overflow-hidden rounded-3xl bg-white shadow-sm lg:max-w-3xl">
+          <section aria-labelledby="session-video-title" className="mx-auto overflow-hidden rounded-3xl border border-line bg-white shadow-sm lg:max-w-3xl">
             <LibraryPlayer
               key={`${currentVideo.id}:${actCursor}`}
               videoUrl={currentVideo.video_url}
@@ -735,13 +780,13 @@ export default function SessionShell({
               onEnded={startActRounds}
             />
             <div className="p-5">
-              <p className="text-xs font-bold uppercase tracking-wider text-violet-500">
+              <p className="text-xs font-bold uppercase tracking-wider text-sage">
                 {ACT_COPY[currentActPhase].kicker} · {durationLabel(currentVideo.duration_sec)}
               </p>
               <h2 id="session-video-title" className="mt-1 text-xl font-black leading-tight text-gray-900">
                 {currentVideo.title}
               </h2>
-              <p className="mt-2 text-sm font-semibold leading-relaxed text-violet-600">
+              <p className="mt-2 text-sm font-semibold leading-relaxed text-saged">
                 {ACT_COPY[currentActPhase].videoLead}
               </p>
               {currentVideo.description && (
@@ -753,24 +798,22 @@ export default function SessionShell({
               <button
                 type="button"
                 onClick={startActRounds}
-                className="mt-4 inline-flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-violet-600 px-6 text-sm font-black text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
+                className="mt-4 inline-flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-saged px-6 text-sm font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
               >
-                놀이 시작할래
+                단서 놀이 할래
               </button>
             </div>
           </section>
         )}
 
         {stage === 'transition' && currentAct && (
-          <section className="mx-auto rounded-3xl bg-white p-6 text-center shadow-sm sm:p-8 lg:max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-wider text-violet-500">
+          <section className="mx-auto rounded-3xl border border-line bg-white p-6 text-center shadow-sm sm:p-8 lg:max-w-2xl">
+            <MoriCharacter className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-line bg-white" imageClassName="scale-125" label="모리" withGlow={false} />
+            <p className="mt-4 text-xs font-bold uppercase tracking-wider text-sage">
               {ACT_COPY[currentActPhase].kicker}
             </p>
             {isVillage && villageSession ? (
               <>
-                <div className="mt-2 text-4xl" aria-hidden="true">
-                  {CHARACTERS[villageSession.transition.narratorId].emoji}
-                </div>
                 <h2 className="mt-3 text-xl font-black leading-snug text-gray-900">
                   {villageSession.transition.line}
                 </h2>
@@ -788,9 +831,9 @@ export default function SessionShell({
                 }
                 startActRounds();
               }}
-              className="mt-6 inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-violet-600 px-6 text-base font-black text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
+              className="mt-6 inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-saged px-6 text-base font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
             >
-              좋아, 시작할래
+              좋아, 열어볼래
             </button>
           </section>
         )}
@@ -802,24 +845,24 @@ export default function SessionShell({
             onKeyDownCapture={markResponded}
             onPointerDownCapture={markResponded}
           >
-            <section className="rounded-3xl bg-white p-4 shadow-sm sm:p-5 lg:p-7">
+            <section className="rounded-3xl border border-line bg-white p-4 shadow-sm sm:p-5 lg:p-7">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold text-violet-500 sm:text-sm">
-                    {roundCursor + 1}번째 놀이 · {currentActPhase === 'emotion' ? '마음 이야기' : '나만의 방법'}
+                  <p className="text-xs font-bold text-sage sm:text-sm">
+                    {roundCursor + 1}번째 단서 · {currentActPhase === 'emotion' ? '마음 문' : '만드는 문'}
                   </p>
                   <h2 className="mt-1 text-lg font-black text-gray-900 sm:text-2xl">
                     {currentActivity?.title ?? currentRound.tag.objective_label_ko}
                   </h2>
                 </div>
-                <span className="inline-flex min-h-[44px] items-center rounded-full bg-violet-50 px-4 text-2xl sm:text-3xl">
-                  {currentActivity ? CHARACTERS[currentActivity.leadCharacter].emoji : currentActPhase === 'emotion' ? '💛' : '🎨'}
+                <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sagebg ring-1 ring-line">
+                  <MoriCharacter className="h-full w-full" imageClassName="scale-125" label="모리" withGlow={false} />
                 </span>
               </div>
 
               {repromptVisible && (
                 <div aria-live="polite" className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-black text-amber-700">
-                  한 번 더 살펴볼까? 마음에 드는 것을 톡 골라봐.
+                  {currentActivity?.feedback.hint ?? '천천히 다시 보면 다른 단서가 보일지도 몰라요.'}
                 </div>
               )}
 
@@ -856,6 +899,8 @@ export default function SessionShell({
                 <EmotionExpressionGame
                   spec={currentRound}
                   childName={childName}
+                  activityTitle={currentActivity?.title}
+                  prompt={currentActivity?.prompt_ko}
                   clipPosterUrl={currentVideo?.thumbnail_url ?? null}
                   onComplete={(result) => {
                     void handleRoundComplete(result);
@@ -865,6 +910,7 @@ export default function SessionShell({
                 <PuzzleGame
                   spec={currentRound}
                   childName={childName}
+                  feedback={currentActivity?.feedback}
                   onComplete={(result) => {
                     void handleRoundComplete(result);
                   }}
@@ -878,9 +924,10 @@ export default function SessionShell({
 
         {stage === 'gate' && (
           <section className="mx-auto space-y-4 lg:max-w-2xl">
-            <div className="rounded-3xl bg-white p-6 text-center shadow-sm sm:p-8">
-              <p className="text-xs font-bold uppercase tracking-wider text-violet-500">
-                {lastResult ? `${lastResult.score ?? 0}/${lastResult.max_score ?? 0}` : '라운드 완료'}
+            <div className="rounded-3xl border border-line bg-white p-6 text-center shadow-sm sm:p-8">
+              <MoriCharacter className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-line bg-white" imageClassName="scale-125" label="모리" withGlow={false} />
+              <p className="mt-4 text-xs font-bold uppercase tracking-wider text-sage">
+                해냈어요
               </p>
               <h2 className="mt-2 text-2xl font-black text-gray-900">
                 {childName} 해냈어!
@@ -888,10 +935,11 @@ export default function SessionShell({
               <p className="mt-3 text-sm font-bold text-gray-600">{rewardSummary(lastDelta)}</p>
               <button
                 type="button"
+                disabled={isSavingRound}
                 onClick={continueAfterGate}
-                className="mt-6 inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-violet-600 px-6 text-base font-black text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
+                className="mt-6 inline-flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-saged px-6 text-base font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.99] disabled:cursor-wait disabled:bg-line disabled:text-ink3 disabled:shadow-none focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
               >
-                {gateButtonLabel()}
+                {isSavingRound ? '기록 남기는 중' : gateButtonLabel()}
               </button>
             </div>
 
@@ -900,7 +948,7 @@ export default function SessionShell({
         )}
       </div>
 
-      {/* 마스코트(토토) — 동물 마을에서 상시 표시, 상태별 반응 + 음성. (complete 화면은 별도 처리) */}
+      {/* 마스코트(모리) — 동물 마을에서 상시 표시, 상태별 반응 + 음성. (complete 화면은 별도 처리) */}
       {isVillage && (
         <Mascot mood={mascotMood} message={mascotMessage} />
       )}

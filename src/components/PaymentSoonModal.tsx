@@ -32,8 +32,8 @@ export default function PaymentSoonModal({ open, onClose, bundle }: PaymentSoonM
   if (!open) return null;
 
   const bundleLabel = bundle
-    ? `${bundle.label} (${bundle.priceKrw.toLocaleString()}원, ${bundle.credits}크레딧)`
-    : '선택하신 번들';
+    ? `${bundle.label} (${bundle.priceKrw.toLocaleString()}원)`
+    : '선택하신 이용권';
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center px-6" aria-modal="true" role="dialog">
@@ -41,19 +41,19 @@ export default function PaymentSoonModal({ open, onClose, bundle }: PaymentSoonM
         type="button"
         aria-label="닫기"
         onClick={onClose}
-        className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-ink/60 backdrop-blur-sm"
       />
 
-      <div className="relative w-full max-w-[375px] rounded-3xl bg-white p-6 text-left shadow-2xl">
+      <div className="relative w-full max-w-[375px] rounded-3xl border border-line bg-white p-6 text-left shadow-2xl">
         <div className="mb-5">
-          <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-violet-500">
-            Closed beta
+          <div className="mb-2 text-[11px] font-black uppercase tracking-[.16em] text-sage">
+            무료 체험 안내
           </div>
-          <h2 className="text-xl font-extrabold leading-[1.35] text-gray-900">
-            결제 시스템 준비 중
+          <h2 className="text-xl font-black leading-[1.35] text-ink">
+            지금은 무료 체험을 먼저 열어드려요
           </h2>
-          <p className="mt-3 text-sm font-medium leading-relaxed text-gray-600">
-            현재 클로즈드 베타 기간이에요. {bundleLabel} 결제는 곧 오픈해요.
+          <p className="mt-3 text-sm font-semibold leading-relaxed text-ink2">
+            {bundleLabel} 이용은 체험 기록을 본 뒤 이어서 안내할게요. 아이는 바로 모리 이야기를 시작할 수 있어요.
           </p>
         </div>
 
@@ -61,14 +61,14 @@ export default function PaymentSoonModal({ open, onClose, bundle }: PaymentSoonM
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-2xl bg-violet-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-violet-200/60 transition hover:bg-violet-600 active:scale-[0.98]"
+            className="w-full rounded-2xl bg-saged px-6 py-4 text-base font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.98]"
           >
-            알림 받기
+            무료 체험 계속하기
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-xl border border-violet-100 bg-violet-50 px-6 py-3 text-sm font-bold text-violet-600 transition hover:bg-violet-100 active:scale-[0.98]"
+            className="w-full rounded-xl border border-line bg-cream px-6 py-3 text-sm font-black text-saged transition hover:bg-mist active:scale-[0.98]"
           >
             닫기
           </button>

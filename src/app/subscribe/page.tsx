@@ -1,33 +1,57 @@
 import { redirect } from 'next/navigation';
-import { createServerClient } from '@/lib/supabase-server';
+import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { getSubscriptionState } from '@/lib/subscription';
+import { isSupabaseServiceConfigured } from '@/lib/supabase';
+import { createServerClient, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import SubscribeClient from './SubscribeClient';
 
 export const metadata = {
   title: 'Kindy 멤버십 - 월 구독',
-  description: '주 2회 새 에피소드, 초개인화 학습, 부모 리포트까지. 월 25,000원.',
+  description: '매주 새 모리 이야기와 놀이 기록, 보호자 대화 힌트까지. 월 25,000원.',
 };
+
+export const dynamic = 'force-dynamic';
 
 /**
  * /subscribe — Kindy 멤버십 구독 페이지 (서버 컴포넌트 가드).
  * 비로그인 → /auth/login?next=/subscribe
  */
 export default async function SubscribePage() {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let parentId: string;
 
-  if (!user) {
-    redirect('/auth/login?next=/subscribe');
+  try {
+    parentId = await getCurrentParentId();
+  } catch (error) {
+    if (isAuthError(error)) redirect('/auth/login?next=/subscribe');
+    throw error;
   }
 
-  const { subscription, entitlement } = await getSubscriptionState(user.id);
+  let email: string | null = null;
+  if (isSupabaseServerConfigured()) {
+    const supabase = await createServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    email = user?.email ?? null;
+  }
+
+  const { subscription, entitlement } = isSupabaseServiceConfigured()
+    ? await getSubscriptionState(parentId)
+    : {
+        subscription: null,
+        entitlement: {
+          parent_id: parentId,
+          is_premium: false,
+          premium_until: null,
+          source: 'local_preview',
+          updated_at: new Date().toISOString(),
+        },
+      };
 
   return (
     <SubscribeClient
-      parentId={user.id}
-      email={user.email ?? null}
+      parentId={parentId}
+      email={email}
       initialSubscription={subscription}
       initialEntitlement={entitlement}
     />

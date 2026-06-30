@@ -62,16 +62,16 @@ export default function InviteCodeForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className={`mx-auto w-full max-w-[375px] rounded-2xl border border-violet-100 bg-white p-4 text-left shadow-sm ${className}`}
+      className={`mx-auto w-full max-w-[375px] rounded-2xl border border-line bg-white p-4 text-left shadow-sm ${className}`}
     >
       <div className="mb-4">
-        <h3 className="text-base font-bold text-gray-900">{title}</h3>
-        <p className="mt-1 text-sm font-medium leading-relaxed text-gray-600">{description}</p>
+        <h3 className="text-base font-black text-ink">{title}</h3>
+        <p className="mt-1 text-sm font-semibold leading-relaxed text-ink2">{description}</p>
       </div>
 
       <label className="block">
-        <span className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-gray-500">
-          Invite code
+        <span className="mb-2 block text-[11px] font-black uppercase tracking-[.14em] text-ink3">
+          초대 코드
         </span>
         <input
           type="text"
@@ -81,20 +81,20 @@ export default function InviteCodeForm({
           placeholder="초대 코드를 입력해주세요"
           autoCapitalize="characters"
           autoComplete="one-time-code"
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-base font-semibold text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-transparent focus:ring-2 focus:ring-violet-300 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-2xl border border-line bg-cream px-4 py-3.5 text-base font-bold text-ink outline-none transition placeholder:text-ink3 focus:border-sage focus:ring-4 focus:ring-sagebg disabled:cursor-not-allowed disabled:opacity-60"
         />
       </label>
 
       <button
         type="submit"
         disabled={pending || !code.trim()}
-        className="mt-3 w-full rounded-2xl bg-violet-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-violet-200/60 transition hover:bg-violet-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-3 w-full rounded-2xl bg-saged px-6 py-4 text-base font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending ? '확인 중...' : '초대 코드 입력'}
       </button>
 
       {error && (
-        <p className="mt-3 text-center text-sm font-semibold text-red-500" aria-live="polite">
+        <p className="mt-3 text-center text-sm font-bold text-clay" aria-live="polite">
           {error}
         </p>
       )}

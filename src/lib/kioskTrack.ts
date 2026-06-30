@@ -70,6 +70,7 @@ export function trackKiosk(sessionId: string | null, event: EventInput): void {
 
 /** QR 목적지 URL. kindy.kr DNS 미연결 상태 → 임시 베이스는 env 로 덮어쓸 수 있음. */
 export function kioskStartUrl(qrToken: string | null): string {
-  const base = process.env.NEXT_PUBLIC_KINDY_START_BASE || 'https://kindy.kr';
+  const base = process.env.NEXT_PUBLIC_KINDY_START_BASE
+    || (typeof window !== 'undefined' ? window.location.origin : 'https://kindy.kr');
   return `${base}/start?ks=${qrToken ?? ''}`;
 }

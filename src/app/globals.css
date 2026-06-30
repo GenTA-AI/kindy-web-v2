@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FBF7EF;
+  --foreground: #233126;
   /* --font-pretendard is injected by next/font/local in src/app/fonts.ts. */
   --font-mono-stack: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
@@ -14,50 +14,45 @@
   --font-mono: var(--font-mono-stack);
 }
 
-/* R3 디자인 시스템 (크림 + 세이지 책정령 모리). 정본 = kindy-web/DESIGN.md.
-   유틸리티 생성: bg-cream, text-sage, border-line, bg-sagebg 등. 보라(violet) 폐기. */
+/* Mori R3 디자인 시스템 (PDF 사업백서 기준).
+   유틸리티 생성: bg-cream, text-sage, border-line, bg-sagebg 등. */
 @theme {
-  --color-cream: #F4EAD2;
-  --color-surface: #FBF7EC;
-  --color-deep: #E9DBBE;
-  --color-sage: #46763F;
-  --color-saged: #2E5129;
-  --color-sages: #93B589;
-  --color-sagebg: #E4EDDF;
-  --color-ink: #231F18;
-  --color-ink2: #534B40;
-  --color-ink3: #8A8070;
-  --color-line: #E0D4BB;
-  --color-gentle: #159C84;
-  --color-gold: #C9871E;
+  --color-cream: #FBF7EF;
+  --color-surface: #FFFFFF;
+  --color-deep: #EEE5D4;
+  --color-sage: #5F735F;
+  --color-saged: #3F5140;
+  --color-sages: #AFC4AE;
+  --color-sagebg: #DDE8DE;
+  --color-mist: #F0F3EE;
+  --color-clay: #B66A4B;
+  --color-ink: #233126;
+  --color-ink2: #4B5A4F;
+  --color-ink3: #7B877D;
+  --color-line: #E3D8C8;
+  --color-gentle: #83A58D;
+  --color-gold: #D19A43;
 }
 
 /* 보라(violet) 팔레트 → R3 세이지 리매핑. 부모·아이 화면 46개 파일의 violet-* 사용을
    편집 없이 일괄 세이지로 통일(브랜드 색 = landing과 동일 계열).
    플레인 :root (unlayered) 라 Tailwind 기본 violet(@layer theme) 보다 우선해 override 됨. */
 :root {
-  --color-violet-50:  #EDF2E7;
-  --color-violet-100: #DCE7D4;
-  --color-violet-200: #C2D5B9;
-  --color-violet-300: #9DBE96;
-  --color-violet-400: #79A271;
-  --color-violet-500: #46763F;
-  --color-violet-600: #335A2E;
-  --color-violet-700: #284821;
-  --color-violet-800: #1E351A;
-  --color-violet-900: #162714;
+  --color-violet-50:  #F0F3EE;
+  --color-violet-100: #DDE8DE;
+  --color-violet-200: #C6D8C7;
+  --color-violet-300: #AFC4AE;
+  --color-violet-400: #83A58D;
+  --color-violet-500: #5F735F;
+  --color-violet-600: #4E604F;
+  --color-violet-700: #3F5140;
+  --color-violet-800: #304034;
+  --color-violet-900: #233126;
 }
 
 /* 모리 둥둥 (R3 모션 — 차분). prefers-reduced-motion 은 motion-safe 로 존중. */
 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 @keyframes twinkle { 0%, 100% { opacity: .25; transform: scale(.9); } 50% { opacity: .7; transform: scale(1.15); } }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
 
 body {
   background: var(--background);

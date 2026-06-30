@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabase, isSupabaseServiceConfigured } from '@/lib/supabase';
 
 // 아산 꿈샘 키오스크(Kindy 데모) 익명 이벤트 인제스트.
 // 설계: KIOSK_KINDY_퍼널추적_설계.md §6. 무인증 + service-role 쓰기(RLS 우회).
@@ -68,8 +68,6 @@ export async function POST(request: NextRequest) {
   }
   if (!body || typeof body !== 'object') return json({ error: 'invalid body' }, 400);
 
-  const db = supabase;
-
   const incoming: IncomingEvent[] = Array.isArray((body as { events?: unknown }).events)
     ? ((body as { events: IncomingEvent[] }).events)
     : (body as { event?: IncomingEvent }).event
@@ -82,6 +80,19 @@ export async function POST(request: NextRequest) {
 
   let sessionId = str((body as { sessionId?: unknown }).sessionId);
   let qrToken: string | null = null;
+
+  if (!isSupabaseServiceConfigured()) {
+    const accepted = events.length;
+    const localSessionId = sessionId ?? `local-kiosk-${crypto.randomUUID()}`;
+    return json({
+      sessionId: localSessionId,
+      qrToken: 'local-preview-kiosk',
+      accepted,
+      preview: true,
+    });
+  }
+
+  const db = getSupabase();
 
   // 세션 없으면 생성(첫 호출=demo_started). location_code 화이트리스트 검증.
   if (!sessionId) {

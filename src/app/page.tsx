@@ -2,52 +2,48 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import InviteCodeForm from '@/components/InviteCodeForm';
+import MoriCharacter from '@/components/MoriCharacter';
 
-/** 책정령 모리 (R3 IP 플레이스홀더 — 실제 히어로 에셋은 public/ip/bookmate-ip-hero.png). */
-function Mori({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 120 120" className={className} aria-hidden="true">
-      <path d="M30 44C18 18 40 8 52 30L52 50Z" className="fill-sage" />
-      <path d="M90 44C102 18 80 8 68 30L68 50Z" className="fill-sage" />
-      <path d="M34 40C26 24 40 18 49 32L49 46Z" className="fill-surface" />
-      <path d="M86 40C94 24 80 18 71 32L71 46Z" className="fill-surface" />
-      <ellipse cx="60" cy="74" rx="34" ry="32" className="fill-surface stroke-sage" strokeWidth={3.5} />
-      <rect x="34" y="92" width="52" height="9" rx="4.5" className="fill-gentle" />
-      <circle cx="50" cy="70" r="4.6" className="fill-ink" />
-      <circle cx="51.5" cy="68.4" r="1.5" fill="#fff" />
-      <circle cx="70" cy="70" r="4.6" className="fill-ink" />
-      <circle cx="71.5" cy="68.4" r="1.5" fill="#fff" />
-      <path d="M53 80Q60 86 67 80" className="stroke-ink" strokeWidth={2.6} fill="none" strokeLinecap="round" />
-      <path d="M60 56l-5-5a3.4 3.4 0 1 1 5-2 3.4 3.4 0 1 1 5 2Z" className="fill-gentle" />
-    </svg>
-  );
-}
+const START_HREF = '/auth/login?next=/onboarding';
+const SAMPLE_REPORT_HREF = '/sample/report';
 
-function StartCtaBlock({ className = '', align = 'start' }: { className?: string; align?: 'start' | 'center' }) {
+function StartCtaBlock({ className = '' }: { className?: string }) {
   const router = useRouter();
   const [inviteOpen, setInviteOpen] = useState(false);
 
   return (
     <div className={className}>
-      <Link
-        href="/onboarding"
-        className="inline-flex items-center justify-center gap-2 rounded-full bg-sage px-7 py-4 text-base font-bold text-white shadow-[0_10px_24px_-8px_rgba(46,118,63,.55)] transition hover:bg-saged active:scale-[0.97]"
-      >
-        무료로 시작하기 🐣
-      </Link>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Link
+          href={START_HREF}
+          className="inline-flex min-h-14 items-center justify-center rounded-full bg-saged px-7 text-base font-extrabold text-white shadow-[0_14px_28px_-14px_rgba(35,49,38,.55)] transition hover:bg-ink active:scale-[0.98]"
+        >
+          무료로 시작하기
+        </Link>
+        <Link
+          href={SAMPLE_REPORT_HREF}
+          className="inline-flex min-h-14 items-center justify-center rounded-full border border-line bg-white px-7 text-base font-extrabold text-ink transition hover:border-sages hover:bg-mist active:scale-[0.98]"
+        >
+          기록 예시 보기
+        </Link>
+      </div>
+      <p className="mt-3 text-sm font-bold text-sage">보호자 계정 1분 · 영상 3편과 첫 놀이 기록 무료</p>
+      <p className="mt-1 text-xs font-semibold leading-relaxed text-ink3">
+        아이 화면에는 광고, 결제 버튼, 자동재생 압박이 보이지 않아요.
+      </p>
       <button
         type="button"
         onClick={() => setInviteOpen((open) => !open)}
-        className={`mt-2 inline-flex min-h-11 items-center py-2 text-[13px] font-semibold text-saged underline underline-offset-[3px] hover:text-sage ${align === 'center' ? 'mx-auto' : ''}`}
+        className="mt-1 inline-flex min-h-10 items-center text-sm font-bold text-ink3 underline underline-offset-[3px] hover:text-saged"
       >
-        초대 코드 있어요
+        초대 코드로 시작하기
       </button>
 
       {inviteOpen && (
         <InviteCodeForm
-          className="mt-4"
+          className="mt-4 max-w-sm"
           onSuccess={() => router.push('/auth/login?next=/onboarding')}
           onAuthRequired={() => router.push('/auth/login?next=/onboarding')}
         />
@@ -56,174 +52,488 @@ function StartCtaBlock({ className = '', align = 'start' }: { className?: string
   );
 }
 
-const STEPS: [string, string][] = [
-  ['이야기 보기', '도서관 추천도서가 AI 애니메이션이 됩니다.'],
-  ['생각 질문', '"구름도 외로울까?" — 정답 없는 질문으로 상상해요.'],
-  ['표현하기', '말하고, 고르고, 그리며 내 생각을 꺼냅니다.'],
-  ['나만의 결과', 'AI로 아이의 아이디어를 작품으로 남겨요.'],
+const STEPS = [
+  ['영상 한 편을 본다', '모리와 동물 마을 친구들의 짧은 이야기'],
+  ['질문과 놀이를 한다', '아이가 고른 답과 끝낸 놀이가 기록돼요'],
+  ['보호자는 오늘 기록을 본다', '잘 맞은 놀이와 다음에 해볼 놀이가 남아요'],
 ];
 
-const VALUES: [string, string, ReactNode][] = [
-  ['01 · 사고력', '정답이 아니라, 질문하는 힘', 'AI 시대의 진짜 경쟁력은 스스로 묻고 상상하는 힘. 매주 정답 없는 질문으로 생각하고 문제를 푸는 힘을 키웁니다.'],
-  ['02 · 문해력 · 표현력', '이야기로 읽고, 내 생각으로 말하기', '좋은 책이 이야기가 되고, 아이는 그 안에서 읽고 말하고 표현합니다. 발표력과 문해력이 자연스럽게 자랍니다.'],
-  ['03 · 부모 리포트', '우리 아이를 처음으로 들여다봅니다', '어떤 질문에 눈이 반짝이는지, 무엇을 좋아하고 어떻게 표현하는지 — 점수가 아니라 우리 아이의 진짜 모습을 매주 보여드려요.'],
-  ['04 · 나만의 이야기', '아이가 직접 완성하는 이야기책', (
-    <>좋아하는 세계와 친구로 매주 이야기가 이어지고, 아이가 직접 풀어갑니다. 한 시즌이 끝나면 <b className="font-semibold text-ink">우리 아이만의 이야기책</b>이 남아요.</>
-  )],
+const THINKING_TOOLS = [
+  '자세히 보기',
+  '머릿속에 그려보기',
+  '규칙 찾기',
+  '규칙 만들기',
+  '닮은 것 잇기',
+  '모아서 만들기',
 ];
+
+const TRUST = [
+  '자세히 보기·비슷한 점 찾기·규칙 찾기 놀이 기반',
+  '아이 화면엔 광고·결제·자동재생 압박 없음',
+  '한 편이 끝나면 보호자 기록으로 멈춤',
+  '모든 콘텐츠 사람 검수 후 공개',
+  '다음 추천은 활동 기록만 참고',
+];
+
+const STORY_OS = [
+  ['아이 화면', '모리와 이야기 숲을 탐험해요. 한 화면엔 한 가지 행동만 나오고, 광고와 결제 화면은 보이지 않아요.'],
+  ['보호자 기록장', '이번 주 이야기, 아이가 고른 답, 끝낸 놀이, 다음 대화 힌트를 한곳에서 봐요.'],
+  ['모리의 역할', '아이가 다시 본 장면, 고른 답, 끝까지 해낸 놀이를 모아 다음 이야기를 더 잘 맞춰줘요.'],
+];
+
+const STORY_PATHS = [
+  ['모리의 나무집', '오늘 볼 이야기와 놀이를 골라요.'],
+  ['동물 마을', '첫 번째 숲 지역. 친구들의 작은 사건을 보고 도와줘요.'],
+  ['생각 놀이 길', '자세히 보기, 비슷한 점 찾기, 규칙 찾기 놀이를 하나씩 만나요.'],
+  ['오늘 기록 남기기', '놀이와 대답이 끝나면 보호자 기록에 오늘 한 일이 남아요.'],
+];
+
+const FIRST_LOOK = [
+  ['모리', '아이 옆에서 영상을 보여주고 질문을 건네는 안내 캐릭터예요.'],
+  ['이야기 숲', '영상, 질문, 짧은 놀이가 이어지는 아이 전용 학습 공간이에요.'],
+  ['놀이 기록', '정답표가 아니라 아이가 무엇을 봤고 어떤 놀이를 끝냈는지 보여주는 보호자 기록이에요.'],
+];
+
+const DIAGNOSIS_SIGNALS = [
+  ['영상 뒤 단서 질문', '“해님이 숨으면 무엇이 보였지?”처럼 방금 본 장면과 소리를 떠올려요.', '관찰'],
+  ['마음 고르기', '“꾸미는 지금 어떤 마음일까?” 얼굴과 상황 단서를 보고 골라요.', '마음 읽기'],
+  ['숨은 친구 찾기', '풀숲에 숨은 도토를 찾아요. 어디를 다시 살펴봤는지도 남아요.', '자세히 보기'],
+  ['닮은 선물 찾기', '친구와 어울리는 선물을 이어 보며 비슷한 점을 찾아요.', '닮은 것 잇기'],
+  ['무늬 이어가기', '색과 모양의 차례를 보고 다음에 올 무늬를 골라요.', '규칙 찾기'],
+  ['나만의 선물 꾸미기', '정답 없이 색, 모양, 스티커로 자기 방법을 만들어요.', '표현'],
+];
+
+const ENTRY_FLOW = [
+  {
+    label: '짧은 체험',
+    title: '모리를 먼저 만나봐요',
+    childTitle: '3분 모리 체험',
+    childLine: '개인정보 없이 영상 하나와 단서 질문 하나를 짧게 해봐요.',
+    childAction: '체험 시작',
+    parentTitle: '짧게 보고 바로 이해해요',
+    parentLine: '아이가 무엇을 자세히 봤는지, 어디에서 다시 살폈는지, 어떤 놀이를 끝까지 했는지 첫 기록을 보여줘요.',
+    result: '마지막에는 아이 이름표를 만들고 다음 이야기를 열 수 있어요.',
+    href: '/demo/kiosk',
+    cta: '짧은 체험 보기',
+  },
+  {
+    label: '오늘의 모험',
+    title: '집에서 바로 시작해요',
+    childTitle: '오늘의 모리 모험',
+    childLine: '아이 이름표를 만들면 영상 1개를 보고, 바로 질문과 놀이를 이어가요.',
+    childAction: '문 열래',
+    parentTitle: '첫 기록이 바로 쌓여요',
+    parentLine: '아이 이름을 만들고, 오늘 이야기와 놀이 기록을 바로 쌓을 수 있어요.',
+    result: '보호자 화면에는 오늘 본 이야기, 고른 답, 완료한 놀이가 모여요.',
+    href: START_HREF,
+    cta: '집에서 시작하기',
+  },
+  {
+    label: '놀이 기록',
+    title: '우리 아이 기록이 남아요',
+    childTitle: '오늘 놀이 완료',
+    childLine: '놀이가 끝나면 모리가 오늘 해낸 활동을 짧게 보여줘요.',
+    childAction: '기록 보기',
+    parentTitle: '오늘 놀이가 기록돼요',
+    parentLine: '이미 잘 들어온 놀이와 한 번 더 해보면 좋은 놀이를 부드럽게 보여줘요.',
+    result: '맞고 틀림보다 완료한 활동, 다시 본 순간, 만든 선택을 중심으로 다음 놀이를 추천해요.',
+    href: SAMPLE_REPORT_HREF,
+    cta: '놀이 기록 보기',
+  },
+  {
+    label: '보호자 화면',
+    title: '이번 주 흐름을 확인해요',
+    childTitle: '다음 이야기 추천',
+    childLine: '이번엔 무늬 언덕에서 비슷한 점을 찾아볼까?',
+    childAction: '새 모험 열기',
+    parentTitle: '오늘 무엇을 했는지 보여요',
+    parentLine: '완료한 영상, 단서 질문, 놀이 기록, 다음 추천이 한 화면에 모입니다.',
+    result: '아이에게는 모험으로 보이고, 보호자에게는 대화 힌트와 다음 놀이로 정리돼요.',
+    href: SAMPLE_REPORT_HREF,
+    cta: '기록 예시 보기',
+  },
+];
+
+function EntryFlowDemo() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const active = ENTRY_FLOW[activeIndex];
+
+  const move = (direction: 1 | -1) => {
+    setActiveIndex((current) => (current + direction + ENTRY_FLOW.length) % ENTRY_FLOW.length);
+  };
+
+  return (
+    <section id="entry-flow" className="border-b border-line bg-white">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-5 py-14 sm:px-8 lg:grid-cols-[.9fr_1.1fr] lg:py-20">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[.16em] text-sage">시작부터 기록까지</p>
+          <h2 className="mt-3 text-3xl font-black sm:text-4xl">모리와 한 편을 놀면, 오늘 기록이 남아요</h2>
+          <p className="mt-4 text-base font-semibold leading-relaxed text-ink2">
+            아이는 모리와 영상을 보고, 짧은 단서 질문과 놀이를 지나갑니다. 보호자는 아이가 무엇을 잘 보고 어디에서 다시 살펴봤는지 확인합니다.
+          </p>
+
+          <div className="mt-6 grid gap-2">
+            {ENTRY_FLOW.map((step, index) => {
+              const selected = index === activeIndex;
+              return (
+                <button
+                  key={step.label}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setActiveIndex(index)}
+                  className={`flex min-h-14 items-center justify-between gap-4 rounded-2xl border px-4 text-left transition active:scale-[0.99] ${
+                    selected
+                      ? 'border-sage bg-sagebg text-ink shadow-sm'
+                      : 'border-line bg-cream text-ink2 hover:border-sage hover:bg-mist'
+                  }`}
+                >
+                  <span>
+                    <span className="block text-xs font-black text-sage">{step.label}</span>
+                    <span className="block text-sm font-black">{step.title}</span>
+                  </span>
+                  <span className="text-xl font-black text-saged">›</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => move(-1)}
+              title="이전 단계"
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-line bg-white text-2xl font-black text-sage transition hover:bg-mist"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={() => move(1)}
+              title="다음 단계"
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-line bg-white text-2xl font-black text-sage transition hover:bg-mist"
+            >
+              ›
+            </button>
+            <Link
+              href={active.href}
+              className="inline-flex min-h-12 items-center justify-center rounded-full bg-saged px-6 text-sm font-black text-white transition hover:bg-ink active:scale-[0.98]"
+            >
+              {active.cta}
+            </Link>
+          </div>
+        </div>
+
+        <div className="rounded-[34px] border border-line bg-cream p-4 shadow-sm sm:p-5" aria-live="polite">
+          <div className="grid gap-4 lg:grid-cols-[.96fr_1.04fr]">
+            <div className="rounded-[28px] border border-line bg-white p-5">
+              <div className="flex items-center gap-3">
+                <MoriCharacter className="h-14 w-14 overflow-hidden rounded-full border border-line bg-cream" imageClassName="scale-125" label="모리" withGlow={false} />
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[.14em] text-sage">아이 화면</p>
+                  <h3 className="text-lg font-black">{active.childTitle}</h3>
+                </div>
+              </div>
+              <div className="mt-5 rounded-3xl bg-mist p-5">
+                <p className="text-xl font-black leading-snug text-ink">{active.childLine}</p>
+                <button
+                  type="button"
+                  className="mt-6 min-h-12 w-full rounded-2xl bg-saged px-4 text-sm font-black text-white shadow-[0_12px_24px_-16px_rgba(35,49,38,.75)]"
+                  onClick={() => move(1)}
+                >
+                  {active.childAction}
+                </button>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                {['단서', '빛', '꽃'].map((item, index) => (
+                  <div key={item} className="rounded-2xl border border-line bg-cream px-2 py-3">
+                    <p className="text-[11px] font-black text-ink3">{item}</p>
+                    <p className="mt-1 text-lg font-black text-saged">{index <= activeIndex ? index + 1 : 0}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-line bg-white p-5">
+              <p className="text-[11px] font-black uppercase tracking-[.14em] text-clay">보호자 화면</p>
+              <h3 className="mt-2 text-2xl font-black leading-tight">{active.parentTitle}</h3>
+              <p className="mt-3 text-base font-bold leading-relaxed text-ink2">{active.parentLine}</p>
+              <div className="mt-5 rounded-3xl bg-sagebg p-5">
+                <p className="text-xs font-black uppercase tracking-[.14em] text-sage">모리가 남기는 기록</p>
+                <p className="mt-2 text-lg font-black leading-snug text-ink">{active.result}</p>
+              </div>
+              <div className="mt-5 grid gap-2">
+                {['짧게 만나기', '오늘의 이야기', '보호자 기록'].map((line, index) => (
+                  <div key={line} className={`rounded-2xl px-4 py-3 text-sm font-black ${index <= activeIndex ? 'bg-saged text-white' : 'bg-mist text-ink2'}`}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DiagnosisPreviewSection() {
+  return (
+    <section className="border-b border-line bg-mist">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-5 py-14 sm:px-8 lg:grid-cols-[.86fr_1.14fr] lg:py-20">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[.16em] text-sage">무엇을 묻고 보나요</p>
+          <h2 className="mt-3 text-3xl font-black sm:text-4xl">아이에게는 놀이, 보호자에게는 관찰 기록</h2>
+          <p className="mt-4 text-base font-semibold leading-relaxed text-ink2">
+            모리는 검사지를 내밀지 않아요. 영상 뒤의 짧은 단서 질문과 놀이에서 어떤 장면을 골랐는지, 다시 살펴봤는지, 끝까지 만들었는지 모아 “지금 잘 들어온 놀이”와 “다음에 더 해볼 놀이”를 보여줘요.
+          </p>
+          <div className="mt-6 rounded-[28px] border border-line bg-white p-5">
+            <p className="text-sm font-black text-sage">오늘 예시</p>
+            <p className="mt-2 text-xl font-black leading-snug text-ink">
+              영상 뒤 단서 질문 → 꾸미 마음 찾기 → 숨은 친구 찾기 → 닮은 선물 찾기 → 나만의 선물 꾸미기
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3">
+          {DIAGNOSIS_SIGNALS.map(([title, body, tag]) => (
+            <article key={title} className="grid grid-cols-[1fr_auto] gap-4 rounded-[24px] border border-line bg-white p-5 shadow-sm">
+              <div>
+                <h3 className="text-lg font-black">{title}</h3>
+                <p className="mt-1.5 text-sm font-semibold leading-relaxed text-ink2">{body}</p>
+              </div>
+              <span className="self-start rounded-full bg-sagebg px-3 py-1 text-xs font-black text-saged">{tag}</span>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-cream text-ink [word-break:keep-all] [overflow-wrap:anywhere]">
-      {/* Nav */}
-      <nav className="sticky top-0 z-30 border-b border-line bg-cream/80 backdrop-blur-md backdrop-saturate-150">
-        <div className="mx-auto flex h-16 w-full max-w-[1120px] items-center gap-3 px-5 sm:px-8">
-          <span className="flex items-center gap-2 text-[20px] font-extrabold tracking-[-.03em]">
-            <Mori className="h-9 w-9" /> Kindy
-          </span>
+      <nav className="sticky top-0 z-30 border-b border-line bg-cream/88 backdrop-blur-md">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-5 sm:px-8">
+          <Link href="/" className="flex items-center gap-3 text-xl font-black">
+            <MoriCharacter className="h-10 w-10 overflow-hidden rounded-full border border-line bg-white" imageClassName="scale-125" label="모리" withGlow={false} />
+            Kindy Mori
+          </Link>
+          <span className="hidden text-sm font-bold text-ink3 sm:inline">모리의 이야기 숲</span>
           <span className="flex-1" />
-          <Link href="/onboarding" className="inline-flex min-h-11 items-center rounded-full bg-sage px-5 py-2.5 text-sm font-bold text-white transition hover:bg-saged">
+          <Link href={START_HREF} className="inline-flex min-h-11 items-center rounded-full bg-saged px-5 text-sm font-extrabold text-white transition hover:bg-ink">
             무료로 시작
           </Link>
         </div>
       </nav>
 
-      {/* Hero */}
-      <header className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 [background:radial-gradient(60%_50%_at_85%_-5%,rgba(21,156,132,.14),transparent_70%),radial-gradient(50%_40%_at_0%_100%,rgba(70,118,63,.10),transparent_70%)]" />
-        <div className="relative mx-auto grid w-full max-w-[1120px] grid-cols-1 items-center gap-9 px-5 py-12 text-center sm:px-8 md:grid-cols-[1.05fr_0.95fr] md:gap-16 md:py-24 md:text-left">
-          <div>
-            <p className="text-xs font-extrabold uppercase tracking-[.16em] text-sage">AI 시대의 진짜 공부</p>
-            <h1 className="mt-3 text-[clamp(34px,6vw,56px)] font-extrabold leading-[1.1] tracking-[-.035em] [text-wrap:balance]">
-              정답을 외우는 아이보다
+      <header className="relative overflow-hidden border-b border-line">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,#FBF7EF_0%,#F0F3EE_100%)]" />
+        <div className="relative mx-auto grid min-h-[calc(88svh-64px)] w-full max-w-6xl grid-cols-1 items-center gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[1.02fr_.98fr] lg:py-14">
+          <div className="max-w-2xl">
+            <p className="text-xs font-black uppercase tracking-[.18em] text-sage">영상 1편 · 짧은 질문 · 보호자 기록</p>
+            <h1 className="mt-4 text-[clamp(38px,7vw,72px)] font-black leading-[1.02]">
+              아이는 영상으로 놀고,{' '}
               <br />
-              <span className="text-sage">질문을 만드는 아이</span>
+              부모는 오늘을 이해해요
             </h1>
-            <p className="mx-auto mt-5 max-w-[30ch] text-[clamp(16px,1.6vw,19px)] leading-relaxed text-ink2 md:mx-0">
-              AI는 답을 알려줍니다.
-              <br />
-              하지만 <b className="font-bold text-ink">스스로 묻고 표현하는 힘</b>은
-              <br />
-              가르쳐주지 않습니다.
+            <p className="mt-5 max-w-[36rem] text-[17px] font-semibold leading-relaxed text-ink2 sm:text-xl">
+              모리의 짧은 이야기를 보고, 바로 이어지는 질문과 놀이를 해요. 끝나면 보호자는 아이가 무엇을 자세히 봤고 어떤 놀이가 잘 맞았는지 확인합니다.
             </p>
-            <p className="mx-auto mt-3.5 max-w-[30ch] text-[15px] text-ink3 md:mx-0">
-              매주 새로운 이야기로 키우는
-              <br />
-              <b className="font-bold text-ink2">사고력 · 문해력 · 표현력.</b>
+            <p className="mt-4 max-w-[34rem] text-base font-bold leading-relaxed text-saged">
+              처음 보는 분도 “영상 학습 + 놀이형 확인 + 부모 기록”으로 바로 이해할 수 있게 만들었습니다.
             </p>
-            <StartCtaBlock className="mt-7 flex flex-col items-center md:items-start" align="center" />
+            <StartCtaBlock className="mt-8" />
+            <a href="#entry-flow" className="mt-4 inline-flex min-h-11 items-center text-sm font-black text-saged underline underline-offset-[4px] hover:text-ink">
+              아이 기록이 남는 방식 보기
+            </a>
           </div>
 
-          {/* Hero visual */}
-          <div className="relative mx-auto mt-2 flex aspect-[5/4.4] w-full max-w-[420px] flex-col items-center justify-center gap-1.5 overflow-hidden rounded-[40px] border border-line bg-[linear-gradient(160deg,var(--color-sagebg),var(--color-surface))] p-7 shadow-[0_18px_50px_-12px_rgba(46,81,41,.18)] md:mt-0 md:aspect-[5/5.4]">
-            <span className="absolute left-[18%] top-[16%] text-gold opacity-50 motion-safe:animate-[twinkle_3.5s_ease-in-out_infinite]">✦</span>
-            <span className="absolute right-[16%] top-[24%] text-gold opacity-50 motion-safe:animate-[twinkle_3.5s_ease-in-out_infinite] [animation-delay:1.2s]">✧</span>
-            <span className="absolute bottom-[22%] left-[24%] text-gold opacity-50 motion-safe:animate-[twinkle_3.5s_ease-in-out_infinite] [animation-delay:.6s]">✦</span>
-            <Mori className="h-[clamp(120px,16vw,168px)] w-[clamp(120px,16vw,168px)] motion-safe:animate-[float_6s_ease-in-out_infinite]" />
-            <div className="mt-2 text-lg font-extrabold text-ink">책정령 모리</div>
-            <div className="text-[13px] text-ink2">아이의 마음을 읽어, 함께 이야기를 만들어요</div>
-            <span className="mt-3 inline-flex items-center gap-2 rounded-full border border-line bg-cream/70 px-3.5 py-1.5 text-xs font-bold text-ink2">
-              📖 이번 주의 새 이야기
-            </span>
+          <div className="relative mx-auto w-full max-w-[520px]">
+            <div className="relative aspect-[.92/1] overflow-hidden rounded-[44px] border border-line bg-white shadow-[0_28px_80px_-40px_rgba(35,49,38,.38)]">
+              <MoriCharacter className="h-full w-full" imageClassName="scale-[1.08]" />
+              <div className="absolute inset-x-5 bottom-5 rounded-[28px] border border-white/70 bg-cream/90 p-4 shadow-lg backdrop-blur">
+                <p className="text-[11px] font-black uppercase tracking-[.16em] text-sage">첫 모험</p>
+                <h2 className="mt-1 text-xl font-black">책정령 모리와 동물 마을 친구들</h2>
+                <p className="mt-1 text-sm font-semibold leading-relaxed text-ink2">
+                  아이 화면엔 광고와 결제 화면 없이, 모리와 이야기가 먼저 보입니다.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Trust */}
-      <section className="border-y border-line bg-surface">
-        <div className="mx-auto grid w-full max-w-[1120px] grid-cols-1 gap-4 px-5 py-10 sm:px-8 md:grid-cols-2 md:py-14">
-          <div className="flex items-start gap-4 rounded-3xl border border-line bg-cream px-6 py-5">
-            <span className="text-2xl leading-none">🏛️</span>
-            <div>
-              <div className="font-bold text-ink">전국 <b className="text-saged">공공도서관</b>과 함께하는 프로그램</div>
-              <div className="mt-1 text-[13px] text-ink3">문체부 · 교육청 · 지자체 운영 도서관과 협력</div>
-            </div>
+      <main>
+        <section className="border-b border-line bg-cream">
+          <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-4 px-5 py-10 sm:px-8 md:grid-cols-3">
+            {FIRST_LOOK.map(([title, body]) => (
+              <article key={title} className="rounded-[28px] border border-line bg-white p-5 shadow-sm">
+                <p className="text-[11px] font-black uppercase tracking-[.16em] text-sage">처음이라면</p>
+                <h2 className="mt-2 text-xl font-black text-ink">{title}</h2>
+                <p className="mt-2 text-sm font-semibold leading-relaxed text-ink2">{body}</p>
+              </article>
+            ))}
           </div>
-          <div className="flex items-start gap-4 rounded-3xl border border-line bg-cream px-6 py-5">
-            <span className="text-2xl leading-none">🎓</span>
-            <div>
-              <div className="font-bold text-ink"><b className="text-saged">30년 경력 대학 교수</b>가 설계한 커리큘럼</div>
-              <div className="mt-1 text-[13px] text-ink3">아이의 생각하는 힘을 키우는 단계별 설계</div>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Steps */}
-      <section className="mx-auto w-full max-w-[1120px] px-5 py-16 sm:px-8 md:py-24">
-        <div className="mb-10 text-center md:mb-14">
-          <p className="text-xs font-extrabold uppercase tracking-[.16em] text-sage">이렇게 배워요</p>
-          <h2 className="mt-2.5 text-[clamp(24px,3.6vw,38px)] font-extrabold tracking-[-.03em]">아이는 그냥 놀기만 하면 돼요</h2>
-          <p className="mx-auto mt-3 max-w-[48ch] text-base text-ink2">도서관 추천도서가 우리 아이만의 이야기가 되는 네 걸음.</p>
-        </div>
-        <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
-          {STEPS.map(([title, desc], i) => (
-            <div key={title} className="rounded-3xl border border-line bg-surface p-6">
-              <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-full bg-sage text-sm font-extrabold text-white shadow-[0_6px_16px_-6px_rgba(46,118,63,.5)]">{i + 1}</span>
-              <h3 className="text-base font-bold tracking-[-.01em]">{title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-ink2">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+        <EntryFlowDemo />
+        <DiagnosisPreviewSection />
 
-      {/* Values */}
-      <section className="border-y border-line bg-surface">
-        <div className="mx-auto w-full max-w-[1120px] px-5 py-16 sm:px-8 md:py-24">
-          <div className="mb-10 text-center md:mb-14">
-            <p className="text-xs font-extrabold uppercase tracking-[.16em] text-sage">부모가 사는 가치</p>
-            <h2 className="mt-2.5 text-[clamp(24px,3.6vw,38px)] font-extrabold tracking-[-.03em]">학원이 채우지 못한 한 가지</h2>
+        <section className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 lg:py-20">
+          <div className="mb-8 max-w-3xl">
+            <p className="text-xs font-black uppercase tracking-[.16em] text-sage">모리의 이야기 숲</p>
+            <h2 className="mt-3 text-3xl font-black sm:text-4xl">아이는 놀고, 보호자는 아이를 더 잘 이해해요</h2>
+            <p className="mt-4 text-base font-semibold leading-relaxed text-ink2">
+              아이는 웹에서 바로 플레이하고, 보호자는 기록장에서 아이가 무엇에 몰입했는지 확인합니다. 다시 본 장면과 고른 놀이가 쌓일수록 다음 이야기도 아이에게 더 잘 맞아집니다.
+            </p>
           </div>
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            {VALUES.map(([ey, title, body]) => (
-              <div key={ey} className="rounded-[32px] border border-line bg-cream p-7 shadow-[0_4px_18px_-6px_rgba(46,81,41,.12)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_50px_-12px_rgba(46,81,41,.18)] md:p-8">
-                <div className="text-[11px] font-extrabold uppercase tracking-[.12em] text-sage">{ey}</div>
-                <h3 className="mt-3 text-[clamp(18px,2.2vw,22px)] font-extrabold tracking-[-.02em]">{title}</h3>
-                <p className="mt-2.5 text-[15px] leading-relaxed text-ink2">{body}</p>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {STORY_OS.map(([title, body]) => (
+              <article key={title} className="rounded-[28px] border border-line bg-white p-6 shadow-sm">
+                <h3 className="text-xl font-black">{title}</h3>
+                <p className="mt-3 text-sm font-semibold leading-relaxed text-ink2">{body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-y border-line bg-mist">
+          <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-5 py-16 sm:px-8 lg:grid-cols-[.95fr_1.05fr] lg:py-20">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[.16em] text-sage">아이의 플레이 루프</p>
+              <h2 className="mt-3 text-3xl font-black sm:text-4xl">모리와 따라가면 자연스럽게 한 편이 끝나요</h2>
+              <p className="mt-4 text-base font-semibold leading-relaxed text-ink2">
+                나무집에서 시작해 문을 열고, 영상을 보고, 짧은 놀이를 합니다. 보호자에게는 그 여정이 오늘의 관찰 기록으로 남습니다.
+              </p>
+            </div>
+            <div className="grid gap-3">
+              {STORY_PATHS.map(([title, body], index) => (
+                <article key={title} className="grid grid-cols-[44px_1fr] gap-4 rounded-[24px] border border-line bg-white p-4 shadow-sm">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sagebg text-sm font-black text-saged">{index + 1}</span>
+                  <div>
+                    <h3 className="text-lg font-black">{title}</h3>
+                    <p className="mt-1 text-sm font-semibold leading-relaxed text-ink2">{body}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-5 py-16 sm:px-8 lg:grid-cols-[.92fr_1.08fr] lg:py-24">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[.16em] text-sage">왜 모리인가요</p>
+            <h2 className="mt-3 text-3xl font-black sm:text-4xl">아이마다 좋아하는 게 다른데, 콘텐츠는 다 똑같죠.</h2>
+          </div>
+          <div className="rounded-[32px] border border-line bg-white p-6 shadow-sm sm:p-8">
+            <p className="text-xl font-black leading-relaxed text-ink">
+              모리는 우리 아이가 무엇에 빠지는지 보고, 다음 모험을 그 아이에게 맞춰요.
+            </p>
+          </div>
+        </section>
+
+        <section className="border-y border-line bg-mist">
+          <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
+            <div className="mb-10">
+              <p className="text-xs font-black uppercase tracking-[.16em] text-sage">첫 플레이 3스텝</p>
+              <h2 className="mt-3 text-3xl font-black sm:text-4xl">무료 체험 안에서 바로 느껴집니다</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {STEPS.map(([title, body], index) => (
+                <article key={title} className="rounded-[28px] border border-line bg-white p-6 shadow-sm">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sagebg text-sm font-black text-saged">{index + 1}</span>
+                  <h3 className="mt-5 text-xl font-black">{title}</h3>
+                  <p className="mt-2 text-sm font-semibold leading-relaxed text-ink2">{body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-5 py-16 sm:px-8 lg:grid-cols-[1fr_1fr] lg:py-24">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[.16em] text-sage">6가지 생각 놀이</p>
+            <h2 className="mt-3 text-3xl font-black sm:text-4xl">아이에게는 놀이 이름으로 보여줘요</h2>
+            <p className="mt-4 text-base font-semibold leading-relaxed text-ink2">
+              내부적으로는 아이의 사고 과정을 나누어 보지만, 화면에서는 자세히 보기, 규칙 찾기처럼 바로 이해되는 놀이 이름으로 안내합니다.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {THINKING_TOOLS.map((tool) => (
+              <div key={tool} className="flex min-h-24 items-center justify-center rounded-3xl border border-line bg-white px-4 text-center text-base font-black shadow-sm">
+                {tool}
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Proof */}
-      <section className="mx-auto w-full max-w-[1120px] px-5 py-16 sm:px-8 md:py-24">
-        <p className="mb-10 text-center text-xs font-extrabold uppercase tracking-[.16em] text-sage">부모님들의 반응</p>
-        <div className="grid grid-cols-1 gap-[18px] md:grid-cols-2">
-          <figure className="rounded-3xl border border-line bg-surface px-6 py-6">
-            <blockquote className="text-base leading-relaxed text-ink">&quot;학습지는 시키면 도망가는데, 이건 다음 이야기 언제 나오냐고 먼저 물어봐요.&quot;</blockquote>
-            <figcaption className="mt-3.5 text-[13px] font-semibold text-ink3">5세 서연이 엄마</figcaption>
-          </figure>
-          <figure className="rounded-3xl border border-line bg-surface px-6 py-6">
-            <blockquote className="text-base leading-relaxed text-ink">&quot;영어·수학은 학원이 있는데, 생각하고 표현하는 건 마땅한 게 없었거든요.&quot;</blockquote>
-            <figcaption className="mt-3.5 text-[13px] font-semibold text-ink3">7세 민준이 아빠</figcaption>
-          </figure>
-        </div>
-      </section>
+        <section className="border-y border-line bg-mist">
+          <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-5 py-16 sm:px-8 lg:grid-cols-[1.05fr_.95fr] lg:py-24">
+            <div className="rounded-[34px] border border-line bg-white p-6 shadow-sm sm:p-8">
+              <p className="text-xs font-black uppercase tracking-[.16em] text-sage">기록 미리보기</p>
+              <h2 className="mt-3 text-3xl font-black">서연이의 첫 놀이 기록</h2>
+              <div className="mt-6 grid gap-3">
+                <div className="rounded-2xl bg-sagebg p-4">
+                  <p className="text-sm font-black text-saged">이미 빛나는 점</p>
+                  <p className="mt-1 text-lg font-black text-ink">규칙 찾기 ★ · 그려보기 ★</p>
+                </div>
+                <div className="rounded-2xl bg-cream p-4 ring-1 ring-line">
+                  <p className="text-sm font-black text-clay">곧 자랄 점</p>
+                  <p className="mt-1 text-base font-bold leading-relaxed text-ink2">
+                    여기에 &apos;닮은 것 잇기&apos;가 더해지면 문제를 푸는 방법이 한 단계 단단해져요.
+                  </p>
+                </div>
+              </div>
+              <p className="mt-5 text-base font-black leading-relaxed text-ink">
+                매주 서연이에게 조금 더 잘 맞는 모험이 그 길을 만들어요.
+              </p>
+            </div>
 
-      {/* Final CTA */}
-      <section className="mx-auto w-full max-w-[1120px] px-5 pb-16 sm:px-8">
-        <div className="rounded-[44px] bg-[linear-gradient(155deg,var(--color-sage),var(--color-saged))] px-6 py-14 text-center text-white shadow-[0_18px_50px_-12px_rgba(46,81,41,.18)] md:py-20">
-          <h2 className="text-[clamp(24px,4vw,38px)] font-extrabold leading-tight tracking-[-.03em]">
-            AI 시대, 우리 아이의
-            <br />
-            <span className="text-[color-mix(in_srgb,#fff_78%,var(--color-gentle))]">생각하는 힘</span>을 키워주세요
-          </h2>
-          <div className="mt-8 flex justify-center">
-            <Link href="/onboarding" className="inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-base font-bold text-saged transition hover:bg-surface active:scale-[0.97]">
-              무료로 시작하기
-            </Link>
+            <div className="flex flex-col justify-center">
+              <p className="text-xs font-black uppercase tracking-[.16em] text-clay">신뢰</p>
+              <h2 className="mt-3 text-3xl font-black sm:text-4xl">오늘 한 일이 바로 보여요.</h2>
+              <div className="mt-6 grid gap-3">
+                {TRUST.map((item) => (
+                  <div key={item} className="rounded-2xl border border-line bg-white p-4 text-base font-black text-ink shadow-sm">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <p className="mt-4 text-[13px] text-white/80">이번 주 이야기를 무료로 체험 · 카드 등록 없이</p>
-        </div>
-      </section>
+        </section>
 
-      {/* AI 고지 (AI 기본법) */}
-      <footer className="px-5 pb-16 text-center sm:px-8">
-        <p className="mx-auto max-w-[44ch] text-[12.5px] text-ink3">
-          Kindy의 학습 콘텐츠는 AI 기술을 활용하여 제작되며, 전문가 검수를 거칩니다.
-        </p>
-      </footer>
+        <section className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
+          <div className="rounded-[36px] bg-saged px-6 py-12 text-center text-white sm:px-10">
+            <p className="text-xs font-black uppercase tracking-[.16em] text-white/70">무료 체험</p>
+            <h2 className="mt-3 text-3xl font-black sm:text-4xl">
+              무료로 모험 3편과 첫 기록을 받아보고, 마음에 들면 계속 이어가요.
+            </h2>
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link href={START_HREF} className="inline-flex min-h-14 items-center justify-center rounded-full bg-white px-8 text-base font-black text-saged transition hover:bg-cream active:scale-[0.98]">
+                무료로 시작하기
+              </Link>
+              <span className="text-sm font-bold text-white/72">설치 없이 웹에서 시작</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto w-full max-w-6xl px-5 pb-16 sm:px-8">
+          <div className="rounded-[36px] border border-line bg-white px-6 py-12 text-center shadow-sm sm:px-10">
+            <p className="text-sm font-black text-sage">아이에게는 모리의 첫 모험, 보호자에게는 첫 놀이 기록</p>
+            <h2 className="mt-3 text-3xl font-black sm:text-4xl">우리 아이의 첫 모험, 지금 무료로.</h2>
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link href={START_HREF} className="inline-flex min-h-14 items-center justify-center rounded-full bg-saged px-8 text-base font-black text-white transition hover:bg-ink active:scale-[0.98]">
+                무료로 시작
+              </Link>
+              <Link href={SAMPLE_REPORT_HREF} className="inline-flex min-h-14 items-center justify-center rounded-full border border-line bg-cream px-8 text-base font-black text-saged transition hover:bg-mist active:scale-[0.98]">
+                기록 예시 보기
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }

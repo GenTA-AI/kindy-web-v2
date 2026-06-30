@@ -17,13 +17,14 @@ export default function LibraryPlayer({
   onPlay,
   onEnded,
 }: Props) {
-  const [showSubtitles, setShowSubtitles] = useState(true);
+  const subtitleSourceKey = `${videoUrl}:${subtitlesUrl ?? ''}`;
+  const [subtitleState, setSubtitleState] = useState({ sourceKey: subtitleSourceKey, show: true });
   const playedRef = useRef(false);
+  const showSubtitles = subtitleState.sourceKey === subtitleSourceKey ? subtitleState.show : true;
 
   useEffect(() => {
     playedRef.current = false;
-    setShowSubtitles(true);
-  }, [videoUrl, subtitlesUrl]);
+  }, [videoUrl]);
 
   const handlePlay = () => {
     if (!playedRef.current) {
@@ -47,14 +48,10 @@ export default function LibraryPlayer({
         )}
       </video>
 
-      <div className="pointer-events-none absolute bottom-14 right-2 select-none rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white/90 backdrop-blur-sm">
-        AI로 생성된 영상이에요
-      </div>
-
       {subtitlesUrl && (
         <button
           type="button"
-          onClick={() => setShowSubtitles((v) => !v)}
+          onClick={() => setSubtitleState({ sourceKey: subtitleSourceKey, show: !showSubtitles })}
           aria-label="자막"
           aria-pressed={showSubtitles}
           className="absolute right-2 top-2 inline-flex min-h-[44px] items-center rounded-md bg-black/60 px-3 text-[10px] font-semibold text-white/90 transition hover:bg-black/80"

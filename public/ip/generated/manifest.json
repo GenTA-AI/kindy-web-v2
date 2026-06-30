@@ -1,0 +1,25 @@
+{
+  "endpoint": "fal-ai/flux/schnell",
+  "assets": [
+    {
+      "id": "mori-village-hero",
+      "path": "/Users/jongwonlee/dev/kindy-web/public/ip/generated/mori-village-hero.png",
+      "requestId": "019f1778-ce78-71e1-911a-022b74d4eed5"
+    },
+    {
+      "id": "gift-box",
+      "path": "/Users/jongwonlee/dev/kindy-web/public/ip/generated/gift-box.png",
+      "requestId": "019f1778-dcc8-7f13-95c4-22024a3a17ff"
+    },
+    {
+      "id": "balloon",
+      "path": "/Users/jongwonlee/dev/kindy-web/public/ip/generated/balloon.png",
+      "requestId": "019f1778-e7d0-7ae1-a924-6afc9da4a8bf"
+    },
+    {
+      "id": "festival-bell",
+      "path": "/Users/jongwonlee/dev/kindy-web/public/ip/generated/festival-bell.png",
+      "requestId": "019f1778-f30d-7923-b64e-f6c85e11240c"
+    }
+  ]
+}

@@ -13,6 +13,10 @@ function getSupabasePublicEnv() {
   return { supabaseUrl, supabaseAnonKey };
 }
 
+export function isSupabaseBrowserConfigured(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
 export function createBrowserClient() {
   const { supabaseUrl, supabaseAnonKey } = getSupabasePublicEnv();
   return createSupabaseBrowserClient(supabaseUrl, supabaseAnonKey);

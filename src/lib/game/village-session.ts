@@ -8,7 +8,7 @@ import {
   type ActivityConfig,
   type VillageSession,
 } from '@/data/worlds/animal-village';
-import { tagForGameType } from '@/lib/game/curriculum-tags';
+import { tagForGameType, tagForObjective } from '@/lib/game/curriculum-tags';
 import type { GameRoundParams, GameRoundSpec } from '@/types/game';
 
 export interface VillageRound {
@@ -47,7 +47,8 @@ function specForActivity(activity: ActivityConfig, roundIndex: number, seed: num
   const difficulty = 1 + Math.floor(roundIndex / 3);
   // 막에 맞는 태그: 정서 막=SEL, 창의 막=교수 도구. (tagForGameType 가 토픽으로 분기)
   const tagTopic = activity.phase === 'emotion' ? 'sel_emotion' : 'creativity';
-  const tag = tagForGameType(activity.game_type, tagTopic, roundIndex);
+  const tag = (activity.objectiveCode ? tagForObjective(activity.objectiveCode) : null)
+    ?? tagForGameType(activity.game_type, tagTopic, roundIndex);
 
   return {
     round_index: roundIndex,
@@ -75,7 +76,7 @@ export function buildVillagePlan(session: VillageSession, seed: number): Village
   return { session, rounds, activities };
 }
 
-/** 'animal-village' 세계의 첫 세션("꾸미 곰의 날") 플랜. */
+/** 'animal-village' 세계의 첫 세션("사라진 반짝빛") 플랜. */
 export function buildAnimalVillagePlan(seed: number): VillagePlan {
   const session = ANIMAL_VILLAGE.sessions[0];
   return buildVillagePlan(session, seed);

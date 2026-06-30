@@ -12,7 +12,8 @@
     "smoke:s01": "tsx --env-file=.env.local scripts/smoke-s01.ts",
     "smoke:s01-lipsync": "tsx --env-file=.env.local scripts/smoke-s01-lipsync.ts",
     "smoke:native15s": "tsx --env-file=.env.local scripts/smoke-native15s.ts",
-    "smoke:extend15s": "tsx --env-file=.env.local scripts/smoke-extend15s.ts"
+    "smoke:extend15s": "tsx --env-file=.env.local scripts/smoke-extend15s.ts",
+    "smoke:limited-animation": "tsx scripts/smoke-limited-animation.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",

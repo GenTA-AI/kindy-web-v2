@@ -19,7 +19,7 @@ const SKILL_ORDER: readonly FutureSkillKey[] = [
 
 const SKILL_META: Record<FutureSkillKey, { label_ko: string; icon: string; unit_ko: string }> = {
   self_directed: { label_ko: '스스로 한 놀이', icon: '🌱', unit_ko: '번' },
-  persistence: { label_ko: '끈기 (다시 도전)', icon: '💪', unit_ko: '번 다시 도전' },
+  persistence: { label_ko: '천천히 다시 보기', icon: '💪', unit_ko: '번 다시 살펴봄' },
   problem_solving: { label_ko: '문제해결·표현', icon: '🧩', unit_ko: '번 활동' },
   communication: { label_ko: '소통·표현력', icon: '💬', unit_ko: '번 표현' },
   curiosity: { label_ko: '호기심 (새 도전)', icon: '✨', unit_ko: '개 새 주제' },
@@ -31,6 +31,8 @@ const PROBLEM_SOLVING_GAME_TYPES: ReadonlySet<string> = new Set([
   'G2_sort',
   'G3_sequence',
   'G5_find',
+  'hidden_friend',
+  'decorate',
 ]);
 const PROBLEM_SOLVING_MARKERS: readonly string[] = [
   'creativity',
@@ -43,10 +45,14 @@ const PROBLEM_SOLVING_MARKERS: readonly string[] = [
   '예술경험',
 ];
 
-// 소통·표현력 신호: 정서표현/발화 라운드.
+// 소통·표현력 신호: 실제 정서표현/발화 행동만 센다.
+// curriculum anchor(예: 사회관계)는 활동의 교육 연결일 뿐, 아이가 표현했다는 행동 증거가 아니다.
 const COMMUNICATION_GAME_TYPES: ReadonlySet<string> = new Set(['emotion_expression']);
 const COMMUNICATION_MARKERS: readonly string[] = [
-  'sel_',
+  'communication',
+  'communicate',
+  'emotion_awareness',
+  'emotion_expression',
   'emotion',
   'empathy',
   'sharing',
@@ -58,7 +64,6 @@ const COMMUNICATION_MARKERS: readonly string[] = [
   '표현',
   '마음',
   '감정',
-  '사회관계',
 ];
 
 // 미래역량 친화적인 대화 스타터(가정에서 1분 대화). 효능 단정 없이 활동 연결만.
@@ -67,7 +72,7 @@ const STARTER_TEMPLATES: Record<FutureSkillKey, readonly string[]> = {
     '이번 주 스스로 {count}번 놀이를 시작했어요. 오늘 무엇을 가장 해보고 싶은지 아이에게 물어볼까요?',
   ],
   persistence: [
-    '어려워도 {count}번 다시 도전했어요. "처음엔 어려웠는데 어떻게 다시 해봤어?"라고 물어볼까요?',
+    '{count}번 천천히 다시 살펴보고 놀이를 이어갔어요. "다시 보니까 뭐가 보였어?"라고 물어볼까요?',
   ],
   problem_solving: [
     '이번 주 {count}번 문제를 풀고 만들어 봤어요. "다른 방법도 있을까?"라고 함께 떠올려볼까요?',
@@ -124,9 +129,28 @@ function markerTexts(result: GameRoundResult): string[] {
   ].map(normalizedText);
 }
 
+function explicitActivityMarkerTexts(result: GameRoundResult): string[] {
+  const looseResult = result as GameRoundResult & Record<string, unknown>;
+  const payload = isRecord(looseResult.payload) ? looseResult.payload : null;
+  const rewardPayload = isRecord(result.reward_payload) ? result.reward_payload : null;
+
+  return [
+    looseResult.sel_activity,
+    looseResult.skill_key,
+    payload?.sel_activity,
+    payload?.skill_key,
+    payload?.activity,
+    rewardPayload?.sel_activity,
+    rewardPayload?.skill_key,
+    rewardPayload?.activity,
+    ...(Array.isArray(result.reward_payload?.stickers) ? result.reward_payload.stickers : []),
+    ...(Array.isArray(result.reward_payload?.collection_unlocks) ? result.reward_payload.collection_unlocks : []),
+  ].map(normalizedText);
+}
+
 function isCommunicationRound(result: GameRoundResult): boolean {
   if (COMMUNICATION_GAME_TYPES.has(result.game_type)) return true;
-  return markerTexts(result).some((text) => includesAnyMarker(text, COMMUNICATION_MARKERS));
+  return explicitActivityMarkerTexts(result).some((text) => includesAnyMarker(text, COMMUNICATION_MARKERS));
 }
 
 function isProblemSolvingRound(result: GameRoundResult): boolean {
@@ -234,7 +258,7 @@ export function growthHighlight(counts: SelActivityCount[], childName?: string):
   const who = childName?.trim() ? `${childName.trim()}이가` : '아이가';
 
   if (map.persistence > 0) {
-    return `${who} 어려운 놀이도 ${map.persistence}번 다시 도전했어요.`;
+    return `${who} ${map.persistence}번 천천히 다시 살펴보고 놀이를 이어갔어요.`;
   }
   if (map.problem_solving > 0) {
     return `${who} 이번 주에 ${map.problem_solving}번 스스로 문제를 풀고 만들어 봤어요.`;

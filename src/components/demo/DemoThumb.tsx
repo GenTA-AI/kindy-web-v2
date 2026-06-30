@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 
 export type DemoTopic = 'science' | 'english' | 'hangul';
-export type DemoStyle = 'princess' | 'space' | 'forest' | 'dino';
+export type DemoStyle = 'mori' | 'space' | 'forest' | 'dino';
 
 interface Palette {
   from: string;
@@ -11,8 +11,8 @@ interface Palette {
 }
 
 const PALETTES: Record<DemoStyle, Record<DemoTopic, Palette>> = {
-  // R3: 보라/인디고 폐기. princess = 밝은 크림-세이지 세계, space = 어두운 세이지-밤하늘.
-  princess: {
+  // R3: 보라/인디고 폐기. mori = 밝은 크림-세이지 세계, space = 어두운 세이지-밤하늘.
+  mori: {
     science: { from: '#EDF2E7', to: '#9DBE96', accent: '#C9871E', ink: '#2E5129' },
     english: { from: '#E4EDDF', to: '#93B589', accent: '#C9871E', ink: '#284821' },
     hangul:  { from: '#F4EAD2', to: '#C2D5B9', accent: '#159C84', ink: '#2E5129' },
@@ -41,7 +41,7 @@ const TOPIC_EMOJI: Record<DemoTopic, string[]> = {
 };
 
 const CHAR_EMOJI: Record<DemoStyle, string> = {
-  princess: '👸',
+  mori: '모리',
   space: '🚀',
   forest: '🦊',
   dino: '🦖',

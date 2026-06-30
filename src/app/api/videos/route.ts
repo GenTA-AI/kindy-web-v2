@@ -1,15 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabase, isSupabaseServiceConfigured } from '@/lib/supabase';
 import { inngest } from '@/inngest/client';
 import type { VideoBrief } from '@/lib/video-providers/director.types';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 
 function unauthorized() {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  return NextResponse.json({ error: '보호자 로그인이 필요해요.' }, { status: 401 });
+}
+
+function badVideoRequest() {
+  return NextResponse.json({ error: '영상 요청 정보를 다시 확인해 주세요.' }, { status: 400 });
+}
+
+function childNotFound() {
+  return NextResponse.json({ error: '아이 정보를 찾지 못했어요.' }, { status: 404 });
+}
+
+function videoListError() {
+  return NextResponse.json({ error: '영상 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.' }, { status: 500 });
+}
+
+function videoCreateError() {
+  return NextResponse.json({ error: '영상 생성을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.' }, { status: 500 });
+}
+
+function legacyGenerationUnavailable() {
+  return NextResponse.json(
+    { error: '개인 영상 생성은 지금 준비 중이에요. 모리 이야기 숲에서 바로 볼 수 있는 이야기를 먼저 이용해 주세요.' },
+    { status: 503 },
+  );
+}
+
+function creditsRequired() {
+  return NextResponse.json(
+    { error: '모리 이야기를 계속 이용하려면 보호자 화면에서 멤버십을 확인해 주세요.', code: 'membership_required' },
+    { status: 402 },
+  );
 }
 
 async function verifyChildOwner(childId: string, parentId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('children')
     .select('id')
     .eq('id', childId)
@@ -23,35 +53,46 @@ async function verifyChildOwner(childId: string, parentId: string) {
 export async function GET(request: NextRequest) {
   let parentId: string;
   try {
-    parentId = await getCurrentParentId();
+    parentId = await getCurrentParentId(request);
   } catch (error) {
     if (isAuthError(error)) return unauthorized();
-    throw error;
+    console.error('[videos:list-auth]', error);
+    return videoListError();
   }
 
   const { searchParams } = new URL(request.url);
   const childId = searchParams.get('childId');
 
   if (!childId) {
-    return NextResponse.json({ error: 'childId required' }, { status: 400 });
+    return badVideoRequest();
   }
 
-  const childOwned = await verifyChildOwner(childId, parentId);
-  if (!childOwned) {
-    return NextResponse.json({ error: 'child not found' }, { status: 404 });
+  if (!isSupabaseServiceConfigured()) {
+    return NextResponse.json([]);
   }
 
-  const { data, error } = await supabase
-    .from('videos')
-    .select('*')
-    .eq('child_id', childId)
-    .order('episode_number', { ascending: false });
+  try {
+    const childOwned = await verifyChildOwner(childId, parentId);
+    if (!childOwned) {
+      return childNotFound();
+    }
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const { data, error } = await getSupabase()
+      .from('videos')
+      .select('*')
+      .eq('child_id', childId)
+      .order('episode_number', { ascending: false });
+
+    if (error) {
+      console.error('[videos:list]', error);
+      return videoListError();
+    }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('[videos:list]', error);
+    return videoListError();
   }
-
-  return NextResponse.json(data);
 }
 
 /**
@@ -68,13 +109,22 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let parentId: string;
   try {
-    parentId = await getCurrentParentId();
+    parentId = await getCurrentParentId(request);
   } catch (error) {
     if (isAuthError(error)) return unauthorized();
-    throw error;
+    console.error('[videos:create-auth]', error);
+    return videoCreateError();
   }
 
-  const body = await request.json();
+  if (!isSupabaseServiceConfigured()) {
+    return legacyGenerationUnavailable();
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return badVideoRequest();
+  }
+
   const {
     child_id,
     title,
@@ -87,27 +137,39 @@ export async function POST(request: NextRequest) {
     brief,                // ← 신규: VideoBrief 전달 시 파이프라인 트리거
     target_duration_sec,  // 옵션 (15 | 30 | ...), 기본 30
     seedance_tier,        // 옵션 ('standard' | 'fast')
-  } = body;
+  } = body as Record<string, unknown>;
 
-  if (!child_id || !title) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  if (typeof child_id !== 'string' || typeof title !== 'string' || !child_id.trim() || !title.trim()) {
+    return badVideoRequest();
   }
 
-  const childOwned = await verifyChildOwner(child_id, parentId);
-  if (!childOwned) {
-    return NextResponse.json({ error: 'child not found' }, { status: 404 });
+  const supabase = getSupabase();
+
+  try {
+    const childOwned = await verifyChildOwner(child_id, parentId);
+    if (!childOwned) {
+      return childNotFound();
+    }
+  } catch (error) {
+    console.error('[videos:create-child]', error);
+    return videoCreateError();
   }
 
   // 다음 에피소드 번호 계산
-  const { count } = await supabase
+  const { count, error: countError } = await supabase
     .from('videos')
     .select('*', { count: 'exact', head: true })
     .eq('child_id', child_id);
+  if (countError) {
+    console.error('[videos:create-count]', countError);
+    return videoCreateError();
+  }
 
   const isPipelineTrigger = brief && typeof brief === 'object';
+  const readyVideoUrl = typeof video_url === 'string' && video_url.trim() ? video_url.trim() : null;
 
-  // 크레딧 atomic 차감 — pipeline trigger 일 때만. 선차감 + 실패 시 refund.
-  //   - stub 백필 (video_url 제공) 은 크레딧 소비 없음.
+  // 레거시 개인 영상 생성권 atomic 차감 — pipeline trigger 일 때만. 선차감 + 실패 시 refund.
+  //   - stub 백필 (video_url 제공) 은 생성권 소비 없음.
   //   - children 트리거로 자동 +1 받은 parent 는 첫 호출에서 0 으로 감소.
   //   - balance=0 이면 consume_credit 이 false → 402 Payment Required.
   let parentIdForRefund: string | null = null;
@@ -115,13 +177,11 @@ export async function POST(request: NextRequest) {
     const { data: consumed, error: consumeErr } = await supabase
       .rpc('consume_credit', { p_parent_id: parentId });
     if (consumeErr) {
-      return NextResponse.json({ error: `credit check failed: ${consumeErr.message}` }, { status: 500 });
+      console.error('[videos:create-credit]', consumeErr);
+      return videoCreateError();
     }
     if (!consumed) {
-      return NextResponse.json(
-        { error: 'insufficient_credits', message: '크레딧이 부족해요. 결제 후 다시 시도해주세요.' },
-        { status: 402 }
-      );
+      return creditsRequired();
     }
     parentIdForRefund = parentId;
   }
@@ -149,13 +209,13 @@ export async function POST(request: NextRequest) {
     .insert({
       child_id,
       title,
-      topic: topic || '',
-      style_tags: style_tags || [],
-      prompt_used: prompt_used || '',
-      adjectives_used: adjectives_used || [],
-      video_url: video_url || null,
-      duration_sec: duration_sec || null,
-      status: isPipelineTrigger ? 'queued' : (video_url ? 'ready' : 'queued'),
+      topic: typeof topic === 'string' ? topic : '',
+      style_tags: Array.isArray(style_tags) ? style_tags : [],
+      prompt_used: typeof prompt_used === 'string' ? prompt_used : '',
+      adjectives_used: Array.isArray(adjectives_used) ? adjectives_used : [],
+      video_url: readyVideoUrl,
+      duration_sec: typeof duration_sec === 'number' ? duration_sec : null,
+      status: isPipelineTrigger ? 'queued' : (readyVideoUrl ? 'ready' : 'queued'),
       episode_number: (count || 0) + 1,
     })
     .select()
@@ -163,7 +223,8 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     await refundCredit();
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[videos:create-insert]', error);
+    return videoCreateError();
   }
 
   // 파이프라인 트리거 모드 — Inngest 이벤트 발사
@@ -186,7 +247,8 @@ export async function POST(request: NextRequest) {
         error_reason: `inngest.send: ${reason}`.slice(0, 500),
       }).eq('id', data.id);
       await refundCredit();
-      return NextResponse.json({ error: `pipeline queue failed: ${reason}` }, { status: 500 });
+      console.error('[videos:create-queue]', reason);
+      return videoCreateError();
     }
 
     return NextResponse.json(
@@ -194,7 +256,7 @@ export async function POST(request: NextRequest) {
         id: data.id,
         request_id: data.request_id,
         status: 'queued',
-        message: 'Pipeline queued. Poll GET /api/videos?childId=... for updates.',
+        message: '영상 생성이 접수됐어요. 완료되면 보호자 화면에서 확인할 수 있어요.',
       },
       { status: 202 }
     );

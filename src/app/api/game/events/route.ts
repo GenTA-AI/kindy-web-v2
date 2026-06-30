@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { isSupabaseServiceConfigured, supabase } from '@/lib/supabase';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
+import { LOCAL_PREVIEW_CHILD_ID } from '@/lib/local-preview-child';
+import {
+  LOCAL_PREVIEW_GAME_COOKIE,
+  LOCAL_PREVIEW_GAME_COOKIE_MAX_AGE,
+  appendLocalPreviewRound,
+  completeLocalPreviewGame,
+  emptyLocalPreviewGameState,
+  parseLocalPreviewGameCookie,
+  serializeLocalPreviewGameState,
+} from '@/lib/local-preview-game';
 import type { GameEvent, GameRoundResult, GameType, RewardDelta } from '@/types/game';
 
 export const runtime = 'nodejs';
@@ -20,6 +30,8 @@ const ALLOWED_GAME_TYPES = new Set<GameType>([
   'G5_find',
   'Q_quiz',
   'emotion_expression',
+  'hidden_friend',
+  'decorate',
 ]);
 
 const MAX_DIFFICULTY = 10;
@@ -45,7 +57,23 @@ type GameSessionRef = {
 };
 
 function unauthorized() {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  return NextResponse.json({ error: '보호자 로그인이 필요해요.' }, { status: 401 });
+}
+
+function badGameEvent() {
+  return NextResponse.json({ error: '놀이 기록을 다시 확인해 주세요.' }, { status: 400 });
+}
+
+function childNotFound() {
+  return NextResponse.json({ error: '아이 정보를 찾지 못했어요.' }, { status: 404 });
+}
+
+function gameSessionNotFound() {
+  return NextResponse.json({ error: '놀이 기록을 찾지 못했어요.' }, { status: 404 });
+}
+
+function gameSaveError() {
+  return NextResponse.json({ error: '놀이 기록을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.' }, { status: 500 });
 }
 
 function str(v: unknown): string | null {
@@ -177,17 +205,17 @@ async function getOwnedGameSession(gameSessionId: string, parentId: string): Pro
 async function handleGameStarted(body: GameEventBody, parentId: string) {
   const childId = str(body.child_id);
   if (!childId) {
-    return NextResponse.json({ error: 'child_id required' }, { status: 400 });
+    return badGameEvent();
   }
 
   const owned = await verifyChildOwner(childId, parentId);
   if (!owned) {
-    return NextResponse.json({ error: 'child not found' }, { status: 404 });
+    return childNotFound();
   }
 
   const context = parseContext(body.context);
   if (!context) {
-    return NextResponse.json({ error: 'invalid context' }, { status: 400 });
+    return badGameEvent();
   }
 
   const { data, error } = await supabase
@@ -200,7 +228,8 @@ async function handleGameStarted(body: GameEventBody, parentId: string) {
     .single();
 
   if (error || !data) {
-    return NextResponse.json({ error: error?.message || 'game session create failed' }, { status: 500 });
+    console.error('[game-events:start]', error);
+    return gameSaveError();
   }
 
   return NextResponse.json({ game_session_id: data.id, accepted: 1 });
@@ -209,22 +238,22 @@ async function handleGameStarted(body: GameEventBody, parentId: string) {
 async function handleRoundCompleted(event: GameEvent, body: GameEventBody, parentId: string) {
   const gameSessionId = parseGameSessionId(body, event);
   if (!gameSessionId) {
-    return NextResponse.json({ error: 'game_session_id required' }, { status: 400 });
+    return badGameEvent();
   }
 
   const session = await getOwnedGameSession(gameSessionId, parentId);
   if (!session) {
-    return NextResponse.json({ error: 'game session not found' }, { status: 404 });
+    return gameSessionNotFound();
   }
 
   const roundIndex = boundedInt(event.round_index, 0, 1000);
   if (roundIndex === null) {
-    return NextResponse.json({ error: 'invalid round_index' }, { status: 400 });
+    return badGameEvent();
   }
 
   const result = parseRoundResult(event.result);
   if ('error' in result) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+    return badGameEvent();
   }
 
   const { error: roundError } = await supabase
@@ -245,7 +274,8 @@ async function handleRoundCompleted(event: GameEvent, body: GameEventBody, paren
     });
 
   if (roundError) {
-    return NextResponse.json({ error: roundError.message }, { status: 500 });
+    console.error('[game-events:round-insert]', roundError);
+    return gameSaveError();
   }
 
   const { error: sessionError } = await supabase
@@ -254,7 +284,8 @@ async function handleRoundCompleted(event: GameEvent, body: GameEventBody, paren
     .eq('id', session.id);
 
   if (sessionError) {
-    return NextResponse.json({ error: sessionError.message }, { status: 500 });
+    console.error('[game-events:round-session-update]', sessionError);
+    return gameSaveError();
   }
 
   return NextResponse.json({ game_session_id: session.id, accepted: 1 });
@@ -263,12 +294,12 @@ async function handleRoundCompleted(event: GameEvent, body: GameEventBody, paren
 async function handleGameCompleted(event: GameEvent, body: GameEventBody, parentId: string) {
   const gameSessionId = parseGameSessionId(body, event);
   if (!gameSessionId) {
-    return NextResponse.json({ error: 'game_session_id required' }, { status: 400 });
+    return badGameEvent();
   }
 
   const session = await getOwnedGameSession(gameSessionId, parentId);
   if (!session) {
-    return NextResponse.json({ error: 'game session not found' }, { status: 404 });
+    return gameSessionNotFound();
   }
 
   const payload = jsonObject(event.payload);
@@ -282,7 +313,8 @@ async function handleGameCompleted(event: GameEvent, body: GameEventBody, parent
     .eq('id', session.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[game-events:complete]', error);
+    return gameSaveError();
   }
 
   return NextResponse.json({ game_session_id: session.id, accepted: 1 });
@@ -291,56 +323,84 @@ async function handleGameCompleted(event: GameEvent, body: GameEventBody, parent
 async function handleCollectionProgress(event: GameEvent, body: GameEventBody, parentId: string) {
   const gameSessionId = parseGameSessionId(body, event);
   if (!gameSessionId) {
-    return NextResponse.json({ error: 'game_session_id required' }, { status: 400 });
+    return badGameEvent();
   }
 
   const session = await getOwnedGameSession(gameSessionId, parentId);
   if (!session) {
-    return NextResponse.json({ error: 'game session not found' }, { status: 404 });
+    return gameSessionNotFound();
   }
 
-  const roundIndex = boundedInt(event.round_index, 0, 1000) ?? 0;
-  const payload = jsonObject(event.payload) ?? {};
+  // Collection progress is a UI/reward-state signal, not a learning round.
+  // The same reward delta is already persisted on the completed round payload.
+  return NextResponse.json({ game_session_id: session.id, accepted: 1, stored: 0 });
+}
 
-  const { error } = await supabase
-    .from('game_rounds')
-    .insert({
-      game_session_id: session.id,
-      child_id: session.child_id,
-      round_index: roundIndex,
-      game_type: 'collection_progress',
-      difficulty: 1,
-      reward_payload: payload,
+function localPreviewResponse(request: NextRequest, body: GameEventBody, event: GameEvent) {
+  const payload = jsonObject(event.payload);
+  const childId = str(body.child_id) ?? LOCAL_PREVIEW_CHILD_ID;
+  const existingState = parseLocalPreviewGameCookie(request.cookies.get(LOCAL_PREVIEW_GAME_COOKIE)?.value);
+  const existingSessionId = parseGameSessionId(body, event) ?? existingState?.session_id;
+  const sessionId = existingSessionId ?? `local-preview-session-${childId}`;
+  let state = existingState ?? emptyLocalPreviewGameState({ sessionId, childId });
+
+  if (event.type === 'game_started') {
+    state = emptyLocalPreviewGameState({
+      sessionId,
+      childId,
+      roundsTotal: boundedInt(payload?.rounds_total, 0, 1000),
     });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } else if (event.type === 'game_round_completed') {
+    const roundIndex = boundedInt(event.round_index, 0, 1000);
+    const result = parseRoundResult(event.result);
+    if (roundIndex !== null && !('error' in result)) {
+      state = appendLocalPreviewRound(state, roundIndex, result);
+    }
+  } else if (event.type === 'game_completed') {
+    state = completeLocalPreviewGame(state, boundedInt(payload?.rounds_total, 0, 1000));
   }
 
-  return NextResponse.json({ game_session_id: session.id, accepted: 1 });
+  const response = NextResponse.json({ game_session_id: state.session_id, accepted: 1, preview: true });
+  response.cookies.set(LOCAL_PREVIEW_GAME_COOKIE, serializeLocalPreviewGameState(state), {
+    httpOnly: true,
+    maxAge: LOCAL_PREVIEW_GAME_COOKIE_MAX_AGE,
+    path: '/',
+    sameSite: 'lax',
+  });
+  return response;
 }
 
 export async function POST(request: NextRequest) {
+  const body = await request.json().catch(() => null) as GameEventBody | null;
+  if (!body || typeof body !== 'object') {
+    return badGameEvent();
+  }
+
+  const event = parseEvent(body);
+  if (!event) {
+    return badGameEvent();
+  }
+
+  if (!isSupabaseServiceConfigured()) {
+    return localPreviewResponse(request, body, event);
+  }
+
   let parentId: string;
   try {
     parentId = await getCurrentParentId();
   } catch (error) {
     if (isAuthError(error)) return unauthorized();
-    throw error;
+    console.error('[game-events:auth]', error);
+    return gameSaveError();
   }
 
-  const body = await request.json().catch(() => null) as GameEventBody | null;
-  if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: 'invalid json' }, { status: 400 });
+  try {
+    if (event.type === 'game_started') return await handleGameStarted(body, parentId);
+    if (event.type === 'game_round_completed') return await handleRoundCompleted(event, body, parentId);
+    if (event.type === 'game_completed') return await handleGameCompleted(event, body, parentId);
+    return await handleCollectionProgress(event, body, parentId);
+  } catch (error) {
+    console.error('[game-events:save]', error);
+    return gameSaveError();
   }
-
-  const event = parseEvent(body);
-  if (!event) {
-    return NextResponse.json({ error: 'invalid event' }, { status: 400 });
-  }
-
-  if (event.type === 'game_started') return handleGameStarted(body, parentId);
-  if (event.type === 'game_round_completed') return handleRoundCompleted(event, body, parentId);
-  if (event.type === 'game_completed') return handleGameCompleted(event, body, parentId);
-  return handleCollectionProgress(event, body, parentId);
 }

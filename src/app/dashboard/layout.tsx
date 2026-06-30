@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   try {
     await getCurrentParentId();

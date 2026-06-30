@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { isSupabaseServiceConfigured, supabase } from '@/lib/supabase';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { getSubscriptionState, syncEntitlement } from '@/lib/subscription';
 
@@ -16,9 +16,17 @@ export async function POST(request: NextRequest) {
     parentId = await getCurrentParentId(request);
   } catch (error) {
     if (isAuthError(error)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: '보호자 로그인이 필요해요.' }, { status: 401 });
     }
-    throw error;
+    console.error('[subscription-cancel:auth]', error);
+    return NextResponse.json({ error: '구독 정보를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.' }, { status: 500 });
+  }
+
+  if (!isSupabaseServiceConfigured()) {
+    return NextResponse.json(
+      { error: '지금은 구독 해지 기능을 확인하는 중이에요. 잠시 후 다시 시도해 주세요.' },
+      { status: 503 },
+    );
   }
 
   const { data: subscription, error: findError } = await supabase
@@ -31,7 +39,8 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (findError) {
-    return NextResponse.json({ error: findError.message }, { status: 500 });
+    console.error('[subscription-cancel:find]', findError);
+    return NextResponse.json({ error: '구독 정보를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.' }, { status: 500 });
   }
   if (!subscription) {
     return NextResponse.json({ error: '해지할 활성 구독이 없어요.' }, { status: 404 });
@@ -47,11 +56,22 @@ export async function POST(request: NextRequest) {
     .eq('id', subscription.id);
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    console.error('[subscription-cancel:update]', updateError);
+    return NextResponse.json({ error: '구독 해지를 접수하지 못했어요. 잠시 후 다시 시도해 주세요.' }, { status: 500 });
   }
 
-  await syncEntitlement(parentId);
+  try {
+    await syncEntitlement(parentId);
+  } catch (error) {
+    console.error('[subscription-cancel:sync-entitlement]', error);
+    return NextResponse.json({ error: '해지 상태를 정리하지 못했어요. 잠시 후 새로고침해 주세요.' }, { status: 500 });
+  }
 
-  const state = await getSubscriptionState(parentId);
-  return NextResponse.json({ ok: true, ...state });
+  try {
+    const state = await getSubscriptionState(parentId);
+    return NextResponse.json({ ok: true, ...state });
+  } catch (error) {
+    console.error('[subscription-cancel:get-state]', error);
+    return NextResponse.json({ error: '해지 결과를 불러오지 못했어요. 잠시 후 새로고침해 주세요.' }, { status: 500 });
+  }
 }

@@ -3,6 +3,7 @@
 //   LIMIT_COUNT=3            // 첫 3편만 처리
 //   ONLY_INDEX=N             // 특정 인덱스만
 //   SKIP_LIPSYNC=1           // 디버그: voiceover 만
+//   ANIMATION_MODE=limited   // 저비용: 정지컷+입뻐끔+슬로우 카메라
 //   DRY_RUN=1                // 매트릭스만 출력
 
 import 'dotenv/config';
@@ -15,7 +16,7 @@ import {
   LIBRARY_MATRIX_90S,
   type LibraryEpisodeSpec,
 } from './library-matrix-90s';
-import { runEpisodePipeline, type EpisodeOutput } from '../src/lib/episode-pipeline';
+import { runEpisodePipeline, type EpisodeAnimationMode, type EpisodeOutput } from '../src/lib/episode-pipeline';
 import { getSupabase } from '../src/lib/supabase';
 import { getSignedUrl } from '../src/lib/supabase-storage';
 import type { EpisodeScene, VideoBrief } from '../src/lib/video-providers/director.types';
@@ -26,6 +27,7 @@ const REPORT_PATH = join(REPORT_DIR, 'report.json');
 const DRY_RUN = process.env.DRY_RUN === '1';
 const SKIP_LIPSYNC = process.env.SKIP_LIPSYNC === '1';
 const SEEDANCE_TIER = (process.env.SEEDANCE_TIER ?? 'standard') as SeedanceTier;
+const ANIMATION_MODE = resolveAnimationMode(process.env.EPISODE_ANIMATION_MODE ?? process.env.ANIMATION_MODE);
 
 type EpisodeStatus = 'success' | 'failed' | 'skipped' | 'dry_run';
 
@@ -65,6 +67,7 @@ interface BatchReport {
   finishedAt: string;
   dryRun: boolean;
   skipLipsync: boolean;
+  animationMode: EpisodeAnimationMode;
   onlyIndex: number | null;
   limitCount: number | null;
   selectedCount: number;
@@ -87,6 +90,12 @@ function logStep(index: number, title: string, step: string, message: string, co
 function slugForSpec(index: number, spec: LibraryEpisodeSpec): string {
   const style = spec.style_tags[0] ?? 'style';
   return `${String(index).padStart(2, '0')}-${style}-${spec.topic}-age${spec.age_band}-90s`;
+}
+
+function resolveAnimationMode(raw: string | undefined): EpisodeAnimationMode {
+  if (!raw) return 'premium';
+  if (raw === 'premium' || raw === 'limited') return raw;
+  throw new Error(`ANIMATION_MODE must be "premium" or "limited" (got ${raw})`);
 }
 
 function styleReferenceFrom(styleTags: string[]): string {
@@ -122,6 +131,19 @@ function costFromOutput(output: EpisodeOutput): CostBreakdown {
 }
 
 function estimatedDryRunCost(): CostBreakdown {
+  if (ANIMATION_MODE === 'limited') {
+    const director = 0.8;
+    const refs = 0.039;
+    const keyframes = 6 * 0.039;
+    const videoSilent = 0;
+    const tts = 0.03;
+    const lipsync = 0;
+    const concat = 0;
+    const upload = 0;
+    const total = director + refs + keyframes + videoSilent + tts + lipsync + concat + upload;
+    return { director, refs, keyframes, videoSilent, tts, lipsync, concat, upload, total };
+  }
+
   const seedanceRate = SEEDANCE_TIER === 'fast' ? 0.2419 : 0.3024;
   const director = 0.8;
   const refs = 0.039;
@@ -207,13 +229,14 @@ async function processEpisode(index: number, spec: LibraryEpisodeSpec): Promise<
       };
     }
 
-    logStep(index, spec.title, 'pipeline', `runEpisodePipeline tier=${SEEDANCE_TIER} skip_lipsync=${SKIP_LIPSYNC}`);
+    logStep(index, spec.title, 'pipeline', `runEpisodePipeline mode=${ANIMATION_MODE} tier=${SEEDANCE_TIER} skip_lipsync=${SKIP_LIPSYNC}`);
     const output = await runEpisodePipeline({
       brief: toVideoBrief(spec),
       workDir,
       storagePrefix,
       seedanceTier: SEEDANCE_TIER,
       skipLipsync: SKIP_LIPSYNC,
+      animationMode: ANIMATION_MODE,
     });
 
     const videoSignedUrl = await getSignedUrl(output.finalVideoStoragePath);
@@ -312,6 +335,7 @@ function buildBatchReport(
     finishedAt: now(),
     dryRun: DRY_RUN,
     skipLipsync: SKIP_LIPSYNC,
+    animationMode: ANIMATION_MODE,
     onlyIndex,
     limitCount,
     selectedCount,
@@ -334,7 +358,7 @@ async function main(): Promise<void> {
     const results: EpisodeReport[] = selected.map(({ index, spec }) => {
       const cost = estimatedDryRunCost();
       console.log(
-        `[DRY_RUN] [${index}] ${spec.title} | ${spec.topic}/${spec.age_band}세 | ${spec.style_tags.join(',')} | ${spec.topic_subject} | episode_unit_sec=${EPISODE_UNIT_SEC} | est=$${cost.total.toFixed(2)}`
+        `[DRY_RUN] [${index}] ${spec.title} | ${spec.topic}/${spec.age_band}세 | ${spec.style_tags.join(',')} | ${spec.topic_subject} | episode_unit_sec=${EPISODE_UNIT_SEC} | mode=${ANIMATION_MODE} | est=$${cost.total.toFixed(2)}`
       );
       return {
         index,
@@ -351,12 +375,12 @@ async function main(): Promise<void> {
     });
     const report = buildBatchReport(startedAt, onlyIndex, limitCount, selected.length, results);
     writeReport(report);
-    console.log(`[DRY_RUN] entries=${results.length} estimated_total=$${report.totalCostUsd.toFixed(2)} skip_lipsync=${SKIP_LIPSYNC}`);
+    console.log(`[DRY_RUN] entries=${results.length} estimated_total=$${report.totalCostUsd.toFixed(2)} mode=${ANIMATION_MODE} skip_lipsync=${SKIP_LIPSYNC}`);
     console.log(`[DRY_RUN] report=${REPORT_PATH}`);
     return;
   }
 
-  console.log(`[${now()}] library 90s batch start selected=${selected.length} limit=${limitCount ?? 'all'} skip_lipsync=${SKIP_LIPSYNC} tier=${SEEDANCE_TIER}`);
+  console.log(`[${now()}] library 90s batch start selected=${selected.length} limit=${limitCount ?? 'all'} mode=${ANIMATION_MODE} skip_lipsync=${SKIP_LIPSYNC} tier=${SEEDANCE_TIER}`);
 
   const results: EpisodeReport[] = [];
   for (const { index, spec } of selected) {

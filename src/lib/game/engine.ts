@@ -189,7 +189,7 @@ function planStagedTrackSession(input: { seed: number; topic: string; round_coun
   const emotionPhaseCount = roundCount <= 1 ? roundCount : Math.min(2, Math.max(1, Math.ceil(roundCount / 2)));
   const creativityPhaseCount = roundCount - emotionPhaseCount;
 
-  // 1막 정서 라운드 게임타입: 첫 라운드는 emotion_expression(감정 사건 해결), 다음은 표정 짝맞추기/감정 퀴즈.
+  // 1막 정서 라운드 게임타입: 첫 라운드는 emotion_expression(감정 사건 해결), 다음은 표정 짝맞추기/감정 단서 질문.
   const emotionTypes: GameType[] = [];
   for (let i = 0; i < emotionPhaseCount; i += 1) {
     if (i === 0) {

@@ -83,7 +83,7 @@ export const CURRICULUM_TAGS: Record<string, CurriculumTag> = {
     interpretive: true,
   },
   // 창의(상상·문제해결) 트랙 → 누리 '예술경험'.
-  // 근거: 호서대 이철재 「창의적 사고와 디자인」 14주 + 「생각의 탄생」(Sparks of Genius) 13 생각도구
+  // 근거: 호서대 이철재 「창의적 사고와 디자인」 14주 + 「생각의 탄생」(Sparks of Genius) 사고 활동 체계
   //   + 디자인사고(기하학·패턴·디자인원리·콜라주). 일반 Torrance facet 대신 이 교수 프레임을 채택.
   //   (docs/curriculum/changsa-creativity-mapping-2026-06-09.md)
   // 6단계 나선 순서: 관찰 → 상상·유추 → 패턴 → 변형·도형 → 디자인원리 → 통합·콜라주.
@@ -179,9 +179,9 @@ function creativitySpiralTag(roundIndex: number): CurriculumTag {
 }
 
 // 창의(상상·문제해결) 트랙: gameType 별로 교수 도구를 매핑(나선 순서 진입점).
-// 관찰=찾기, 추상화·변형=분류, 패턴=짝맞추기, 상상·유추=퀴즈, 통합=창작.
+// 관찰=찾기, 상상·유추=짝/단서 연결, 패턴=순서·반복, 변형=분류·재구성, 통합=창작.
 const CREATIVITY_TRACK_TAGS: Record<GameType, CurriculumTag> = {
-  G1_match: CURRICULUM_TAGS.creativity_pattern, // 반복 짝 찾기 = 패턴
+  G1_match: CURRICULUM_TAGS.creativity_imagine, // 닮은 단서 잇기 = 상상·유추
   G2_sort: CURRICULUM_TAGS.creativity_transform, // 모양 분류·변형 = 변형·도형
   G3_sequence: CURRICULUM_TAGS.creativity_pattern, // 순서·반복 = 패턴
   G4_listen: CURRICULUM_TAGS.creativity_observe, // 듣고 자세히 = 관찰

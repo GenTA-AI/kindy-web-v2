@@ -19,6 +19,10 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 let _supabase: SupabaseClient | null = null;
 
+export function isSupabaseServiceConfigured(): boolean {
+  return Boolean(supabaseUrl && supabaseServiceKey);
+}
+
 export function getSupabase(): SupabaseClient {
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error('Supabase URL and SERVICE_ROLE key required. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local');

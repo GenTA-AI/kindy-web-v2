@@ -17,6 +17,11 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 import { synthesizeKorean } from './gemini-tts';
+import {
+  cameraPresetFromDirective,
+  parseNormalizedBox,
+  renderLimitedAnimationScene,
+} from './limited-animation';
 import { NanoBananaProvider } from './video-providers/nano-banana';
 import { Seedance2Provider, type SeedanceTier } from './video-providers/seedance2';
 import { syncLipSync } from './video-providers/fal-lipsync';
@@ -34,7 +39,10 @@ export interface EpisodeInput {
   storagePrefix: string;
   seedanceTier?: SeedanceTier;
   skipLipsync?: boolean;
+  animationMode?: EpisodeAnimationMode;
 }
+
+export type EpisodeAnimationMode = 'premium' | 'limited';
 
 export interface EpisodeOutput {
   script: EpisodeScript;
@@ -186,6 +194,12 @@ function emptyCost(): EpisodeOutput['perStageCostUsd'] {
 function totalCost(cost: EpisodeOutput['perStageCostUsd']): number {
   return cost.director + cost.refs + cost.keyframes + cost.videoSilent +
     cost.tts + cost.lipsync + cost.concat + cost.upload;
+}
+
+function resolveAnimationMode(inputMode: EpisodeAnimationMode | undefined): EpisodeAnimationMode {
+  const raw = inputMode ?? process.env.EPISODE_ANIMATION_MODE ?? process.env.ANIMATION_MODE ?? 'premium';
+  if (raw === 'premium' || raw === 'limited') return raw;
+  throw new Error(`Episode animation mode must be "premium" or "limited" (got ${raw})`);
 }
 
 function styleDirective(script: EpisodeScript): string {
@@ -599,6 +613,28 @@ async function stepCompositeScene(
   return { path: outputPath, lipsyncCostUsd: 0 };
 }
 
+function stepLimitedAnimationScene(
+  scene: EpisodeScene,
+  keyframePath: string,
+  audio: SceneAudio,
+  scenesDir: string,
+  sceneIndex: number
+): { path: string } {
+  const outputPath = join(scenesDir, `s${String(sceneIndex + 1).padStart(2, '0')}_limited.mp4`);
+  const isSpeakingScene = scene.type === 'character_speaking';
+  renderLimitedAnimationScene({
+    keyframePath,
+    audioPath: audio.path,
+    outputPath,
+    durationSec: scene.durationSec,
+    isSpeakingScene,
+    speechDurationSec: isSpeakingScene ? Math.min(scene.durationSec, audio.ttsDurationSec) : undefined,
+    mouthBox: parseNormalizedBox(process.env.LIMITED_MOUTH_BOX),
+    cameraPreset: cameraPresetFromDirective(scene.cameraDirective, sceneIndex, isSpeakingScene),
+  });
+  return { path: outputPath };
+}
+
 function appendSilence(audioPath: string, silenceSec: number, outPath: string): string {
   const silencePath = outPath.replace(/\.wav$/, '.silence.wav');
   runFfmpeg([
@@ -811,6 +847,7 @@ export async function runEpisodePipeline(input: EpisodeInput): Promise<EpisodeOu
 
   const cost = emptyCost();
   const tier = input.seedanceTier ?? (process.env.SEEDANCE_TIER as SeedanceTier | undefined) ?? 'standard';
+  const animationMode = resolveAnimationMode(input.animationMode);
 
   const director = await directEpisodeScript(input.brief, workDir);
   cost.director += director.costUsd;
@@ -826,24 +863,6 @@ export async function runEpisodePipeline(input: EpisodeInput): Promise<EpisodeOu
     cost.keyframes += keyframe.costUsd;
   }
 
-  const silentVideos: string[] = [];
-  let previousLastFramePath: string | null = null;
-  for (let i = 0; i < script.scenes.length; i += 1) {
-    const silent = await stepSilentVideo(
-      script,
-      script.scenes[i],
-      ref.path,
-      keyframes[i],
-      previousLastFramePath,
-      clipsDir,
-      i,
-      tier
-    );
-    silentVideos.push(silent.path);
-    previousLastFramePath = silent.lastFramePath;
-    cost.videoSilent += silent.costUsd;
-  }
-
   const sceneAudio: SceneAudio[] = [];
   for (let i = 0; i < script.scenes.length; i += 1) {
     const audio = await stepSceneAudio(script.scenes[i], audioDir, i);
@@ -852,17 +871,43 @@ export async function runEpisodePipeline(input: EpisodeInput): Promise<EpisodeOu
   }
 
   const sceneVideos: string[] = [];
-  for (let i = 0; i < script.scenes.length; i += 1) {
-    const composite = await stepCompositeScene(
-      script.scenes[i],
-      silentVideos[i],
-      sceneAudio[i].path,
-      scenesDir,
-      i,
-      input.skipLipsync === true
-    );
-    sceneVideos.push(composite.path);
-    cost.lipsync += composite.lipsyncCostUsd;
+
+  if (animationMode === 'limited') {
+    for (let i = 0; i < script.scenes.length; i += 1) {
+      const limited = stepLimitedAnimationScene(script.scenes[i], keyframes[i], sceneAudio[i], scenesDir, i);
+      sceneVideos.push(limited.path);
+    }
+  } else {
+    const silentVideos: string[] = [];
+    let previousLastFramePath: string | null = null;
+    for (let i = 0; i < script.scenes.length; i += 1) {
+      const silent = await stepSilentVideo(
+        script,
+        script.scenes[i],
+        ref.path,
+        keyframes[i],
+        previousLastFramePath,
+        clipsDir,
+        i,
+        tier
+      );
+      silentVideos.push(silent.path);
+      previousLastFramePath = silent.lastFramePath;
+      cost.videoSilent += silent.costUsd;
+    }
+
+    for (let i = 0; i < script.scenes.length; i += 1) {
+      const composite = await stepCompositeScene(
+        script.scenes[i],
+        silentVideos[i],
+        sceneAudio[i].path,
+        scenesDir,
+        i,
+        input.skipLipsync === true
+      );
+      sceneVideos.push(composite.path);
+      cost.lipsync += composite.lipsyncCostUsd;
+    }
   }
 
   const finalVideoLocalPath = join(workDir, 'final.mp4');

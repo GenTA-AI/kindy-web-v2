@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import GameTokenVisual from '@/components/game/GameTokenVisual';
 import type { GameRoundResult, GameRoundSpec } from '@/types/game';
 
 interface HiddenFriendGameProps {
@@ -25,6 +26,17 @@ type Spot = {
   left: number;
   top: number;
 };
+
+const SPOT_ANCHORS: Array<Pick<Spot, 'left' | 'top'>> = [
+  { left: 18, top: 28 },
+  { left: 50, top: 20 },
+  { left: 80, top: 32 },
+  { left: 24, top: 68 },
+  { left: 56, top: 58 },
+  { left: 82, top: 74 },
+  { left: 42, top: 82 },
+  { left: 68, top: 42 },
+];
 
 type RuntimeParams = GameRoundSpec['params'] & {
   items?: unknown;
@@ -51,6 +63,17 @@ function seededRand(seed: number) {
   };
 }
 
+function shuffledAnchors(rand: () => number, count: number) {
+  const anchors = [...SPOT_ANCHORS];
+
+  for (let index = anchors.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(rand() * (index + 1));
+    [anchors[index], anchors[swapIndex]] = [anchors[swapIndex], anchors[index]];
+  }
+
+  return anchors.slice(0, count);
+}
+
 function buildSpots(spec: GameRoundSpec, answerToken: string | null): Spot[] {
   const params = spec.params as RuntimeParams;
   const raw = Array.isArray(params.items) ? params.items : [];
@@ -73,10 +96,12 @@ function buildSpots(spec: GameRoundSpec, answerToken: string | null): Spot[] {
     items[0].isTarget = true;
   }
 
-  return items.map((item) => ({
+  const anchors = shuffledAnchors(rand, items.length);
+
+  return items.map((item, index) => ({
     ...item,
-    left: 8 + Math.round(rand() * 80),
-    top: 12 + Math.round(rand() * 70),
+    left: anchors[index]?.left ?? 50,
+    top: anchors[index]?.top ?? 50,
   }));
 }
 
@@ -159,13 +184,12 @@ export default function HiddenFriendGame({
       <h2 className="mt-1 text-lg font-black text-gray-900 sm:text-2xl">{title}</h2>
 
       <div className="relative mt-4 h-64 overflow-hidden rounded-2xl bg-gradient-to-b from-emerald-50 via-lime-50 to-emerald-100 sm:h-80 lg:h-[28rem]">
-        {/* 풀숲 배경 장식(장식용 이모지) */}
-        <div className="pointer-events-none absolute inset-0 select-none text-2xl opacity-50">
-          <span className="absolute left-[6%] top-[70%]">🌿</span>
-          <span className="absolute left-[40%] top-[80%]">🌱</span>
-          <span className="absolute left-[74%] top-[68%]">🌿</span>
-          <span className="absolute left-[20%] top-[20%]">☁️</span>
-          <span className="absolute left-[68%] top-[14%]">☀️</span>
+        <div className="pointer-events-none absolute inset-0 select-none opacity-70">
+          <span className="absolute -left-8 bottom-[-18%] h-36 w-36 rounded-full bg-emerald-200/45 blur-sm" />
+          <span className="absolute bottom-[-20%] left-[24%] h-44 w-44 rounded-full bg-lime-200/55 blur-sm" />
+          <span className="absolute -right-10 bottom-[-16%] h-40 w-40 rounded-full bg-emerald-300/40 blur-sm" />
+          <span className="absolute left-[14%] top-[16%] h-10 w-24 rounded-full bg-white/65" />
+          <span className="absolute right-[16%] top-[14%] h-16 w-16 rounded-full bg-amber-200/70" />
         </div>
 
         {spots.map((spot) => {
@@ -178,16 +202,16 @@ export default function HiddenFriendGame({
               aria-label={`${spot.label_ko} 눌러보기`}
               onClick={() => handleTap(spot)}
               disabled={found}
-              className={`absolute flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-3xl transition active:scale-90 lg:h-20 lg:w-20 lg:text-5xl ${
+              className={`absolute flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl transition active:scale-90 lg:h-24 lg:w-24 ${
                 isFoundTarget
                   ? 'juice-cheer scale-125 bg-white shadow-lg shadow-emerald-200'
-                  : isWrong
+                : isWrong
                     ? 'juice-shake'
-                    : 'juice-bounce hover:scale-110'
+                    : 'juice-bounce bg-white/80 shadow-sm ring-1 ring-white/80 hover:scale-110 hover:bg-white'
               }`}
-              style={{ left: `${spot.left}%`, top: `${spot.top}%` }}
+              style={{ left: `${spot.left}%`, top: `${spot.top}%`, zIndex: spot.isTarget ? 2 : 1 }}
             >
-              <span aria-hidden="true">{spot.token}</span>
+              <GameTokenVisual token={spot.token} label={spot.label_ko} compact className="h-12 w-12 lg:h-16 lg:w-16" />
             </button>
           );
         })}
@@ -199,7 +223,7 @@ export default function HiddenFriendGame({
             found ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-50 text-emerald-700'
           }`}
         >
-          <span aria-hidden="true">{found ? '🎉' : '🔍'}</span>
+          <span aria-hidden="true">{found ? '✓' : '•'}</span>
           {found ? `${childName} 해냈어! ${status}` : status}
         </span>
       </div>

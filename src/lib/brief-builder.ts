@@ -1,23 +1,24 @@
 /**
- * Child + 커리큘럼 선택 → Claude director 용 VideoBrief 로 변환.
+ * Child + 학습 과정 선택 → Claude director 용 VideoBrief 로 변환.
  *
  * MVP 매핑 규칙 (GACS-3 피드백 루프는 다음 단계에서 가중치 적용):
- *   - topic: 커리큘럼의 첫 에피소드 제목 (예: "비는 왜 올까?")
+ *   - topic: 학습 과정의 첫 에피소드 제목 (예: "비는 왜 올까?")
  *   - audience: `${age}세 (${audienceLabel})`
  *   - targetDurationSec: 기본 30 (15s single-call, 30s video-extension 자동 분기)
- *   - learningGoals: 커리큘럼 concept + 퀴즈 키워드
+ *   - learningGoals: 학습 과정 concept + 단서 질문 키워드
  *   - styleReference: 선택된 스타일 + Pinkfong/Pororo-level 고정
  *   - tone: "밝고 따뜻한, 호기심 자극"
- *   - protagonistHint: 미리(Miri) 고정 — 브랜드 캐릭터 (K-pop 아이돌 + 핑크퐁)
+ *   - protagonistHint: 동물 마을은 모리 고정. legacy 학습 과정은 미리(Miri) 힌트 유지.
  */
 
+import { ANIMAL_VILLAGE } from '@/data/worlds/animal-village';
 import { CURRICULUM_MAP, STYLE_OPTIONS, TOPIC_OPTIONS } from '@/types';
 import type { VideoBrief } from './video-providers/director.types';
 
 interface BuildBriefInput {
   childName: string;
   age: number;
-  styles: string[];     // ['princess', 'space'] — STYLE_OPTIONS id
+  styles: string[];     // ['story_forest', 'pattern_hill'] — STYLE_OPTIONS id
   topic: string;        // 'science' | 'english'
   episodeIndex?: number; // 0-based, 기본 0 (첫 에피소드)
   targetDurationSec?: number;
@@ -47,8 +48,53 @@ function MIRI_HINT(): string {
   ].join(' ');
 }
 
+function MORI_HINT(): string {
+  return [
+    '**브랜드 마스코트 "모리(Mori)"**, 부드러운 크림색 털과 세이지 그린 스카프를 가진 작은 책정령.',
+    '큰 귀는 펼친 책장처럼 보이고, 귀 안쪽은 종이 페이지 결을 가진다. 머리 위 문자나 로고 장식은 넣지 않는다.',
+    '가슴에는 따뜻한 하트 불빛이 있고, 표정은 장난스럽지만 다정하다. 손과 발은 둥글고 말랑한 세이지색.',
+    '3D plush storybook character, soft tactile fabric, warm cream background, gentle studio lighting, no scary shadows.',
+    '대사 장면은 medium shot 이상, 얼굴과 입 모양이 잘 보이는 3/4 front angle 우선.',
+  ].join(' ');
+}
+
+export function buildAnimalVillageFirstVideoBrief(input: {
+  childName: string;
+  age: number;
+  targetDurationSec?: number;
+}): VideoBrief {
+  const session = ANIMAL_VILLAGE.sessions[0];
+  const plan = session.firstVideo;
+  const beats = plan.beats.map((beat, index) =>
+    `${index + 1}. ${beat.visual_ko} / ${beat.narration_ko}`,
+  );
+
+  return {
+    topic: plan.title,
+    audience: `${input.age}세 ${audienceLabel(input.age)}`,
+    targetDurationSec: input.targetDurationSec ?? plan.durationSec,
+    learningGoals: [
+      ...plan.teachingFocus,
+      `영상 후 질문 후보: ${plan.quizPrompts.join(' / ')}`,
+    ],
+    styleReference: [
+      'premium 3D plush storybook animation',
+      'warm cream and sage palette matching Mori reference',
+      'soft rounded animal-village props, readable facial expressions, slow camera movement',
+      'clear visual clues for preschool and early elementary children',
+    ].join(', '),
+    tone: '따뜻하고 장난스럽지만 과하게 빠르지 않은 탐정 놀이',
+    roughSynopsis: `${input.childName}에게 보여줄 첫 모리 영상. ${plan.logline} 장면 구성: ${beats.join(' ')}`,
+    protagonistHint: MORI_HINT(),
+  };
+}
+
 export function buildBriefFromChild(input: BuildBriefInput): VideoBrief {
-  const { childName, age, styles, topic, episodeIndex = 0, targetDurationSec = 30 } = input;
+  const { childName, age, styles, topic, episodeIndex = 0, targetDurationSec } = input;
+
+  if (topic === 'animal-village') {
+    return buildAnimalVillageFirstVideoBrief({ childName, age, targetDurationSec });
+  }
 
   const ageBand = CURRICULUM_MAP[topic]?.[age];
   const episode = ageBand?.episodes?.[episodeIndex];
@@ -60,7 +106,7 @@ export function buildBriefFromChild(input: BuildBriefInput): VideoBrief {
 
   const learningGoals = [
     concept && `${concept} — 감각적으로 이해하기`,
-    `${age}세 ${topicLabel} 커리큘럼 (${ageBand?.theme ?? '기본 주제'}) 흐름에 맞춘 개념 전달`,
+    `${age}세 ${topicLabel} 학습 과정 (${ageBand?.theme ?? '기본 주제'}) 흐름에 맞춘 개념 전달`,
     quizKeywords.length ? `핵심 키워드: ${quizKeywords.slice(0, 4).join(', ')}` : null,
   ].filter(Boolean) as string[];
 
@@ -71,7 +117,7 @@ export function buildBriefFromChild(input: BuildBriefInput): VideoBrief {
   return {
     topic: subject,
     audience: `${age}세 ${audienceLabel(age)}`,
-    targetDurationSec,
+    targetDurationSec: targetDurationSec ?? 30,
     learningGoals,
     styleReference: styleReferenceFrom(styles),
     tone: '밝고 따뜻하며 호기심을 자극하는',

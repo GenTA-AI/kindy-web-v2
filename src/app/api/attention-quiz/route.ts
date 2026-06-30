@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { supabase } from '@/lib/supabase';
+import { isSupabaseServiceConfigured, supabase } from '@/lib/supabase';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
+import { LOCAL_PREVIEW_ATTENTION_QUESTIONS, LOCAL_PREVIEW_LIBRARY_VIDEO } from '@/lib/library-preview';
 import type { VideoScript } from '@/lib/video-providers/director.types';
 
 function unauthorized() {
@@ -23,8 +24,8 @@ async function verifyChildOwner(childId: string, parentId: string) {
 /**
  * POST /api/attention-quiz
  *
- * 영상의 VideoScript 를 읽어 Claude 가 "관찰/집중도" 퀴즈 3문항 생성.
- * 일반 커리큘럼 퀴즈 (개념 이해) 와 분리된 "집중도" 축 측정용.
+ * 영상의 VideoScript 를 읽어 Claude 가 "장면 단서 질문" 3문항 생성.
+ * 아이에게 시험처럼 보이지 않도록, 방금 본 장면을 떠올리는 짧은 선택 질문만 만든다.
  *
  * 질문 예시:
  *   - "미리의 머리핀은 어떤 모양이었지?"  (외형 관찰)
@@ -57,6 +58,13 @@ export async function POST(request: NextRequest) {
   }
   if (video_id && library_video_id) {
     return NextResponse.json({ error: 'only one of video_id or library_video_id allowed' }, { status: 400 });
+  }
+
+  if (!isSupabaseServiceConfigured() && library_video_id === LOCAL_PREVIEW_LIBRARY_VIDEO.id) {
+    return NextResponse.json({
+      questions: LOCAL_PREVIEW_ATTENTION_QUESTIONS,
+      meta: { source: 'local-preview' },
+    });
   }
 
   let script: VideoScript | null = null;
@@ -125,8 +133,8 @@ export async function POST(request: NextRequest) {
 ## 영상 씬 요약
 ${scriptSummary}
 
-위 영상을 보고 아이가 얼마나 집중해서 관찰했는지 측정하는 퀴즈 3개를 생성해.
-각 퀴즈는 visual/auditory 세부사항을 묻는다. 개념/학습 내용 질문은 금지 (그건 별도 퀴즈).
+	위 영상을 보고 아이가 방금 본 장면을 자연스럽게 떠올릴 수 있는 단서 질문 3개를 생성해.
+	각 질문은 visual/auditory 세부사항을 묻는다. 개념/학습 내용 질문은 금지.
 
 JSON 만 응답. 다른 말 금지.`,
       },
@@ -162,12 +170,13 @@ JSON 만 응답. 다른 말 금지.`,
   });
 }
 
-const SYSTEM_PROMPT = `너는 한국 어린이(3-8세)를 위한 "집중도 측정" 퀴즈 설계자다.
+const SYSTEM_PROMPT = `너는 한국 어린이(3-8세)를 위한 "장면 단서 질문" 설계자다.
 
 ## 역할
-영상의 씬 요약을 받아 아이가 얼마나 집중해 관찰했는지 알아내는 퀴즈 3개를 만든다.
+영상의 씬 요약을 받아 아이가 방금 본 장면을 짧게 떠올리는 선택 질문 3개를 만든다.
+아이에게는 놀이처럼 보여야 하며, 보호자 리포트에는 관찰 가능한 활동 기록으로만 사용된다.
 
-## 집중도 측정 질문 유형 (4가지 focus 중 하나를 각 질문에 태그)
+## 질문 유형 (4가지 focus 중 하나를 각 질문에 태그)
 - appearance: 캐릭터/사물의 외형(색·모양·옷·머리·소품)을 관찰했는지
 - action: 캐릭터가 한 동작/순서를 기억하는지
 - detail: 배경의 구체적인 요소(구름·꽃·글자 등)를 포착했는지

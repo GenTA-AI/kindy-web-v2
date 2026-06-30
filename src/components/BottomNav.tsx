@@ -10,7 +10,7 @@ interface NavItem {
   icon: (active: boolean) => React.ReactNode;
 }
 
-const STUDY_HREF = '/dashboard/study';
+const REPORT_HREF = '/dashboard/report';
 
 const ITEMS: NavItem[] = [
   {
@@ -24,19 +24,19 @@ const ITEMS: NavItem[] = [
     ),
   },
   {
-    href: STUDY_HREF,
-    label: '학습',
-    isActive: (p) => p.startsWith(STUDY_HREF),
+    href: REPORT_HREF,
+    label: '기록',
+    isActive: (p) => p.startsWith(REPORT_HREF),
     icon: (active) => (
       <svg className="w-5 h-5" fill={active ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 0 : 1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25A8.967 8.967 0 0 1 18 3.75c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.5h16.5M3.75 9h16.5M7.5 13.5h9M7.5 18h5.25" />
       </svg>
     ),
   },
   {
-    href: '/dashboard/videos',
-    label: '영상',
-    isActive: (p) => p.startsWith('/dashboard/videos'),
+    href: '/library',
+    label: '이야기',
+    isActive: (p) => p.startsWith('/library'),
     icon: (active) => (
       <svg className="w-5 h-5" fill={active ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 0 : 1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
@@ -63,15 +63,15 @@ export default function BottomNav() {
   const qs = childId ? `?childId=${childId}` : '';
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 max-w-md w-full bg-white border-t border-gray-100 px-2 pt-2 pb-6 flex z-30">
+    <div className="fixed bottom-0 left-1/2 z-30 flex w-full max-w-md -translate-x-1/2 border-t border-line bg-cream/95 px-2 pb-6 pt-2 shadow-[0_-16px_36px_-28px_rgba(35,49,38,.5)] backdrop-blur">
       {ITEMS.map((item) => {
         const active = item.isActive(pathname);
         return (
           <Link
             key={item.href}
             href={`${item.href}${qs}`}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-1 transition ${
-              active ? 'text-violet-500' : 'text-gray-400 hover:text-gray-600'
+            className={`flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 py-1 transition ${
+              active ? 'text-saged' : 'text-ink3 hover:text-ink'
             }`}
           >
             {item.icon(active)}

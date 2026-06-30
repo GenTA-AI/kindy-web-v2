@@ -22,7 +22,11 @@ function loginRedirectUrl(request: NextRequest) {
   return url;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return NextResponse.next();
+  }
+
   const { supabaseUrl, supabaseAnonKey } = getSupabasePublicEnv();
   let supabaseResponse = NextResponse.next({
     request: {

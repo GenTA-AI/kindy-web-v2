@@ -71,8 +71,11 @@ export function useVoice(): UseVoiceResult {
   const webVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-    setMuted(readStoredMute());
+    const timer = window.setTimeout(() => {
+      setMounted(true);
+      setMuted(readStoredMute());
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {

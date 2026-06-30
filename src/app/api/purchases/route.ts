@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { NextResponse } from 'next/server';
+import { isSupabaseServiceConfigured, supabase } from '@/lib/supabase';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 
 function unauthorized() {
@@ -9,13 +9,17 @@ function unauthorized() {
 /**
  * GET /api/purchases — 인증된 parent 결제 내역 (최신순).
  */
-export async function GET(_request: NextRequest) {
+export async function GET() {
   let parentId: string;
   try {
     parentId = await getCurrentParentId();
   } catch (error) {
     if (isAuthError(error)) return unauthorized();
     throw error;
+  }
+
+  if (!isSupabaseServiceConfigured()) {
+    return NextResponse.json([]);
   }
 
   const { data, error } = await supabase

@@ -1,104 +1,94 @@
-'use client';
-
-import { Suspense, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { createBrowserClient } from '@/lib/supabase-browser';
-import { ATTRIBUTION_COOKIE, ATTRIBUTION_COOKIE_MAX_AGE_DAYS } from '@/lib/attribution';
+import AttributionTracker from './AttributionTracker';
+import { normalizeMarketingSource } from '@/lib/attribution';
 
-/**
- * /start?ks=<qr_token> — 키오스크 QR 랜딩 (퍼널: 키오스크 데모 → 가정 전환).
- * 1) ks 토큰을 90일 쿠키(kindy_attr)에 보관
- * 2) 이미 로그인된 부모면 즉시 /api/attribution/claim 으로 first-touch 연결
- * 3) 앱 안내 + 가입 CTA(/auth/login)
- */
-function StartContent() {
-  const searchParams = useSearchParams();
-  const ks = searchParams.get('ks');
-  const claimedRef = useRef(false);
+type SearchParams = Record<string, string | string[] | undefined>;
 
-  useEffect(() => {
-    if (ks) {
-      const maxAge = ATTRIBUTION_COOKIE_MAX_AGE_DAYS * 24 * 60 * 60;
-      document.cookie = `${ATTRIBUTION_COOKIE}=${encodeURIComponent(ks)}; path=/; max-age=${maxAge}; samesite=lax`;
-    }
+const FIRST_LOOK = [
+  ['모리', '아이 옆에서 영상을 보여주고 질문을 건네는 안내 친구예요.'],
+  ['이야기 숲', '짧은 영상, 단서 질문, 놀이가 한 번에 이어지는 공간이에요.'],
+  ['보호자 기록', '오늘 끝낸 놀이와 집에서 이어볼 한마디를 보여줘요.'],
+];
 
-    if (claimedRef.current) return;
-    claimedRef.current = true;
+function firstParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
 
-    // 이미 로그인된 부모면 바로 attribution 연결 (실패해도 UI 를 막지 않음).
-    (async () => {
-      try {
-        const supabase = createBrowserClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
-        await fetch('/api/attribution/claim', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(ks ? { ks } : {}),
-        });
-      } catch {
-        // 퍼널 측정 실패는 조용히 무시.
-      }
-    })();
-  }, [ks]);
+export default async function StartPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const token = firstParam(params.ks);
+  const source = normalizeMarketingSource(firstParam(params.from));
+  const isAiDiagnosis = source === 'ai-diagnosis';
 
   return (
-    <main className="flex-1 bg-gray-50">
-      <div className="max-w-[375px] mx-auto px-6 py-12">
-        <p className="text-[11px] font-bold text-violet-500 tracking-wider uppercase mb-2">
-          AI 책 놀이, 재미있었나요?
+    <main className="flex-1 bg-cream text-ink">
+      <AttributionTracker token={token} source={source} />
+      <div className="mx-auto max-w-[375px] px-6 py-12">
+        <p className="mb-2 text-[11px] font-black uppercase tracking-wider text-sage">
+          {isAiDiagnosis ? '방금 본 영상 다음' : '모리와 더 놀아볼까요?'}
         </p>
-        <h1 className="text-2xl font-extrabold text-gray-900 leading-snug mb-3">
-          집에서도 Kindy와
+        <h1 className="mb-3 text-2xl font-black leading-snug text-ink">
+          {isAiDiagnosis ? '다음 영상으로' : '집에서도 모리와'}
           <br />
-          이어서 놀아요
+          {isAiDiagnosis ? '놀이를 이어가요' : '바로 놀아요'}
         </h1>
-        <p className="text-sm text-gray-500 leading-relaxed mb-8">
-          방금 키오스크에서 만난 이야기 그대로, 우리 아이 취향에 맞춘 학습 영상과 놀이가
-          매주 새로 도착해요.
+        <p className="mb-8 text-sm font-semibold leading-relaxed text-ink2">
+          {isAiDiagnosis
+            ? '방금 본 영상은 모리를 짧게 만나는 첫 장면이에요. 아이 이름표를 만들면 다음 이야기와 짧은 놀이로 오늘 기록을 이어갈 수 있어요.'
+            : '아이 이름표를 만들면 웹에서 바로 오늘의 이야기와 단서 놀이를 열 수 있어요. 보호자 화면에는 완료한 놀이와 대화 힌트가 남습니다.'}
         </p>
 
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
-          <div className="text-[10px] font-bold text-violet-500 tracking-wider uppercase mb-2">
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5 shadow-sm">
+          <p className="mb-3 text-[10px] font-black uppercase tracking-wider text-sage">처음이라면</p>
+          <div className="space-y-3">
+            {FIRST_LOOK.map(([title, body]) => (
+              <div key={title} className="rounded-2xl bg-cream p-3">
+                <p className="text-sm font-black text-ink">{title}</p>
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-ink2">{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5 shadow-sm">
+          <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-sage">
             이렇게 시작해요
           </div>
-          <ol className="space-y-3 text-sm text-gray-600">
+          <ol className="space-y-3 text-sm font-semibold text-ink2">
             <li className="flex gap-3">
-              <span className="w-6 h-6 flex-shrink-0 rounded-full bg-violet-50 text-violet-600 text-xs font-extrabold flex items-center justify-center">1</span>
-              <span><b className="text-gray-900">부모님 계정 만들기</b> — 카카오 또는 이메일로 1분이면 끝나요.</span>
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-sagebg text-xs font-black text-saged">1</span>
+              <span><b className="text-ink">보호자 계정 만들기</b> — 이메일로 1분이면 끝나요.</span>
             </li>
             <li className="flex gap-3">
-              <span className="w-6 h-6 flex-shrink-0 rounded-full bg-violet-50 text-violet-600 text-xs font-extrabold flex items-center justify-center">2</span>
-              <span><b className="text-gray-900">아이 등록</b> — 이름과 취향만 알려주세요.</span>
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-sagebg text-xs font-black text-saged">2</span>
+              <span><b className="text-ink">아이 이름표 만들기</b> — 이름과 나이에 맞춰 길이를 맞춰요.</span>
             </li>
             <li className="flex gap-3">
-              <span className="w-6 h-6 flex-shrink-0 rounded-full bg-violet-50 text-violet-600 text-xs font-extrabold flex items-center justify-center">3</span>
-              <span><b className="text-gray-900">iPad 앱에서 시청</b> — 앱 다운로드 안내를 가입 후 보내드려요.</span>
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-sagebg text-xs font-black text-saged">3</span>
+              <span>
+                <b className="text-ink">{isAiDiagnosis ? '다음 놀이 이어가기' : '웹에서 바로 플레이'}</b>
+                {' '}
+                — {isAiDiagnosis ? '영상과 단서 놀이로 다음 기록을 만들어요.' : '영상, 단서 질문, 놀이를 이어가요.'}
+              </span>
             </li>
           </ol>
         </div>
 
         <Link
           href="/auth/login?next=/onboarding"
-          className="block w-full text-center px-6 py-4 bg-violet-500 hover:bg-violet-600 text-white font-bold text-base rounded-2xl shadow-lg shadow-violet-200/60 active:scale-[0.98] transition"
+          className="block w-full rounded-2xl bg-saged px-6 py-4 text-center text-base font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.98]"
         >
-          Kindy 시작하기
+          모리 시작하기
         </Link>
-        <p className="text-[11px] text-gray-400 text-center mt-3">
-          가입은 무료 · 첫 영상도 무료로 만들어드려요
+        <p className="mt-3 text-center text-[11px] font-semibold text-ink3">
+          가입은 무료 · 모리 영상 3편과 첫 놀이 기록 무료
         </p>
       </div>
     </main>
-  );
-}
-
-export default function StartPage() {
-  return (
-    <Suspense fallback={null}>
-      <StartContent />
-    </Suspense>
   );
 }

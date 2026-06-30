@@ -1,11 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import GameTokenVisual from '@/components/game/GameTokenVisual';
 import type { GameRoundResult, GameRoundSpec } from '@/types/game';
 
 interface PuzzleGameProps {
   spec: GameRoundSpec;
   childName: string;
+  feedback?: {
+    success: string;
+    retry: string;
+    hint: string;
+  };
   onComplete: (result: GameRoundResult) => void;
 }
 
@@ -34,6 +40,7 @@ type RuntimePuzzleParams = GameRoundSpec['params'] & {
   items?: unknown;
   categories?: unknown;
   prompt_ko?: unknown;
+  answer_token?: unknown;
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -60,73 +67,128 @@ const CATEGORY_LABELS: Record<string, string> = {
   calm: '편안한 마음',
 };
 
-const TOKEN_MARKS: Record<string, string> = {
-  A: 'A',
-  B: 'B',
-  C: 'C',
-  D: 'D',
-  E: 'E',
-  I: 'I',
-  angry: '😠',
-  bell: '🔔',
-  butterfly: '🦋',
-  calm: '🫧',
-  cat: '🐱',
-  clap: '👏',
-  do: '도',
-  dog: '🐶',
-  drum: '🥁',
-  fa: '파',
-  fish: '🐟',
-  flower: '🌸',
-  frog: '🐸',
-  happy: '😊',
-  leaf: '🍃',
-  mi: '미',
-  moon: '🌙',
-  proud: '🌟',
-  rain: '🌧️',
-  re: '레',
-  sad: '😢',
-  seed: '🌱',
-  shake: '✨',
-  snow: '❄️',
-  sol: '솔',
-  sun: '☀️',
-  tap: '톡',
-  worried: '😟',
-};
-
 const DEFAULT_FEEDBACK: Feedback = {
   tone: 'idle',
   message: '천천히 살펴봐요.',
 };
 
-export default function PuzzleGame({ spec, childName, onComplete }: PuzzleGameProps) {
+export default function PuzzleGame({ spec, childName, feedback, onComplete }: PuzzleGameProps) {
   const roundKey = `${spec.round_index}:${spec.game_type}:${spec.params.seed}:${spec.params.asset_pool_id}`;
 
   if (spec.game_type === 'G1_match') {
-    return <MatchPuzzle key={roundKey} spec={spec} childName={childName} onComplete={onComplete} />;
+    return <MatchPuzzle key={roundKey} spec={spec} childName={childName} feedback={feedback} onComplete={onComplete} />;
   }
 
   if (spec.game_type === 'G2_sort') {
-    return <SortPuzzle key={roundKey} spec={spec} childName={childName} onComplete={onComplete} />;
+    return <SortPuzzle key={roundKey} spec={spec} childName={childName} feedback={feedback} onComplete={onComplete} />;
+  }
+
+  if (spec.game_type === 'Q_quiz') {
+    return <QuizPuzzle key={roundKey} spec={spec} childName={childName} feedback={feedback} onComplete={onComplete} />;
   }
 
   return (
-    <section className="rounded-xl border border-violet-100 bg-violet-50 p-5 text-center shadow-sm shadow-violet-100/60">
-      <div className="text-4xl" aria-hidden="true">
-        🧩
-      </div>
-      <h2 className="mt-3 text-lg font-bold text-violet-900">퍼즐을 준비하고 있어요</h2>
-      <p className="mt-2 text-sm font-medium text-violet-600">
+    <section className="rounded-xl border border-line bg-sagebg p-5 text-center shadow-sm shadow-sagebg">
+      <PuzzleFallbackIcon />
+      <h2 className="mt-3 text-lg font-bold text-ink">퍼즐을 준비하고 있어요</h2>
+      <p className="mt-2 text-sm font-medium text-saged">
         이번 놀이는 다른 화면에서 이어갈게요.
       </p>
     </section>
   );
 }
 
-function MatchPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
+function QuizPuzzle({ spec, childName, feedback: feedbackCopy, onComplete }: PuzzleGameProps) {
+  const items = useMemo(() => readItems(spec), [spec]);
+  const answerToken = readAnswerToken(spec);
+  const prompt = readPrompt(spec, '이야기에서 본 단서를 골라요');
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [wrongItemIds, setWrongItemIds] = useState<string[]>([]);
+  const [feedback, setFeedback] = useState<Feedback>(DEFAULT_FEEDBACK);
+  const { completed, completeRound, markRetried, retried } = useRoundCompletion(spec, onComplete);
+  const delay = useTimerQueue();
+
+  if (items.length === 0) {
+    return <EmptyPuzzleState title="단서 질문을 준비하고 있어요" />;
+  }
+
+  if (completed) {
+    return <CompletedState childName={childName} score={1} maxScore={1} retried={retried} />;
+  }
+
+  function isAnswer(item: PuzzleItem): boolean {
+    if (answerToken) return item.token === answerToken;
+    return item.category === 'answer' || item.category === 'correct';
+  }
+
+  function handlePick(item: PuzzleItem) {
+    if (selectedItemId) return;
+
+    if (isAnswer(item)) {
+      setSelectedItemId(item.id);
+      setFeedback({
+        tone: 'success',
+        message: feedbackCopy?.success ?? '맞아, 방금 이야기에서 본 단서야!',
+      });
+      delay(() => completeRound(1, 1), 650);
+      return;
+    }
+
+    markRetried();
+    setWrongItemIds((prev) => [...prev, item.id]);
+    setFeedback({
+      tone: 'retry',
+      message: feedbackCopy?.retry ?? '가까워졌어. 이야기 장면을 다시 떠올려볼까?',
+    });
+  }
+
+  return (
+    <section className="rounded-xl border border-line bg-white p-4 shadow-sm shadow-sagebg">
+      <PuzzleHeader
+        eyebrow={`단서 질문 ${spec.round_index + 1}`}
+        title={prompt}
+        progressLabel={selectedItemId ? '찾았어요' : '1개 찾기'}
+        progressValue={selectedItemId ? 1 : 0}
+        progressMax={1}
+      />
+
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-5">
+        {items.map((item) => {
+          const picked = selectedItemId === item.id;
+          const wrong = wrongItemIds.includes(item.id);
+
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-label={`${item.label_ko} 고르기`}
+              aria-pressed={picked}
+              disabled={Boolean(selectedItemId)}
+              onClick={() => handlePick(item)}
+              className={`min-h-[118px] rounded-xl border-2 p-3 text-center transition-all duration-300 active:scale-95 lg:min-h-[156px] lg:p-5 ${
+                picked
+                  ? 'scale-105 border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : wrong
+                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                    : 'border-line bg-sagebg text-gray-800 hover:border-sage hover:bg-mist'
+              }`}
+            >
+              <TokenVisual item={item} />
+              <span className="mt-3 block text-sm font-black lg:text-base">{item.label_ko}</span>
+              <span className="mt-1 block text-xs font-bold text-sage">
+                {picked ? '찾았어요' : wrong ? '다시 보기' : '톡 눌러보기'}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <FeedbackLine feedback={feedback} />
+    </section>
+  );
+}
+
+function MatchPuzzle({ spec, childName, feedback: feedbackCopy, onComplete }: PuzzleGameProps) {
   const items = useMemo(() => readItems(spec), [spec]);
   const cards = useMemo(() => makeMatchCards(items, spec.params.seed), [items, spec.params.seed]);
   const prompt = readPrompt(spec, '같은 짝을 찾아요');
@@ -174,7 +236,9 @@ function MatchPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
       setSelectedCardIds([]);
       setFeedback({
         tone: 'success',
-        message: nextMatched.length === totalPairs ? '모든 짝을 찾았어!' : '짝을 찾았어!',
+        message: nextMatched.length === totalPairs
+          ? feedbackCopy?.success ?? '모든 짝을 찾았어!'
+          : '짝을 찾았어!',
       });
 
       if (nextMatched.length === totalPairs) {
@@ -189,7 +253,7 @@ function MatchPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
     setMismatchedCardIds(nextSelected);
     setFeedback({
       tone: 'retry',
-      message: '거의 다 왔어! 다른 짝을 찾아볼까?',
+      message: feedbackCopy?.retry ?? '거의 다 왔어! 다른 짝을 찾아볼까?',
     });
     delay(() => {
       setSelectedCardIds([]);
@@ -199,7 +263,7 @@ function MatchPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
   }
 
   return (
-    <section className="rounded-xl border border-violet-100 bg-white p-4 shadow-sm shadow-violet-100/60">
+    <section className="rounded-xl border border-line bg-white p-4 shadow-sm shadow-sagebg">
       <PuzzleHeader
         eyebrow={`퍼즐 ${spec.round_index + 1}`}
         title={prompt}
@@ -228,8 +292,8 @@ function MatchPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
                   : isMismatch
                     ? 'border-rose-200 bg-rose-50 text-rose-600'
                     : isSelected
-                      ? 'scale-105 border-violet-400 bg-violet-100 text-violet-800 shadow-sm shadow-violet-200'
-                      : 'border-violet-100 bg-violet-50 text-gray-800 hover:border-violet-300 hover:bg-violet-100'
+                      ? 'scale-105 border-sage bg-mist text-ink shadow-sm shadow-sagebg'
+                      : 'border-line bg-sagebg text-gray-800 hover:border-sage hover:bg-mist'
               }`}
             >
               {card.kind === 'token' ? (
@@ -239,7 +303,7 @@ function MatchPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
                   {card.item.label_ko}
                 </span>
               )}
-              <span className="mt-2 block text-xs font-bold text-violet-500">
+              <span className="mt-2 block text-xs font-bold text-sage">
                 {isMatched ? '찾았어요' : card.kind === 'token' ? '그림' : '이름'}
               </span>
             </button>
@@ -252,7 +316,7 @@ function MatchPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
   );
 }
 
-function SortPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
+function SortPuzzle({ spec, childName, feedback: feedbackCopy, onComplete }: PuzzleGameProps) {
   const items = useMemo(() => readItems(spec), [spec]);
   const categories = useMemo(() => readCategories(spec, items), [spec, items]);
   const prompt = readPrompt(spec, '같은 무리끼리 나누어요');
@@ -297,7 +361,7 @@ function SortPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
       markRetried();
       setFeedback({
         tone: 'retry',
-        message: '거의 다 왔어! 다른 바구니를 골라볼까?',
+        message: feedbackCopy?.retry ?? '거의 다 왔어! 다른 바구니를 골라볼까?',
       });
       return;
     }
@@ -311,7 +375,9 @@ function SortPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
     setSelectedItemId(null);
     setFeedback({
       tone: 'success',
-      message: Object.keys(nextAssignments).length === items.length ? '모두 잘 나누었어!' : '잘 넣었어!',
+      message: Object.keys(nextAssignments).length === items.length
+        ? feedbackCopy?.success ?? '모두 잘 나누었어!'
+        : '잘 넣었어!',
     });
 
     if (Object.keys(nextAssignments).length === items.length) {
@@ -320,7 +386,7 @@ function SortPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
   }
 
   return (
-    <section className="rounded-xl border border-violet-100 bg-white p-4 shadow-sm shadow-violet-100/60">
+    <section className="rounded-xl border border-line bg-white p-4 shadow-sm shadow-sagebg">
       <PuzzleHeader
         eyebrow={`퍼즐 ${spec.round_index + 1}`}
         title={prompt}
@@ -343,8 +409,8 @@ function SortPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
                 onClick={() => handleItemSelect(item)}
                 className={`flex min-h-[72px] min-w-[88px] flex-1 items-center gap-3 rounded-lg border-2 px-3 py-2 text-left transition-all duration-300 active:scale-95 sm:flex-none lg:min-h-[88px] lg:px-5 ${
                   isSelected
-                    ? 'scale-105 border-violet-400 bg-violet-100 text-violet-800 shadow-sm shadow-violet-200'
-                    : 'border-violet-100 bg-violet-50 text-gray-800 hover:border-violet-300 hover:bg-violet-100'
+                    ? 'scale-105 border-sage bg-mist text-ink shadow-sm shadow-sagebg'
+                    : 'border-line bg-sagebg text-gray-800 hover:border-sage hover:bg-mist'
                 }`}
               >
                 <TokenVisual item={item} compact />
@@ -373,12 +439,12 @@ function SortPuzzle({ spec, childName, onComplete }: PuzzleGameProps) {
               onClick={() => handleCategorySelect(category)}
               className={`min-h-[132px] rounded-lg border-2 p-3 text-left transition-all duration-300 active:scale-95 ${
                 selectedItem
-                  ? 'border-violet-200 bg-violet-50 hover:border-violet-400 hover:bg-violet-100'
+                  ? 'border-sagebg bg-sagebg hover:border-sage hover:bg-mist'
                   : 'border-gray-100 bg-gray-50'
               }`}
             >
-              <span className="block text-sm font-black text-violet-900">{categoryLabel(category)}</span>
-              <span className="mt-1 block text-xs font-bold text-violet-500">
+              <span className="block text-sm font-black text-ink">{categoryLabel(category)}</span>
+              <span className="mt-1 block text-xs font-bold text-sage">
                 {placedItems.length}개 모였어요
               </span>
               <span className="mt-3 flex flex-wrap gap-2">
@@ -421,10 +487,10 @@ function PuzzleHeader({
     <div>
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold text-violet-500">{eyebrow}</p>
+          <p className="text-xs font-bold text-sage">{eyebrow}</p>
           <h2 className="mt-1 text-lg font-black text-gray-900">{title}</h2>
         </div>
-        <span className="inline-flex min-h-[44px] min-w-[68px] items-center justify-center rounded-full bg-violet-100 px-3 text-sm font-black text-violet-700">
+        <span className="inline-flex min-h-[44px] min-w-[68px] items-center justify-center rounded-full bg-mist px-3 text-sm font-black text-saged">
           {progressLabel}
         </span>
       </div>
@@ -433,11 +499,11 @@ function PuzzleHeader({
         aria-valuemax={100}
         aria-valuemin={0}
         aria-valuenow={progressPct}
-        className="mt-3 h-3 overflow-hidden rounded-full bg-violet-50"
+        className="mt-3 h-3 overflow-hidden rounded-full bg-sagebg"
         role="progressbar"
       >
         <div
-          className="h-full rounded-full bg-violet-500 transition-all duration-500"
+          className="h-full rounded-full bg-saged transition-all duration-500"
           style={{ width: `${progressPct}%` }}
         />
       </div>
@@ -455,12 +521,12 @@ function FeedbackLine({ feedback }: { feedback: Feedback }) {
             : feedback.tone === 'retry'
               ? 'bg-amber-100 text-amber-700'
               : feedback.tone === 'hint'
-                ? 'bg-violet-100 text-violet-700'
+                ? 'bg-mist text-saged'
                 : 'bg-gray-50 text-gray-500'
         }`}
       >
-        <span aria-hidden="true" className="text-xl">
-          {feedback.tone === 'success' ? '⭐' : feedback.tone === 'retry' ? '😊' : '🧩'}
+        <span aria-hidden="true" className="text-lg">
+          {feedback.tone === 'success' ? '✓' : feedback.tone === 'retry' ? '•' : '·'}
         </span>
         {feedback.message}
       </div>
@@ -480,14 +546,14 @@ function CompletedState({
   retried: boolean;
 }) {
   return (
-    <section className="rounded-xl border border-violet-100 bg-white p-6 text-center shadow-sm shadow-violet-100/60">
-      <div className="text-5xl transition-all duration-300" aria-hidden="true">
-        🎉
+    <section className="rounded-xl border border-line bg-white p-6 text-center shadow-sm shadow-sagebg">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-sagebg text-3xl font-black text-saged transition-all duration-300" aria-hidden="true">
+        ✓
       </div>
       <h2 className="mt-3 text-xl font-black text-gray-900">
         {childName} 해냈어!
       </h2>
-      <p className="mt-2 text-sm font-bold text-violet-600">
+      <p className="mt-2 text-sm font-bold text-saged">
         {score}/{maxScore}개 완성했어요
       </p>
       <p className="mt-1 text-sm font-medium text-gray-500">
@@ -499,45 +565,29 @@ function CompletedState({
 
 function EmptyPuzzleState({ title }: { title: string }) {
   return (
-    <section className="rounded-xl border border-violet-100 bg-violet-50 p-5 text-center shadow-sm shadow-violet-100/60">
-      <div className="text-4xl" aria-hidden="true">
-        🧩
-      </div>
-      <h2 className="mt-3 text-lg font-bold text-violet-900">{title}</h2>
-      <p className="mt-2 text-sm font-medium text-violet-600">
+    <section className="rounded-xl border border-line bg-sagebg p-5 text-center shadow-sm shadow-sagebg">
+      <PuzzleFallbackIcon />
+      <h2 className="mt-3 text-lg font-bold text-ink">{title}</h2>
+      <p className="mt-2 text-sm font-medium text-saged">
         잠깐 뒤에 다시 놀이해요.
       </p>
     </section>
   );
 }
 
-function TokenVisual({ item, compact = false }: { item: PuzzleItem; compact?: boolean }) {
-  const token = item.token.trim();
-
-  if (isInlineSvg(token)) {
-    return (
-      <span
-        aria-hidden="true"
-        className={`inline-flex shrink-0 items-center justify-center [&_svg]:h-full [&_svg]:w-full ${
-          compact ? 'h-9 w-9' : 'mx-auto h-16 w-16'
-        }`}
-        dangerouslySetInnerHTML={{ __html: token }}
-      />
-    );
-  }
-
-  const mark = TOKEN_MARKS[token] ?? (isLikelyEmoji(token) || Array.from(token).length <= 2 ? token : item.label_ko.slice(0, 2));
-
+function PuzzleFallbackIcon() {
   return (
-    <span
-      aria-hidden="true"
-      className={`inline-flex shrink-0 items-center justify-center rounded-lg bg-white font-black shadow-sm ${
-        compact ? 'h-9 w-9 text-xl' : 'mx-auto h-16 w-16 text-4xl'
-      }`}
-    >
-      {mark}
-    </span>
+    <div className="mx-auto grid h-14 w-14 grid-cols-2 gap-1 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-line" aria-hidden="true">
+      <span className="rounded-tl-xl rounded-br-md bg-sage" />
+      <span className="rounded-tr-xl rounded-bl-md bg-mint" />
+      <span className="rounded-bl-xl rounded-tr-md bg-honey" />
+      <span className="rounded-br-xl rounded-tl-md bg-coral" />
+    </div>
   );
+}
+
+function TokenVisual({ item, compact = false }: { item: PuzzleItem; compact?: boolean }) {
+  return <GameTokenVisual token={item.token} label={item.label_ko} compact={compact} />;
 }
 
 function useRoundCompletion(spec: GameRoundSpec, onComplete: (result: GameRoundResult) => void) {
@@ -664,6 +714,11 @@ function readPrompt(spec: GameRoundSpec, fallback: string): string {
   return stringValue(params.prompt_ko) ?? fallback;
 }
 
+function readAnswerToken(spec: GameRoundSpec): string | null {
+  const params = spec.params as RuntimePuzzleParams;
+  return stringValue(params.answer_token);
+}
+
 function categoryLabel(category: string): string {
   return CATEGORY_LABELS[category] ?? category;
 }
@@ -695,13 +750,4 @@ function stringValue(value: unknown): string | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isInlineSvg(value: string): boolean {
-  const trimmed = value.trim().toLowerCase();
-  return trimmed.startsWith('<svg') && trimmed.includes('</svg>');
-}
-
-function isLikelyEmoji(value: string): boolean {
-  return /\p{Extended_Pictographic}/u.test(value);
 }

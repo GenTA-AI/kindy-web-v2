@@ -26,7 +26,7 @@ function StatusBadge({ lesson }: { lesson: LessonWithProgress }) {
   if (lesson.library_video_id === null) {
     return (
       <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-bold text-gray-500">
-        콘텐츠 준비중
+        영상 준비중
       </span>
     );
   }
@@ -35,8 +35,8 @@ function StatusBadge({ lesson }: { lesson: LessonWithProgress }) {
 
   if (status === 'completed') {
     return (
-      <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-bold text-violet-600">
-        ✓ 완료{typeof lesson.progress?.quiz_score === 'number' ? ` · 퀴즈 ${lesson.progress.quiz_score}개 맞음` : ''}
+      <span className="rounded-full bg-mist px-2.5 py-1 text-[11px] font-bold text-saged">
+        ✓ 완료{typeof lesson.progress?.quiz_score === 'number' ? ` · 단서 ${lesson.progress.quiz_score}개` : ''}
       </span>
     );
   }
@@ -51,7 +51,7 @@ function StatusBadge({ lesson }: { lesson: LessonWithProgress }) {
 
   if (status === 'available') {
     return (
-      <span className="rounded-full bg-violet-500 px-2.5 py-1 text-[11px] font-bold text-white">
+      <span className="rounded-full bg-saged px-2.5 py-1 text-[11px] font-bold text-white">
         시작 가능
       </span>
     );
@@ -83,7 +83,7 @@ function LessonRow({ lesson, childId, syllabusId }: { lesson: LessonWithProgress
           <p className="mt-2 line-clamp-2 text-xs font-medium leading-relaxed text-gray-500">{lesson.objective}</p>
         )}
       </div>
-      {canOpen && <span className="flex-shrink-0 text-violet-400">›</span>}
+      {canOpen && <span className="flex-shrink-0 text-sage">›</span>}
     </>
   );
 
@@ -91,7 +91,7 @@ function LessonRow({ lesson, childId, syllabusId }: { lesson: LessonWithProgress
     return (
       <Link
         href={`/dashboard/study/lesson/${lesson.id}?childId=${encodeURIComponent(childId)}&syllabusId=${encodeURIComponent(syllabusId)}`}
-        className="flex min-h-[64px] items-center gap-3 rounded-2xl border border-violet-100 bg-white p-4 shadow-sm transition hover:border-violet-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
+        className="flex min-h-[64px] items-center gap-3 rounded-2xl border border-line bg-white p-4 shadow-sm transition hover:border-sagebg hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
       >
         {content}
       </Link>
@@ -111,14 +111,14 @@ export default function UnitProgressList({ detail, childId }: Props) {
       {detail.units.map((unit) => (
         <section key={unit.id} className="rounded-3xl bg-white p-5 shadow-sm">
           <div className="mb-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-violet-500">단원 {unit.sort_order}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-sage">단원 {unit.sort_order}</p>
             <h2 className="mt-1 text-lg font-extrabold text-gray-900">{unit.title}</h2>
             {unit.objective && <p className="mt-2 text-sm font-medium leading-relaxed text-gray-500">{unit.objective}</p>}
           </div>
           <div className="space-y-2">
             {unit.lessons.length === 0 ? (
-              <div className="rounded-2xl bg-violet-50 p-4 text-center text-sm font-medium text-gray-500">
-                아직 등록된 차시가 없어요.
+              <div className="rounded-2xl bg-sagebg p-4 text-center text-sm font-medium text-gray-500">
+                아직 등록된 활동이 없어요.
               </div>
             ) : (
               unit.lessons.map((lesson) => (

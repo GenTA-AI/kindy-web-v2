@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { getSubscriptionState } from '@/lib/subscription';
+import { isSupabaseServiceConfigured } from '@/lib/supabase';
 
 /**
  * GET /api/subscription — 로그인한 parent 의 구독 + entitlement.
  *
- * 인증: 세션 쿠키(웹) 또는 `Authorization: Bearer <supabase access token>` (iPad 앱).
+ * 인증: 세션 쿠키(웹) 또는 `Authorization: Bearer <supabase access token>`.
  *
  * 응답:
  * {
@@ -20,16 +21,30 @@ export async function GET(request: NextRequest) {
     parentId = await getCurrentParentId(request);
   } catch (error) {
     if (isAuthError(error)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: '보호자 로그인이 필요해요.' }, { status: 401 });
     }
-    throw error;
+    console.error('[subscription:auth]', error);
+    return NextResponse.json({ error: '구독 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.' }, { status: 500 });
+  }
+
+  if (!isSupabaseServiceConfigured()) {
+    return NextResponse.json({
+      subscription: null,
+      entitlement: {
+        parent_id: parentId,
+        is_premium: false,
+        premium_until: null,
+        source: 'local_preview',
+        updated_at: new Date().toISOString(),
+      },
+    });
   }
 
   try {
     const state = await getSubscriptionState(parentId);
     return NextResponse.json(state);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('[subscription:get]', error);
+    return NextResponse.json({ error: '구독 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.' }, { status: 500 });
   }
 }

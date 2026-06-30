@@ -48,10 +48,10 @@ export default function WaitlistForm({ className = '' }: WaitlistFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className={`mx-auto w-full max-w-[375px] rounded-2xl border border-violet-100 bg-white p-4 text-left shadow-sm ${className}`}
+      className={`mx-auto w-full max-w-[375px] rounded-2xl border border-line bg-white p-4 text-left shadow-sm ${className}`}
     >
       <label className="block">
-        <span className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-gray-500">
+        <span className="mb-2 block text-[11px] font-black uppercase tracking-[.14em] text-ink3">
           초대 받을 이메일
         </span>
         <input
@@ -61,14 +61,14 @@ export default function WaitlistForm({ className = '' }: WaitlistFormProps) {
           disabled={pending || done}
           placeholder="parent@example.com"
           autoComplete="email"
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-base font-semibold text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-transparent focus:ring-2 focus:ring-violet-300 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-2xl border border-line bg-cream px-4 py-3.5 text-base font-bold text-ink outline-none transition placeholder:text-ink3 focus:border-sage focus:ring-4 focus:ring-sagebg disabled:cursor-not-allowed disabled:opacity-60"
         />
       </label>
 
       <button
         type="submit"
         disabled={pending || done || !email.trim()}
-        className="mt-3 w-full rounded-2xl bg-violet-500 px-6 py-4 text-base font-bold text-white shadow-lg shadow-violet-200/60 transition hover:bg-violet-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-3 w-full rounded-2xl bg-saged px-6 py-4 text-base font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending ? '가입 중...' : '가입하기'}
       </button>
@@ -76,7 +76,7 @@ export default function WaitlistForm({ className = '' }: WaitlistFormProps) {
       {(done || error) && (
         <p
           className={`mt-3 text-center text-sm font-semibold ${
-            error ? 'text-red-500' : 'text-violet-600'
+            error ? 'text-clay' : 'text-saged'
           }`}
           aria-live="polite"
         >

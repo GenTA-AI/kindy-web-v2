@@ -114,10 +114,12 @@ export interface GACS3Output {
   word_profile: WordProfile;
 }
 
-// Style options for onboarding (MVP: 2 styles only)
+// Style options for onboarding: 아이가 고르는 이야기 숲 입구.
 export const STYLE_OPTIONS = [
-  { id: 'princess', label: '공주/동화', description: '부드럽고 따뜻한 동화 속 세계' },
-  { id: 'space', label: '우주 탐험', description: '신비롭고 광활한 우주 모험' },
+  { id: 'story_forest', label: '속삭이는 숲길', description: '친구 마음을 살피는 이야기' },
+  { id: 'water_lab', label: '물방울 실험터', description: '왜 그럴까를 찾아보는 놀이' },
+  { id: 'pattern_hill', label: '무늬 언덕', description: '규칙과 짝을 발견하는 놀이' },
+  { id: 'star_workshop', label: '별빛 작업실', description: '내 방법으로 꾸미고 만드는 시간' },
 ] as const;
 
 // Topic options.

@@ -2,16 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { GameRoundResult, GameRoundSpec } from '@/types/game';
+import { topicLabel } from '@/lib/topic-label';
 
 type EmotionOption = {
   id: 'joy' | 'calm' | 'curious' | 'worried' | 'sad' | 'angry';
-  emoji: string;
   label: string;
   helper: string;
   valence: -2 | -1 | 0 | 1 | 2;
   arousal: -2 | -1 | 0 | 1 | 2;
   className: string;
 };
+
+type EmotionId = EmotionOption['id'];
 
 type EmotionExpressionPayload = {
   sel_activity: 'emotion_awareness';
@@ -38,6 +40,8 @@ type EmotionExpressionRoundResult = GameRoundResult & {
 interface EmotionExpressionGameProps {
   spec: GameRoundSpec;
   childName: string;
+  activityTitle?: string;
+  prompt?: string;
   clipPosterUrl?: string | null;
   onComplete: (result: GameRoundResult) => void;
 }
@@ -45,7 +49,6 @@ interface EmotionExpressionGameProps {
 const EMOTION_OPTIONS = [
   {
     id: 'joy',
-    emoji: '😄',
     label: '신나요',
     helper: '밝고 통통 튀는 마음',
     valence: 2,
@@ -54,7 +57,6 @@ const EMOTION_OPTIONS = [
   },
   {
     id: 'calm',
-    emoji: '🙂',
     label: '편안해요',
     helper: '조용하고 부드러운 마음',
     valence: 2,
@@ -63,7 +65,6 @@ const EMOTION_OPTIONS = [
   },
   {
     id: 'curious',
-    emoji: '🤔',
     label: '궁금해요',
     helper: '더 알고 싶은 마음',
     valence: 1,
@@ -72,16 +73,14 @@ const EMOTION_OPTIONS = [
   },
   {
     id: 'worried',
-    emoji: '😟',
     label: '걱정돼요',
     helper: '조심스럽게 살피는 마음',
     valence: -1,
     arousal: 1,
-    className: 'border-violet-200 bg-violet-50 text-violet-800',
+    className: 'border-sagebg bg-sagebg text-ink',
   },
   {
     id: 'sad',
-    emoji: '😢',
     label: '속상해요',
     helper: '마음이 내려앉는 느낌',
     valence: -2,
@@ -90,7 +89,6 @@ const EMOTION_OPTIONS = [
   },
   {
     id: 'angry',
-    emoji: '😠',
     label: '화나요',
     helper: '힘이 크게 올라오는 마음',
     valence: -2,
@@ -112,9 +110,92 @@ function manikinPosition(option: EmotionOption) {
   };
 }
 
+function EmotionFace({ emotionId, compact = false }: { emotionId: EmotionId; compact?: boolean }) {
+  const colors: Record<EmotionId, string> = {
+    joy: 'bg-amber-100 ring-amber-200',
+    calm: 'bg-emerald-100 ring-emerald-200',
+    curious: 'bg-sky-100 ring-sky-200',
+    worried: 'bg-sagebg ring-sage/20',
+    sad: 'bg-blue-100 ring-blue-200',
+    angry: 'bg-rose-100 ring-rose-200',
+  };
+  const mouth: Record<EmotionId, string> = {
+    joy: 'h-3 w-7 rounded-b-full border-b-4 border-ink',
+    calm: 'h-2 w-6 rounded-b-full border-b-4 border-ink',
+    curious: 'h-4 w-4 rounded-full border-[3px] border-ink',
+    worried: 'h-2 w-6 rounded-t-full border-t-4 border-ink',
+    sad: 'h-3 w-7 rounded-t-full border-t-4 border-ink',
+    angry: 'h-1.5 w-7 rounded-full bg-ink',
+  };
+  const browClass = emotionId === 'angry' || emotionId === 'worried'
+    ? 'opacity-100'
+    : 'opacity-0';
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`relative inline-flex shrink-0 items-center justify-center rounded-full ring-2 ${
+        compact ? 'h-10 w-10' : 'h-14 w-14'
+      } ${colors[emotionId]}`}
+    >
+      <span className={`absolute left-[23%] top-[25%] h-1 w-3 rounded-full bg-ink ${browClass} ${emotionId === 'angry' ? 'rotate-[-22deg]' : 'rotate-[18deg]'}`} />
+      <span className={`absolute right-[23%] top-[25%] h-1 w-3 rounded-full bg-ink ${browClass} ${emotionId === 'angry' ? 'rotate-[22deg]' : 'rotate-[-18deg]'}`} />
+      <span className="absolute left-[30%] top-[38%] h-1.5 w-1.5 rounded-full bg-ink" />
+      <span className="absolute right-[30%] top-[38%] h-1.5 w-1.5 rounded-full bg-ink" />
+      <span className={`absolute bottom-[22%] ${mouth[emotionId]}`} />
+    </span>
+  );
+}
+
+function MindMapPanel({ selectedEmotion }: { selectedEmotion: EmotionOption | null }) {
+  return (
+    <div className="rounded-2xl border border-line bg-sagebg p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-ink">마음 지도</p>
+          <p className="mt-1 text-xs font-medium text-saged">
+            고른 얼굴이 지도 위에 보여요
+          </p>
+        </div>
+        <EmotionFace emotionId={selectedEmotion?.id ?? 'calm'} compact />
+      </div>
+
+      <div className="mt-4 rounded-2xl bg-white p-4">
+        <div className="relative h-48 rounded-xl border border-line bg-gradient-to-br from-sagebg via-white to-cream">
+          <span className="absolute left-1/2 top-3 -translate-x-1/2 text-xs font-bold text-ink3">
+            움직이는 쪽
+          </span>
+          <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs font-bold text-ink3">
+            조용한 쪽
+          </span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-ink3">
+            힘든 쪽
+          </span>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-ink3">
+            편안한 쪽
+          </span>
+          <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-line" />
+          <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-line" />
+          {selectedEmotion && (
+            <span
+              aria-label={`${selectedEmotion.label} 위치`}
+              className="absolute flex h-12 w-12 items-center justify-center rounded-full border-2 border-sage bg-white shadow-lg shadow-sagebg"
+              style={manikinPosition(selectedEmotion)}
+            >
+              <EmotionFace emotionId={selectedEmotion.id} compact />
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EmotionExpressionGame({
   spec,
   childName,
+  activityTitle,
+  prompt,
   clipPosterUrl = null,
   onComplete,
 }: EmotionExpressionGameProps) {
@@ -127,6 +208,9 @@ export default function EmotionExpressionGame({
   const hasReason = reason.trim().length > 0;
   const participationScore = selectedEmotion ? (hasReason ? 2 : 1) : 0;
   const roundNumber = spec.round_index + 1;
+  const displayTopic = topicLabel(spec.topic);
+  const title = activityTitle?.trim() || '마음 단서 찾기';
+  const scenePrompt = prompt?.trim() || '장면을 보고 떠오른 마음을 골라볼래?';
 
   useEffect(() => {
     startedAtRef.current = Date.now();
@@ -172,30 +256,30 @@ export default function EmotionExpressionGame({
   return (
     <section
       aria-labelledby="emotion-expression-title"
-      className="w-full rounded-3xl border border-violet-100 bg-white p-4 shadow-sm shadow-violet-100/70 sm:p-5"
+      className="w-full rounded-3xl border border-line bg-white p-4 shadow-sm sm:p-5"
     >
       <div className="flex flex-col gap-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-bold text-violet-500">
+            <p className="text-xs font-bold text-sage">
               {roundNumber}라운드 · 마음 표현
             </p>
-            <h2 id="emotion-expression-title" className="mt-1 text-2xl font-black text-gray-900">
-              기분을 표현해봐
+            <h2 id="emotion-expression-title" className="mt-1 text-2xl font-black text-ink">
+              {title}
             </h2>
           </div>
-          <span className="inline-flex min-h-[44px] items-center rounded-full bg-violet-50 px-4 text-sm font-bold text-violet-700">
-            {spec.topic}
+          <span className="inline-flex min-h-[44px] items-center rounded-full bg-sagebg px-4 text-sm font-bold text-saged">
+            {displayTopic}
           </span>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
-          <div className="overflow-hidden rounded-2xl border border-violet-100 bg-violet-50">
-            <div className="relative min-h-[220px]">
+          <div className="overflow-hidden rounded-2xl border border-line bg-mist">
+            <div className="relative min-h-[180px] sm:min-h-[220px]">
               {clipPosterUrl ? (
                 <div
                   role="img"
-                  aria-label={`${spec.topic} 장면`}
+                  aria-label={`${displayTopic} 장면`}
                   className="absolute inset-0 bg-cover bg-center"
                   style={{ backgroundImage: `url(${clipPosterUrl})` }}
                 />
@@ -233,59 +317,21 @@ export default function EmotionExpressionGame({
                   </svg>
                 </div>
               )}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-violet-950/70 to-transparent p-4 text-white">
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/75 to-transparent p-4 text-white">
                 <p className="text-sm font-semibold">장면을 보고 떠오른 마음</p>
-                <p className="mt-1 text-lg font-black">어떤 마음이 들었어?</p>
+                <p className="mt-1 text-lg font-black">{scenePrompt}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-violet-100 bg-violet-50/70 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold text-violet-900">마음 지도</p>
-                <p className="mt-1 text-xs font-medium text-violet-600">
-                  고른 얼굴이 지도 위에 보여요
-                </p>
-              </div>
-              <span className="text-3xl" aria-hidden="true">
-                {selectedEmotion?.emoji ?? '🙂'}
-              </span>
-            </div>
-
-            <div className="mt-4 rounded-2xl bg-white p-4">
-              <div className="relative h-48 rounded-xl border border-violet-100 bg-gradient-to-br from-blue-50 via-white to-amber-50">
-                <span className="absolute left-1/2 top-3 -translate-x-1/2 text-xs font-bold text-gray-500">
-                  움직이는 쪽
-                </span>
-                <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs font-bold text-gray-500">
-                  조용한 쪽
-                </span>
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500">
-                  힘든 쪽
-                </span>
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500">
-                  편안한 쪽
-                </span>
-                <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-violet-100" />
-                <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-violet-100" />
-                {selectedEmotion && (
-                  <span
-                    aria-label={`${selectedEmotion.label} 위치`}
-                    className="absolute flex h-12 w-12 items-center justify-center rounded-full border-2 border-violet-400 bg-white text-2xl shadow-lg shadow-violet-200"
-                    style={manikinPosition(selectedEmotion)}
-                  >
-                    {selectedEmotion.emoji}
-                  </span>
-                )}
-              </div>
-            </div>
+          <div className="hidden lg:block">
+            <MindMapPanel selectedEmotion={selectedEmotion} />
           </div>
         </div>
 
         <div>
-          <p className="text-base font-bold text-gray-900">
-            {childName}, 이 장면에서 떠오른 얼굴을 골라볼래?
+          <p className="text-base font-bold text-ink">
+            {childName}, {scenePrompt}
           </p>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {EMOTION_OPTIONS.map((option) => {
@@ -300,14 +346,12 @@ export default function EmotionExpressionGame({
                   onClick={() => setSelectedEmotionId(option.id)}
                   className={`min-h-[88px] rounded-2xl border-2 p-3 text-left transition-all active:scale-[0.98] disabled:cursor-default ${
                     isSelected
-                      ? `${option.className} ring-4 ring-violet-200`
-                      : 'border-gray-100 bg-white text-gray-700 hover:border-violet-200 hover:bg-violet-50'
+                      ? `${option.className} ring-4 ring-sagebg`
+                      : 'border-line bg-white text-ink2 hover:border-sage hover:bg-mist'
                   }`}
                 >
                   <span className="flex items-center gap-2">
-                    <span className="text-3xl" aria-hidden="true">
-                      {option.emoji}
-                    </span>
+                    <EmotionFace emotionId={option.id} compact />
                     <span className="text-base font-black">{option.label}</span>
                   </span>
                   <span className="mt-2 block text-xs font-semibold opacity-80">{option.helper}</span>
@@ -317,12 +361,23 @@ export default function EmotionExpressionGame({
           </div>
         </div>
 
+        <button
+          type="button"
+          disabled={!selectedEmotion || isSubmitted}
+          onClick={handleComplete}
+          className={`min-h-[52px] rounded-2xl bg-saged px-5 py-3 text-base font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-line disabled:text-ink3 disabled:shadow-none lg:static ${
+            selectedEmotion ? 'sticky bottom-3 z-20' : ''
+          }`}
+        >
+          {isSubmitted ? '표현을 기록했어요' : '표현 마치기'}
+        </button>
+
         {selectedEmotion && (
-          <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
-            <p className="text-base font-bold text-violet-900">
+          <div className="rounded-2xl border border-line bg-mist p-4">
+            <p className="text-base font-bold text-ink">
               {selectedEmotion.label}라고 느꼈구나.
             </p>
-            <label htmlFor="emotion-expression-reason" className="mt-3 block text-sm font-bold text-gray-800">
+            <label htmlFor="emotion-expression-reason" className="mt-3 block text-sm font-bold text-ink">
               왜 그런 마음이 들었는지 한마디로 말해도 돼
             </label>
             <textarea
@@ -333,22 +388,17 @@ export default function EmotionExpressionGame({
               maxLength={80}
               rows={2}
               placeholder="예: 친구 얼굴을 보고 그렇게 느꼈어"
-              className="mt-2 min-h-[72px] w-full resize-none rounded-2xl border border-violet-100 bg-white px-4 py-3 text-base font-medium text-gray-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100 disabled:text-gray-500"
+              className="mt-2 min-h-[72px] w-full resize-none rounded-2xl border border-line bg-white px-4 py-3 text-base font-medium text-ink outline-none transition focus:border-sage focus:ring-4 focus:ring-sagebg disabled:text-ink3"
             />
-            <p className="mt-2 text-xs font-medium text-violet-600">
+            <p className="mt-2 text-xs font-medium text-saged">
               말하지 않아도 괜찮아. 고른 마음만으로도 표현했어요.
             </p>
           </div>
         )}
 
-        <button
-          type="button"
-          disabled={!selectedEmotion || isSubmitted}
-          onClick={handleComplete}
-          className="min-h-[52px] rounded-2xl bg-violet-600 px-5 py-3 text-base font-black text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none"
-        >
-          {isSubmitted ? '표현을 기록했어요' : '표현 마치기'}
-        </button>
+        <div className="lg:hidden">
+          <MindMapPanel selectedEmotion={selectedEmotion} />
+        </div>
       </div>
     </section>
   );

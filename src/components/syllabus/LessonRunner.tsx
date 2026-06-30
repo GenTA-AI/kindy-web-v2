@@ -33,7 +33,7 @@ function BackToProgressLink({ childId, syllabusId }: { childId: string; syllabus
       href={`/dashboard/study/${encodeURIComponent(syllabusId)}?childId=${encodeURIComponent(childId)}`}
       className="inline-flex min-h-[44px] items-center rounded-full bg-white/20 px-4 text-xs font-bold text-white transition hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/70"
     >
-      진도표로 돌아가기
+      학습표로 돌아가기
     </Link>
   );
 }
@@ -46,6 +46,7 @@ export default function LessonRunner({ lesson, childId, syllabusId, childAge }: 
   const [questions, setQuestions] = useState<AttentionQuestion[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [quizLoading, setQuizLoading] = useState(false);
   const [completionLoading, setCompletionLoading] = useState(false);
   const [completionError, setCompletionError] = useState<string | null>(null);
@@ -56,6 +57,13 @@ export default function LessonRunner({ lesson, childId, syllabusId, childAge }: 
   const playedRef = useRef(false);
   const quizStartedRef = useRef(false);
   const completionStartedRef = useRef(false);
+  const answerAdvanceTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (answerAdvanceTimerRef.current !== null) window.clearTimeout(answerAdvanceTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     setStep('video');
@@ -64,6 +72,7 @@ export default function LessonRunner({ lesson, childId, syllabusId, childAge }: 
     setQuestions([]);
     setCurrentIdx(0);
     setAnswers([]);
+    setSelectedAnswer(null);
     setQuizLoading(false);
     setCompletionLoading(false);
     setCompletionError(null);
@@ -155,7 +164,7 @@ export default function LessonRunner({ lesson, childId, syllabusId, childAge }: 
       const body = await postProgress('complete', score);
       setUnlockedLessonId(body.unlockedLessonId ?? null);
     } catch {
-      setCompletionError('차시 완료 저장에 실패했어요. 진도표에서 다시 확인해주세요.');
+      setCompletionError('활동 완료 저장에 실패했어요. 학습표에서 다시 확인해주세요.');
     } finally {
       setCompletionLoading(false);
       setStep('done');
@@ -196,6 +205,7 @@ export default function LessonRunner({ lesson, childId, syllabusId, childAge }: 
         setQuestions(nextQuestions);
         setCurrentIdx(0);
         setAnswers([]);
+        setSelectedAnswer(null);
         setQuizLoading(false);
       } catch {
         if (!cancelled) {
@@ -234,37 +244,46 @@ export default function LessonRunner({ lesson, childId, syllabusId, childAge }: 
   }, [completeLesson, postProgress, questions]);
 
   const submitAnswer = (answerIdx: number) => {
+    if (selectedAnswer !== null) return;
+
     const nextAnswers = [...answers, answerIdx];
     setAnswers(nextAnswers);
+    setSelectedAnswer(answerIdx);
 
-    if (currentIdx + 1 < questions.length) {
-      setCurrentIdx((idx) => idx + 1);
-      return;
-    }
+    if (answerAdvanceTimerRef.current !== null) window.clearTimeout(answerAdvanceTimerRef.current);
+    answerAdvanceTimerRef.current = window.setTimeout(() => {
+      answerAdvanceTimerRef.current = null;
 
-    void completeQuiz(nextAnswers);
+      if (currentIdx + 1 < questions.length) {
+        setCurrentIdx((idx) => idx + 1);
+        setSelectedAnswer(null);
+        return;
+      }
+
+      void completeQuiz(nextAnswers);
+    }, 1200);
   };
 
   if (lesson.library_video_id === null) {
     return (
-      <div className="min-h-screen bg-violet-50 pb-24">
-        <div className="bg-gradient-to-br from-violet-500 to-violet-400 px-6 pb-12 pt-12 text-white">
+      <div className="min-h-screen bg-sagebg pb-24">
+        <div className="bg-saged px-6 pb-12 pt-12 text-white">
           <BackToProgressLink childId={childId} syllabusId={syllabusId} />
-          <p className="mt-6 text-[11px] font-bold uppercase tracking-wider text-violet-100">차시 학습</p>
+          <p className="mt-6 text-[11px] font-bold uppercase tracking-wider text-white/70">오늘 학습</p>
           <h1 className="mt-1 text-2xl font-extrabold leading-tight">{lesson.title}</h1>
         </div>
         <div className="px-6 pt-6">
           <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-violet-100 text-xl">⌛</div>
-            <h2 className="text-lg font-extrabold text-gray-900">이 차시는 콘텐츠 준비 중이에요</h2>
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-mist text-xl">⌛</div>
+            <h2 className="text-lg font-extrabold text-gray-900">이 활동은 콘텐츠 준비 중이에요</h2>
             <p className="mt-2 text-sm font-medium leading-relaxed text-gray-500">
-              영상이 연결되면 바로 학습할 수 있어요. 지금은 진도표에서 다른 차시를 확인해주세요.
+              영상이 연결되면 바로 학습할 수 있어요. 지금은 학습표에서 다른 활동을 확인해주세요.
             </p>
             <Link
               href={`/dashboard/study/${encodeURIComponent(syllabusId)}?childId=${encodeURIComponent(childId)}`}
-              className="mt-5 inline-flex min-h-[44px] w-full items-center justify-center rounded-2xl bg-violet-500 px-6 text-sm font-bold text-white shadow-lg shadow-violet-200/60 transition hover:bg-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
+              className="mt-5 inline-flex min-h-[44px] w-full items-center justify-center rounded-2xl bg-saged px-6 text-sm font-bold text-white shadow-lg shadow-sagebg/60 transition hover:bg-saged focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
             >
-              진도표로 돌아가기
+              학습표로 돌아가기
             </Link>
           </div>
         </div>
@@ -276,39 +295,57 @@ export default function LessonRunner({ lesson, childId, syllabusId, childAge }: 
     const question = questions[currentIdx];
 
     return (
-      <div className="min-h-screen bg-violet-50 pb-24">
-        <div className="bg-gradient-to-br from-violet-500 to-violet-400 px-6 pb-12 pt-12 text-white">
+      <div className="min-h-screen bg-sagebg pb-24">
+        <div className="bg-saged px-6 pb-12 pt-12 text-white">
           <BackToProgressLink childId={childId} syllabusId={syllabusId} />
-          <p className="mt-6 text-[11px] font-bold uppercase tracking-wider text-violet-100">집중 퀴즈</p>
+          <p className="mt-6 text-[11px] font-bold uppercase tracking-wider text-white/70">단서 질문</p>
           <h1 className="mt-1 text-2xl font-extrabold leading-tight">{lesson.title}</h1>
         </div>
         <div className="px-6 pt-6">
           <div className="rounded-3xl bg-white p-6 shadow-sm">
             {quizLoading || completionLoading || !question ? (
               <div className="py-10 text-center">
-                <p className="text-sm font-bold text-violet-500">
-                  {completionLoading ? '차시 완료 저장 중...' : '퀴즈 준비 중...'}
+                <p className="text-sm font-bold text-sage">
+                  {completionLoading ? '활동 완료 저장 중...' : '단서 질문 준비 중...'}
                 </p>
                 <p className="mt-2 text-xs font-medium text-gray-400">잠시만 기다려주세요.</p>
               </div>
             ) : (
               <>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-violet-500">
-                  퀴즈 {currentIdx + 1} / {questions.length}
+                <p className="text-[11px] font-bold uppercase tracking-wider text-sage">
+                  단서 질문 {currentIdx + 1} / {questions.length}
                 </p>
                 <h2 className="mt-2 text-xl font-extrabold leading-snug text-gray-900">{question.question}</h2>
                 <div className="mt-5 space-y-2">
                   {question.options.map((option, index) => (
-                    <button
-                      key={`${question.question}-${option}`}
-                      type="button"
-                      onClick={() => submitAnswer(index)}
-                      className="w-full min-h-[44px] rounded-xl border border-violet-100 bg-white px-4 py-3 text-left text-sm font-semibold text-gray-800 transition hover:border-violet-200 hover:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2 active:scale-[0.99]"
-                    >
-                      {option}
-                    </button>
+                    (() => {
+                      const isSelected = selectedAnswer === index;
+                      const isAnswered = selectedAnswer !== null;
+                      const selectedClass = isSelected
+                        ? index === question.correctAnswer
+                          ? 'border-sage bg-sagebg text-saged'
+                          : 'border-clay/40 bg-cream text-clay'
+                        : 'border-line bg-white text-gray-800 hover:border-sagebg hover:bg-sagebg';
+
+                      return (
+                        <button
+                          key={`${question.question}-${option}`}
+                          type="button"
+                          onClick={() => submitAnswer(index)}
+                          disabled={isAnswered}
+                          className={`w-full min-h-[44px] rounded-xl border px-4 py-3 text-left text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2 active:scale-[0.99] disabled:cursor-default ${selectedClass}`}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })()
                   ))}
                 </div>
+                {selectedAnswer !== null && (
+                  <p className="mt-4 rounded-2xl bg-mist px-4 py-3 text-sm font-extrabold text-saged" aria-live="polite">
+                    {selectedAnswer === question.correctAnswer ? '단서를 찾았어요. 다음으로 가요.' : '좋아요. 고른 단서도 기록했어요.'}
+                  </p>
+                )}
               </>
             )}
           </div>
@@ -319,23 +356,23 @@ export default function LessonRunner({ lesson, childId, syllabusId, childAge }: 
 
   if (step === 'done') {
     return (
-      <div className="min-h-screen bg-violet-50 pb-24">
-        <div className="bg-gradient-to-br from-violet-500 to-violet-400 px-6 pb-12 pt-12 text-white">
+      <div className="min-h-screen bg-sagebg pb-24">
+        <div className="bg-saged px-6 pb-12 pt-12 text-white">
           <BackToProgressLink childId={childId} syllabusId={syllabusId} />
-          <p className="mt-6 text-[11px] font-bold uppercase tracking-wider text-violet-100">차시 완료</p>
+          <p className="mt-6 text-[11px] font-bold uppercase tracking-wider text-white/70">활동 완료</p>
           <h1 className="mt-1 text-2xl font-extrabold leading-tight">{lesson.title}</h1>
         </div>
         <div className="px-6 pt-6">
           <div className="rounded-3xl bg-white p-6 text-center shadow-sm">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-violet-100 text-2xl">✓</div>
-            <h2 className="text-2xl font-extrabold text-gray-900">차시 완료!</h2>
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-mist text-2xl">✓</div>
+            <h2 className="text-2xl font-extrabold text-gray-900">오늘 활동 완료!</h2>
             {quizSkipped ? (
               <p className="mt-3 text-sm font-medium leading-relaxed text-gray-500">
-                이 영상은 아직 퀴즈가 없어 바로 완료했어요.
+                이 영상은 아직 단서 질문이 없어 바로 완료했어요.
               </p>
             ) : (
               <p className="mt-3 text-sm font-medium leading-relaxed text-gray-500">
-                집중 퀴즈 {completedScore ?? 0}{quizTotal ? ` / ${quizTotal}` : ''}개를 맞췄어요.
+                단서 질문 {completedScore ?? 0}{quizTotal ? ` / ${quizTotal}` : ''}개를 끝까지 골랐어요.
               </p>
             )}
             {completionError && (
@@ -347,23 +384,23 @@ export default function LessonRunner({ lesson, childId, syllabusId, childAge }: 
               {unlockedLessonId ? (
                 <Link
                   href={`/dashboard/study/lesson/${encodeURIComponent(unlockedLessonId)}?childId=${encodeURIComponent(childId)}&syllabusId=${encodeURIComponent(syllabusId)}`}
-                  className="inline-flex min-h-[44px] w-full items-center justify-center rounded-2xl bg-violet-500 px-6 text-sm font-bold text-white shadow-lg shadow-violet-200/60 transition hover:bg-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
+                  className="inline-flex min-h-[44px] w-full items-center justify-center rounded-2xl bg-saged px-6 text-sm font-bold text-white shadow-lg shadow-sagebg/60 transition hover:bg-saged focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
                 >
-                  다음 차시 시작하기
+                  다음 활동 시작하기
                 </Link>
               ) : (
                 <Link
                   href={`/dashboard/study?childId=${encodeURIComponent(childId)}`}
-                  className="inline-flex min-h-[44px] w-full items-center justify-center rounded-2xl bg-violet-500 px-6 text-sm font-bold text-white shadow-lg shadow-violet-200/60 transition hover:bg-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
+                  className="inline-flex min-h-[44px] w-full items-center justify-center rounded-2xl bg-saged px-6 text-sm font-bold text-white shadow-lg shadow-sagebg/60 transition hover:bg-saged focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
                 >
-                  모든 차시를 마쳤어요!
+                  모든 활동을 마쳤어요!
                 </Link>
               )}
               <Link
                 href={`/dashboard/study/${encodeURIComponent(syllabusId)}?childId=${encodeURIComponent(childId)}`}
-                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-2xl border border-violet-100 bg-violet-50 px-6 text-sm font-bold text-violet-600 transition hover:bg-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
+                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-2xl border border-line bg-sagebg px-6 text-sm font-bold text-saged transition hover:bg-mist focus:outline-none focus:ring-2 focus:ring-sage focus:ring-offset-2"
               >
-                진도표로 돌아가기
+                학습표로 돌아가기
               </Link>
             </div>
           </div>
@@ -373,12 +410,12 @@ export default function LessonRunner({ lesson, childId, syllabusId, childAge }: 
   }
 
   return (
-    <div className="min-h-screen bg-violet-50 pb-24">
-      <div className="bg-gradient-to-br from-violet-500 to-violet-400 px-6 pb-14 pt-12 text-white">
+    <div className="min-h-screen bg-sagebg pb-24">
+      <div className="bg-saged px-6 pb-14 pt-12 text-white">
         <BackToProgressLink childId={childId} syllabusId={syllabusId} />
-        <p className="mt-6 text-[11px] font-bold uppercase tracking-wider text-violet-100">차시 학습</p>
+        <p className="mt-6 text-[11px] font-bold uppercase tracking-wider text-white/70">오늘 학습</p>
         <h1 className="mt-1 text-2xl font-extrabold leading-tight">{lesson.title}</h1>
-        {lesson.objective && <p className="mt-2 text-sm font-medium leading-relaxed text-violet-100">{lesson.objective}</p>}
+        {lesson.objective && <p className="mt-2 text-sm font-medium leading-relaxed text-white/70">{lesson.objective}</p>}
       </div>
 
       <div className="px-6 pt-6">
@@ -403,10 +440,10 @@ export default function LessonRunner({ lesson, childId, syllabusId, childAge }: 
             />
           )}
           <div className="p-5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-violet-500">영상 시청</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-sage">영상 시청</p>
             <h2 className="mt-1 text-lg font-extrabold text-gray-900">{video?.title ?? lesson.title}</h2>
             <p className="mt-2 text-sm font-medium leading-relaxed text-gray-500">
-              영상을 끝까지 보면 집중 퀴즈가 열려요.
+              영상을 끝까지 보면 단서 질문이 열려요.
             </p>
           </div>
         </div>

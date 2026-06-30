@@ -4,8 +4,8 @@ import { pretendard } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Kindy - 우리 아이 맞춤 학습 영상",
-  description: "아이가 좋아하는 스타일로 만든 맞춤 교육 영상. 집중력이 달라집니다.",
+  title: "Kindy Mori - 모리의 이야기 숲",
+  description: "모리 영상을 보고 짧은 질문과 놀이를 마치면, 보호자가 오늘의 놀이 기록과 다음 추천을 확인하는 웹 서비스.",
 };
 
 export default function RootLayout({

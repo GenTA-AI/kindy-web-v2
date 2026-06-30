@@ -36,7 +36,7 @@ export interface VillageCharacter {
   trait: string;
   /** 이 친구가 다루는 정서 결. */
   emotion: string;
-  /** 마스코트(토토)의 응원 톤 등에 쓰는 색 키. */
+  /** 마스코트(모리)의 응원 톤 등에 쓰는 색 키. */
   accent: 'amber' | 'rose' | 'sky' | 'emerald' | 'violet' | 'slate';
   /** Gemini TTS 아동 음성. */
   voice: VillageVoice;
@@ -45,10 +45,10 @@ export interface VillageCharacter {
 export const CHARACTERS: Record<CharacterId, VillageCharacter> = {
   toto: {
     id: 'toto',
-    name: '토토',
-    species: '토끼',
-    emoji: '🐰',
-    trait: '마을을 안내하는 다정한 친구',
+    name: '모리',
+    species: '책정령',
+    emoji: '🌱',
+    trait: '이야기 속 작은 소리를 듣는 다정한 정령',
     emotion: '응원·안내',
     accent: 'violet',
     voice: 'Puck', // 밝고 활기찬 아이 가이드
@@ -190,7 +190,7 @@ export interface ActivityFeedback {
 }
 
 export interface ActivityVoice {
-  /** 활동 진입 시 토토/올빼미가 읽어주는 안내. */
+  /** 활동 진입 시 모리/올빼미가 읽어주는 안내. */
   intro: string;
   /** 정답/완료 칭찬. */
   praise: string;
@@ -200,6 +200,10 @@ export interface ActivityConfig {
   id: string;
   game_type: GameType;
   phase: SessionAct;
+  /** 리포트/추천에 남길 명시 목표. 없으면 game_type 기반 태그를 쓴다. */
+  objectiveCode?: string;
+  /** 보호자 리포트/콘텐츠 검수에서 보는 관찰 신호. 아이 화면에는 직접 노출하지 않는다. */
+  diagnosticSignal?: string;
   /** 화면 제목(아이 눈높이). */
   title: string;
   /** 안내문(음성으로도 읽음). */
@@ -224,13 +228,42 @@ function uniqueCategories(items: VillageItem[]): string[] {
 
 /** 활동 템플릿 8종(스펙 표). 세션 시나리오가 이 중 6개를 골라 2막으로 배치. */
 export const ACTIVITY_TEMPLATES: Record<string, ActivityConfig> = {
+  // 0. 영상 직후 단서 확인 (주의·기억·관찰)
+  video_recall_seed: {
+    id: 'video_recall_seed',
+    game_type: 'Q_quiz',
+    phase: 'emotion',
+    objectiveCode: 'creativity_observe',
+    diagnosticSignal: '첫 영상 직후 핵심 사물을 기억하고 그림 단서로 다시 고르는지 본다.',
+    title: '사라진 반짝빛 단서',
+    prompt_ko: '꾸미가 잃어버린 반짝 단서는 무엇이었을까?',
+    leadCharacter: 'toto',
+    items: [
+      { token: '🌱', label_ko: '반짝빛', category: 'answer' },
+      { token: '🎈', label_ko: '빨간 풍선', category: 'option' },
+      { token: '🧸', label_ko: '작은 인형', category: 'option' },
+      { token: '🔔', label_ko: '축제 종', category: 'option' },
+    ],
+    answerToken: '🌱',
+    voice: {
+      intro: '방금 이야기에서 꾸미가 잃어버린 반짝 단서는 무엇이었을까?',
+      praise: '맞아, 반짝빛이었어! 이야기를 잘 기억했구나.',
+    },
+    feedback: {
+      success: '반짝빛을 찾았어!',
+      retry: '가까워졌어. 꾸미가 안고 있던 화분을 떠올려봐.',
+      hint: '작고 초록빛이 나는 단서를 찾아봐.',
+    },
+  },
   // 1. 표정 읽기 (정서/관찰)
   read_face: {
     id: 'read_face',
     game_type: 'emotion_expression',
     phase: 'emotion',
-    title: '꾸미 마음 찾기',
-    prompt_ko: '꾸미는 지금 어떤 마음일까? 얼굴을 보고 골라줘.',
+    objectiveCode: 'sel_social_awareness',
+    diagnosticSignal: '친구의 얼굴 단서를 보고 불편한 마음을 알아차리는지 본다.',
+    title: '꾸미 얼굴 단서',
+    prompt_ko: '반짝빛이 사라졌어. 꾸미는 어떤 마음일까?',
     leadCharacter: 'kkumi',
     items: [
       { token: '😢', label_ko: '슬퍼요', category: 'uncomfortable' },
@@ -239,7 +272,7 @@ export const ACTIVITY_TEMPLATES: Record<string, ActivityConfig> = {
       { token: '😴', label_ko: '졸려요', category: 'calm' },
     ],
     voice: {
-      intro: '꾸미가 고개를 숙이고 있어. 꾸미는 지금 어떤 마음일까?',
+      intro: '꾸미가 반짝빛을 잃어버렸대. 얼굴을 보고 마음을 찾아볼까?',
       praise: '꾸미 마음을 알아줬구나. 정말 다정해!',
     },
     feedback: {
@@ -253,8 +286,10 @@ export const ACTIVITY_TEMPLATES: Record<string, ActivityConfig> = {
     id: 'guess_feeling',
     game_type: 'emotion_expression',
     phase: 'emotion',
-    title: '꾸미는 왜 슬플까',
-    prompt_ko: '꾸미가 왜 그런 마음인지 같이 생각해보자.',
+    objectiveCode: 'sel_social_awareness',
+    diagnosticSignal: '상황 단서와 친구 마음을 연결해 이유를 떠올리는지 본다.',
+    title: '왜 속상할까',
+    prompt_ko: '꾸미가 왜 그런 마음인지 한마디로 생각해보자.',
     leadCharacter: 'kkumi',
     items: [
       { token: '🎈', label_ko: '풍선을 놓쳤어요', category: 'reason' },
@@ -262,7 +297,7 @@ export const ACTIVITY_TEMPLATES: Record<string, ActivityConfig> = {
       { token: '🌧️', label_ko: '비가 와서 못 놀았어요', category: 'reason' },
     ],
     voice: {
-      intro: '꾸미가 좋아하던 게 사라졌대. 왜 슬픈지 같이 헤아려볼까?',
+      intro: '꾸미가 왜 속상한지 같이 헤아려볼까?',
       praise: '꾸미 마음을 깊이 헤아렸어. 친구는 정말 든든하겠다!',
     },
     feedback: {
@@ -276,13 +311,15 @@ export const ACTIVITY_TEMPLATES: Record<string, ActivityConfig> = {
     id: 'find_hidden',
     game_type: 'hidden_friend',
     phase: 'emotion',
-    title: '숨은 친구 찾기',
+    objectiveCode: 'creativity_observe',
+    diagnosticSignal: '작은 시각 단서를 끝까지 살피고 오탭 뒤 다시 찾는지 본다.',
+    title: '풀숲 단서 찾기',
     prompt_ko: '풀숲에 숨은 도토를 찾아 톡 눌러줘!',
     leadCharacter: 'doto',
     items: HIDDEN_FRIEND_ITEMS,
     answerToken: '🐿️',
     voice: {
-      intro: '겁 많은 도토가 풀숲에 숨었어. 자세히 보고 도토를 찾아줄래?',
+      intro: '풀숲에서 작은 소리가 들려. 자세히 보고 도토를 찾아줄래?',
       praise: '도토를 찾았어! 자세히 보는 눈이 정말 좋구나.',
     },
     feedback: {
@@ -296,12 +333,14 @@ export const ACTIVITY_TEMPLATES: Record<string, ActivityConfig> = {
     id: 'match_treat',
     game_type: 'G1_match',
     phase: 'creativity',
-    title: '선물 짝 맞추기',
-    prompt_ko: '친구가 좋아하는 선물을 짝지어줘.',
+    objectiveCode: 'creativity_imagine',
+    diagnosticSignal: '친구 특성과 어울리는 물건을 연결해 유추하는지 본다.',
+    title: '친구 선물 단서',
+    prompt_ko: '친구가 좋아할 선물을 떠올려 짝지어줘.',
     leadCharacter: 'toto',
     items: FRIEND_TREAT_ITEMS,
     voice: {
-      intro: '친구마다 좋아하는 게 달라. 누가 무엇을 좋아할지 짝지어볼까?',
+      intro: '친구마다 좋아하는 게 달라. 무엇이 어울릴지 상상해서 이어볼까?',
       praise: '딱 맞는 짝을 찾았어! 친구들이 좋아하겠다.',
     },
     feedback: {
@@ -315,14 +354,16 @@ export const ACTIVITY_TEMPLATES: Record<string, ActivityConfig> = {
     id: 'finish_pattern',
     game_type: 'G2_sort',
     phase: 'creativity',
-    title: '목도리 무늬 잇기',
-    prompt_ko: '꾸미 목도리 무늬를 같은 색끼리 모아줘.',
+    objectiveCode: 'creativity_pattern',
+    diagnosticSignal: '색·모양 반복을 보고 다음 규칙을 예측하는지 본다.',
+    title: '별빛 길 무늬',
+    prompt_ko: '반짝빛으로 가는 길의 다음 무늬를 골라줘.',
     leadCharacter: 'kkumi',
     items: PATTERN_ITEMS,
     categories: uniqueCategories(PATTERN_ITEMS),
     voice: {
-      intro: '꾸미에게 따뜻한 목도리를 만들어주자. 무늬를 골라볼까?',
-      praise: '멋진 무늬가 완성됐어! 꾸미가 좋아하겠다.',
+      intro: '별빛 길에는 반복되는 무늬가 있어. 다음 무늬를 찾아볼까?',
+      praise: '멋진 무늬가 이어졌어! 반짝빛에 가까워졌어.',
     },
     feedback: {
       success: '무늬가 이어졌어!',
@@ -335,13 +376,15 @@ export const ACTIVITY_TEMPLATES: Record<string, ActivityConfig> = {
     id: 'sort_habitat',
     game_type: 'G2_sort',
     phase: 'creativity',
+    objectiveCode: 'creativity_transform',
+    diagnosticSignal: '같은 대상을 기준에 따라 묶고 바꾸어 분류하는지 본다.',
     title: '친구들 집 찾기',
     prompt_ko: '하늘·물·땅 친구로 나누어줘.',
     leadCharacter: 'toto',
     items: HABITAT_ITEMS,
     categories: uniqueCategories(HABITAT_ITEMS),
     voice: {
-      intro: '친구들이 집을 찾고 있어. 하늘·물·땅으로 나눠줄까?',
+      intro: '친구들이 집을 찾고 있어. 하늘·물·땅 단서를 살펴볼까?',
       praise: '모두 집을 찾았어! 정말 잘 나눴구나.',
     },
     feedback: {
@@ -355,6 +398,8 @@ export const ACTIVITY_TEMPLATES: Record<string, ActivityConfig> = {
     id: 'match_home',
     game_type: 'G1_match',
     phase: 'creativity',
+    objectiveCode: 'creativity_imagine',
+    diagnosticSignal: '친구와 사는 곳의 관계를 떠올려 짝으로 연결하는지 본다.',
     title: '친구와 집 짝 맞추기',
     prompt_ko: '친구가 사는 집을 짝지어줘.',
     leadCharacter: 'toto',
@@ -364,7 +409,7 @@ export const ACTIVITY_TEMPLATES: Record<string, ActivityConfig> = {
       { token: '🐰🕳️', label_ko: '토끼와 굴', category: 'home_rabbit' },
     ],
     voice: {
-      intro: '친구마다 사는 곳이 달라. 누가 어디 사는지 짝지어볼까?',
+      intro: '친구마다 사는 곳이 달라. 어디가 편안할지 찾아볼까?',
       praise: '집을 잘 찾아줬어! 친구들이 편안하겠다.',
     },
     feedback: {
@@ -378,15 +423,17 @@ export const ACTIVITY_TEMPLATES: Record<string, ActivityConfig> = {
     id: 'decorate_gift',
     game_type: 'decorate',
     phase: 'creativity',
-    title: '나만의 선물 꾸미기',
-    prompt_ko: '색·모양·스티커로 꾸미에게 줄 선물을 만들어줘.',
+    objectiveCode: 'creativity_compose',
+    diagnosticSignal: '색과 스티커를 고르고 배치해 자기 결과물을 완성하는지 본다.',
+    title: '별빛 선물 꾸미기',
+    prompt_ko: '색·모양·스티커로 별빛 선물을 만들어줘.',
     leadCharacter: 'kkumi',
     items: [...DECORATE_PALETTE.colors, ...DECORATE_PALETTE.shapes, ...DECORATE_PALETTE.stickers],
     freeform: true,
     palette: DECORATE_PALETTE,
     voice: {
-      intro: '이제 꾸미에게 줄 선물을 나만의 방법으로 꾸며보자!',
-      praise: '와, 세상에 하나뿐인 멋진 선물이야!',
+      intro: '이제 별빛 선물을 나만의 방법으로 꾸며보자!',
+      praise: '와, 세상에 하나뿐인 별빛 선물이야!',
     },
     feedback: {
       success: '나만의 선물이 완성됐어!',
@@ -397,7 +444,7 @@ export const ACTIVITY_TEMPLATES: Record<string, ActivityConfig> = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 세션 시나리오 — "꾸미 곰의 날" (2막, 6활동)
+// 세션 시나리오 — "사라진 반짝빛" (2막, 6활동)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface SessionScene {
@@ -406,11 +453,29 @@ export interface SessionScene {
   line: string;
 }
 
+export interface FirstVideoBeat {
+  id: string;
+  visual_ko: string;
+  narration_ko: string;
+  testSignal: string;
+}
+
+export interface FirstVideoPlan {
+  title: string;
+  durationSec: number;
+  logline: string;
+  teachingFocus: string[];
+  beats: FirstVideoBeat[];
+  quizPrompts: string[];
+}
+
 export interface VillageSession {
   id: string;
   title: string;
   /** 이 세션의 주인공 친구. */
   heroCharacter: CharacterId;
+  /** AI 영상 생성/검수용 첫 영상 설계. */
+  firstVideo: FirstVideoPlan;
   intro: SessionScene[];
   /** 1막(정서) 활동 id 순서. */
   act1: string[];
@@ -421,22 +486,76 @@ export interface VillageSession {
 }
 
 export const KKUMI_DAY_SESSION: VillageSession = {
-  id: 'kkumi-day',
-  title: '꾸미 곰의 날',
+  id: 'kkumi-starlight-seed',
+  title: '사라진 반짝빛',
   heroCharacter: 'kkumi',
+  firstVideo: {
+    title: '모리와 사라진 반짝빛',
+    durationSec: 75,
+    logline: '별빛 축제 아침, 꾸미의 반짝빛이 사라지고 모리가 아이를 새 탐정 친구로 초대한다.',
+    teachingFocus: [
+      '영상 직후 그림 선택으로 핵심 단서 다시 떠올리기',
+      '장면에서 작고 구체적인 단서를 찾기',
+      '친구 얼굴과 상황을 연결해 마음 헤아리기',
+      '단서를 바탕으로 다음 놀이에서 해결 방법 만들기',
+    ],
+    beats: [
+      {
+        id: 'festival-morning',
+        visual_ko: '동물 마을에 작은 등불과 별빛 화분이 놓이고, 모리의 가슴 불빛이 켜진다.',
+        narration_ko: '오늘은 별빛 축제 날이야. 그런데 조용한 반짝 소리가 들리지 않아.',
+        testSignal: '도입 몰입과 첫 탭까지 걸린 시간',
+      },
+      {
+        id: 'kkumi-face',
+        visual_ko: '꾸미가 빈 화분을 안고 고개를 숙인다. 눈가와 입꼬리가 분명히 보인다.',
+        narration_ko: '꾸미의 반짝빛이 사라졌대. 꾸미 얼굴에 어떤 마음이 보일까?',
+        testSignal: '친구 마음 선택과 이유 말하기',
+      },
+      {
+        id: 'tiny-clues',
+        visual_ko: '풀숲에 작은 꼬리, 낙엽, 반짝 가루, 도토리가 살짝 보인다.',
+        narration_ko: '풀숲에 아주 작은 단서가 숨어 있어. 천천히 보면 보일지도 몰라.',
+        testSignal: '숨은 친구/단서 찾기 정확도와 다시 보기',
+      },
+      {
+        id: 'gift-plan',
+        visual_ko: '모리가 친구들이 좋아하는 선물 그림을 바닥에 펼친다.',
+        narration_ko: '반짝빛을 찾으면 꾸미에게 어떤 선물이 어울릴까? 닮은 단서를 이어보자.',
+        testSignal: '유추 짝 맞추기와 선택 변경',
+      },
+      {
+        id: 'starlight-path',
+        visual_ko: '빨강, 파랑, 노랑, 별 모양이 길 위에 반복된다.',
+        narration_ko: '별빛 길에는 규칙이 있어. 다음 무늬를 찾으면 반짝빛이 돌아올 거야.',
+        testSignal: '패턴 완성, 오류 후 재시도',
+      },
+      {
+        id: 'child-creation',
+        visual_ko: '빈 별빛 선물이 화면 가운데 놓이고 색과 스티커가 주변에 빛난다.',
+        narration_ko: '마지막은 너만의 방법이야. 별빛 선물을 꾸며 꾸미에게 전해주자.',
+        testSignal: '창작 팔레트 선택 수와 완료 여부',
+      },
+    ],
+    quizPrompts: [
+      '꾸미가 잃어버린 것은 무엇이었을까?',
+      '풀숲에서 가장 먼저 보인 작은 단서는 무엇이었을까?',
+      '꾸미에게 어떤 말을 해주면 좋을까?',
+    ],
+  },
   intro: [
-    { narratorId: 'owl', line: '오늘은 꾸미가 슬퍼 보이는구나…' },
-    { narratorId: 'toto', line: '왜 그런지 같이 알아볼까?' },
+    { narratorId: 'owl', line: '별빛 축제 아침, 꾸미의 반짝빛이 사라졌구나.' },
+    { narratorId: 'toto', line: '나와 함께 작은 단서를 찾아줄래?' },
   ],
-  act1: ['read_face', 'guess_feeling', 'find_hidden'],
+  act1: ['video_recall_seed', 'read_face', 'find_hidden'],
   transition: {
     narratorId: 'toto',
-    line: '이제 꾸미를 어떻게 도와줄까? 나만의 방법을 만들어보자!',
+    line: '단서를 찾았어. 이제 너만의 방법으로 꾸미를 도와보자.',
   },
   act2: ['match_treat', 'finish_pattern', 'decorate_gift'],
   closing: {
     narratorId: 'kkumi',
-    line: '고마워! 덕분에 기분이 환해졌어. 별빛 축제에서 또 만나자!',
+    line: '고마워! 네가 찾아준 반짝빛이 별빛 축제를 환하게 만들었어!',
   },
 };
 
@@ -452,8 +571,8 @@ export interface AnimalVillageWorld {
 
 export const ANIMAL_VILLAGE: AnimalVillageWorld = {
   id: 'animal-village',
-  name: '동물 마을',
-  tagline: '별빛 축제를 함께 준비하는 동물 친구들의 마을',
+  name: '동물 마을 이야기',
+  tagline: '모리와 함께 처음 여는 이야기 숲의 작은 마을',
   characters: CHARACTERS,
   mascotId: 'toto',
   activities: ACTIVITY_TEMPLATES,
