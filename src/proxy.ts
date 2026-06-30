@@ -24,7 +24,17 @@ function loginRedirectUrl(request: NextRequest) {
 
 export async function proxy(request: NextRequest) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return NextResponse.next();
+    // 로컬 개발(또는 명시적 프리뷰)에서만 인증 미들웨어를 통과시킨다.
+    const localPreviewAllowed =
+      process.env.NODE_ENV !== 'production' || process.env.KINDY_LOCAL_PREVIEW === '1';
+    if (localPreviewAllowed) {
+      return NextResponse.next();
+    }
+    // 프로덕션 오설정: 보호 라우트(matcher 한정)를 가짜 통과시키지 않는다.
+    if (request.nextUrl.pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Auth backend not configured' }, { status: 503 });
+    }
+    return NextResponse.redirect(loginRedirectUrl(request));
   }
 
   const { supabaseUrl, supabaseAnonKey } = getSupabasePublicEnv();
