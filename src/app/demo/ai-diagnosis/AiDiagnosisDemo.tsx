@@ -321,7 +321,7 @@ export default function AiDiagnosisDemo() {
                 </div>
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[.16em] text-sage">
-                    {completed ? '오늘 기록' : `진행 중 ${answeredCount}/${QUESTIONS.length}`}
+                    {completed ? '오늘 고른 단서 · 예시' : `진행 중 ${answeredCount}/${QUESTIONS.length}`}
                   </p>
                   <h2 className="mt-1 text-xl font-black leading-snug">
                     {completed ? '오늘 잘 맞은 놀이' : '질문을 끝까지 눌러주세요'}

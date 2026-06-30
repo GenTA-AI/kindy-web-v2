@@ -9,6 +9,7 @@ import { buildAnimalVillagePlan } from '@/lib/game/village-session';
 import { getSupabase, isSupabaseServiceConfigured } from '@/lib/supabase';
 import { FREE_TRIAL_SESSION_LIMIT, getMembershipGateState } from '@/lib/subscription';
 import { localPreviewLibraryVideoForAge } from '@/lib/library-preview';
+import { VILLAGE_FIRST_VIDEO_FALLBACK } from '@/lib/art-assets';
 import { LOCAL_PREVIEW_CHILD_COOKIE, parseLocalPreviewChildCookie } from '@/lib/local-preview-child';
 import { topicLabel } from '@/lib/topic-label';
 import type { Child } from '@/types';
@@ -278,13 +279,16 @@ export default async function PlayPage({ searchParams }: PlayPageProps) {
   if (useVillage) {
     const villageSeed = stableSeed(`${selectedChild.id}:animal-village:home-play`);
     const plan = buildAnimalVillagePlan(villageSeed);
-    // 동물 마을 영상은 아직 없으면 캐릭터 카드 도입으로 폴백(SessionShell 이 처리).
-    const villageVideos = await loadLibraryVideos({
+    // 동물 마을 영상: DB에 published 영상이 있으면 사용, 없으면 번들된 실제 모리 영상으로 폴백
+    // (카드만 보여주지 않고 랜딩이 약속한 "영상 한 편"이 기본 세션에서 실재하도록).
+    const loadedVillageVideos = await loadLibraryVideos({
       requestedVideoId,
       topic: 'animal-village',
       ageBand,
       limit: 2,
     });
+    const villageVideos =
+      loadedVillageVideos.length > 0 ? loadedVillageVideos : [VILLAGE_FIRST_VIDEO_FALLBACK];
 
     return (
       <SessionShell
