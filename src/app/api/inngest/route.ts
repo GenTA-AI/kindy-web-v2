@@ -14,11 +14,12 @@
 import { serve } from 'inngest/next';
 import { inngest } from '@/inngest/client';
 import { videoGenerate } from '@/inngest/functions/video-generation';
+import { subscriptionRenewal } from '@/inngest/functions/subscription-renewal';
 
 // signingKey 는 src/inngest/client.ts 에서 client options 로 주입됨.
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [videoGenerate],
+  functions: [videoGenerate, subscriptionRenewal],
 });
 
 // Seedance/nano-banana 호출이 합쳐 5~15분 걸리므로 상한 충분히.
