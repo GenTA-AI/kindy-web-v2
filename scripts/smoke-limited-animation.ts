@@ -2,7 +2,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { renderLimitedAnimationScene } from '../src/lib/limited-animation';
+import { renderLimitedAnimationScene, analyzeMouthWindows } from '../src/lib/limited-animation';
 
 const workDir = join(process.cwd(), 'tmp', 'limited-animation-smoke');
 mkdirSync(workDir, { recursive: true });
@@ -21,11 +21,11 @@ const audioPath = join(workDir, 'speech-tone.wav');
 const outputPath = join(workDir, 'limited-speaking.mp4');
 const previewPath = join(workDir, 'preview.jpg');
 
+// 말소리 흉내 — 유성 버스트 + 휴지(입 동기화가 눈에 보이도록). 0.85s 주기 중 0.6s만 소리.
 run('ffmpeg', [
   '-y', '-v', 'error',
   '-f', 'lavfi',
-  '-i', 'sine=frequency=520:duration=3.2',
-  '-af', 'volume=0.12',
+  '-i', "aevalsrc=exprs='0.12*sin(2*PI*520*t)*gt(mod(t\\,0.85)\\,0.25)':s=22050:d=3.2",
   '-ar', '22050',
   '-ac', '1',
   '-c:a', 'pcm_s16le',
@@ -57,7 +57,14 @@ run('ffmpeg', [
   previewPath,
 ]);
 
+// 음성 동기화 검증: 유성 버스트마다 입 열림 구간이 잡히고, 휴지가 있어야 한다.
+const analysis = analyzeMouthWindows(audioPath, 24, 3.2);
+const gaps = analysis.windows.length - 1;
 console.log(`limited animation smoke ok`);
+console.log(`mouth-sync windows=${analysis.windows.length} (voiced bursts detected, gaps=${gaps})`);
+if (!analysis.ok || analysis.windows.length < 2) {
+  throw new Error(`audio-driven mouth sync failed: expected multiple voiced windows, got ${analysis.windows.length}`);
+}
 console.log(`video=${outputPath}`);
 console.log(`preview=${previewPath}`);
 

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { deflateSync } from 'node:zlib';
 
@@ -31,6 +31,13 @@ export interface LimitedAnimationInput {
   width?: number;
   height?: number;
   fps?: number;
+  /** 입 움직임을 실제 음성(WAV) 진폭에 맞춘다. 기본 true. WAV 분석 실패 시 고정 뻐끔으로 폴백. */
+  syncMouthToAudio?: boolean;
+}
+
+export interface MouthWindow {
+  start: number;
+  end: number;
 }
 
 const DEFAULT_WIDTH = 1280;
@@ -92,7 +99,15 @@ export function renderLimitedAnimationScene(input: LimitedAnimationInput): void 
   const assets = createMouthAssets(dirname(input.outputPath), mouthW, mouthH);
   const speakUntil = Math.max(0.15, Math.min(input.durationSec, input.speechDurationSec ?? input.durationSec));
   const speakWindow = `between(t,0,${speakUntil.toFixed(3)})`;
-  const flapWindow = `${speakWindow}*lt(mod(t,0.22),0.11)`;
+
+  // 음성 진폭에 맞춘 입 열림. 분석 성공 시 실제 말소리에 동기화, 실패 시 고정 뻐끔 폴백.
+  let flapWindow = `${speakWindow}*lt(mod(t,0.22),0.11)`;
+  if (input.syncMouthToAudio !== false) {
+    const analysis = analyzeMouthWindows(input.audioPath, fps, speakUntil);
+    if (analysis.ok) {
+      flapWindow = buildOpenEnableExpr(analysis.windows);
+    }
+  }
 
   runFfmpeg([
     '-y', '-v', 'error',
@@ -118,6 +133,124 @@ export function renderLimitedAnimationScene(input: LimitedAnimationInput): void 
     '-t', input.durationSec.toFixed(3),
     input.outputPath,
   ], 'limited speaking render');
+}
+
+/**
+ * WAV 음성의 프레임별 진폭(RMS)을 분석해 "입이 열려야 하는 구간"을 뽑는다.
+ * 유성음 구간엔 열고 무음/휴지엔 닫아, 입 움직임이 실제 말소리에 맞게 한다.
+ * WAV(PCM s16le) 만 지원 — 그 외/실패 시 ok=false 로 폴백 유도.
+ */
+export function analyzeMouthWindows(
+  audioPath: string,
+  fps: number,
+  durationSec: number,
+  opts?: { threshold?: number },
+): { windows: MouthWindow[]; ok: boolean } {
+  const wav = safeParseWav(audioPath);
+  if (!wav || wav.sampleRate <= 0) return { windows: [], ok: false };
+
+  const samplesPerFrame = Math.max(1, Math.round(wav.sampleRate / fps));
+  const totalFrames = Math.max(1, Math.round(durationSec * fps));
+  const rms: number[] = [];
+  for (let f = 0; f < totalFrames; f += 1) {
+    const startIdx = f * samplesPerFrame * wav.channels;
+    let sumSq = 0;
+    let n = 0;
+    for (let s = 0; s < samplesPerFrame; s += 1) {
+      const base = startIdx + s * wav.channels;
+      if (base >= wav.samples.length) break;
+      const v = wav.samples[base] / 32768; // ch0
+      sumSq += v * v;
+      n += 1;
+    }
+    rms.push(n ? Math.sqrt(sumSq / n) : 0);
+  }
+
+  const peak = rms.reduce((m, v) => (v > m ? v : m), 0);
+  if (peak <= 1e-4) return { windows: [], ok: false }; // 무음
+
+  const threshold = (opts?.threshold ?? 0.14) * peak;
+  const open = rms.map((v) => v >= threshold);
+
+  // 짧은 휴지(<=2프레임)는 붙이고, 1프레임짜리 열림은 유지.
+  const mergeGap = 2;
+  const windows: MouthWindow[] = [];
+  let runStart = -1;
+  let gap = 0;
+  for (let f = 0; f < open.length; f += 1) {
+    if (open[f]) {
+      if (runStart < 0) runStart = f;
+      gap = 0;
+    } else if (runStart >= 0) {
+      gap += 1;
+      if (gap > mergeGap) {
+        windows.push({ start: runStart / fps, end: (f - gap + 1) / fps });
+        runStart = -1;
+        gap = 0;
+      }
+    }
+  }
+  if (runStart >= 0) windows.push({ start: runStart / fps, end: open.length / fps });
+
+  return { windows, ok: windows.length > 0 };
+}
+
+/** open-mouth 오버레이 enable 식: 유성 구간 AND 빠른 미세 뻐끔(장모음도 조음되게). */
+function buildOpenEnableExpr(windows: MouthWindow[]): string {
+  const union = windows
+    .map((w) => `between(t,${w.start.toFixed(3)},${w.end.toFixed(3)})`)
+    .join('+');
+  // mod 0.16s 주기 중 앞부분에서만 열림 → 유성 구간 안에서 빠르게 여닫음.
+  // 쉼표는 enable='...' 따옴표 안이라 이스케이프 불필요(기존 between(t,a,b) 패턴과 동일).
+  return `(${union})*gt(mod(t,0.16),0.05)`;
+}
+
+interface WavData {
+  sampleRate: number;
+  channels: number;
+  samples: Int16Array;
+}
+
+function safeParseWav(path: string): WavData | null {
+  try {
+    return parseWav(readFileSync(path));
+  } catch {
+    return null;
+  }
+}
+
+function parseWav(buf: Buffer): WavData | null {
+  if (buf.length < 44) return null;
+  if (buf.toString('ascii', 0, 4) !== 'RIFF' || buf.toString('ascii', 8, 12) !== 'WAVE') return null;
+  let offset = 12;
+  let sampleRate = 0;
+  let channels = 0;
+  let bits = 0;
+  let audioFormat = 0;
+  let dataStart = -1;
+  let dataLen = 0;
+  while (offset + 8 <= buf.length) {
+    const id = buf.toString('ascii', offset, offset + 4);
+    const size = buf.readUInt32LE(offset + 4);
+    const body = offset + 8;
+    if (id === 'fmt ') {
+      audioFormat = buf.readUInt16LE(body);
+      channels = buf.readUInt16LE(body + 2);
+      sampleRate = buf.readUInt32LE(body + 4);
+      bits = buf.readUInt16LE(body + 14);
+    } else if (id === 'data') {
+      dataStart = body;
+      dataLen = Math.min(size, buf.length - body);
+    }
+    offset = body + size + (size % 2); // chunks are word-aligned
+  }
+  if (audioFormat !== 1 || bits !== 16 || dataStart < 0 || channels < 1) return null;
+  const sampleCount = Math.floor(dataLen / 2);
+  const samples = new Int16Array(sampleCount);
+  for (let i = 0; i < sampleCount; i += 1) {
+    samples[i] = buf.readInt16LE(dataStart + i * 2);
+  }
+  return { sampleRate, channels, samples };
 }
 
 export function cameraPresetFromDirective(
