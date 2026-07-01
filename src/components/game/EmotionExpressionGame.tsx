@@ -102,15 +102,7 @@ function normalizedDifficulty(value: number): number {
   return Math.min(10, Math.max(1, Math.round(value)));
 }
 
-function manikinPosition(option: EmotionOption) {
-  return {
-    left: `${12 + ((option.valence + 2) / 4) * 76}%`,
-    top: `${12 + ((2 - option.arousal) / 4) * 76}%`,
-    transform: 'translate(-50%, -50%)',
-  };
-}
-
-function EmotionFace({ emotionId, compact = false }: { emotionId: EmotionId; compact?: boolean }) {
+function EmotionFace({ emotionId }: { emotionId: EmotionId }) {
   const colors: Record<EmotionId, string> = {
     joy: 'bg-amber-100 ring-amber-200',
     calm: 'bg-emerald-100 ring-emerald-200',
@@ -134,9 +126,7 @@ function EmotionFace({ emotionId, compact = false }: { emotionId: EmotionId; com
   return (
     <span
       aria-hidden="true"
-      className={`relative inline-flex shrink-0 items-center justify-center rounded-full ring-2 ${
-        compact ? 'h-10 w-10' : 'h-14 w-14'
-      } ${colors[emotionId]}`}
+      className={`relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full ring-2 ${colors[emotionId]}`}
     >
       <span className={`absolute left-[23%] top-[25%] h-1 w-3 rounded-full bg-ink ${browClass} ${emotionId === 'angry' ? 'rotate-[-22deg]' : 'rotate-[18deg]'}`} />
       <span className={`absolute right-[23%] top-[25%] h-1 w-3 rounded-full bg-ink ${browClass} ${emotionId === 'angry' ? 'rotate-[22deg]' : 'rotate-[-18deg]'}`} />
@@ -144,50 +134,6 @@ function EmotionFace({ emotionId, compact = false }: { emotionId: EmotionId; com
       <span className="absolute right-[30%] top-[38%] h-1.5 w-1.5 rounded-full bg-ink" />
       <span className={`absolute bottom-[22%] ${mouth[emotionId]}`} />
     </span>
-  );
-}
-
-function MindMapPanel({ selectedEmotion }: { selectedEmotion: EmotionOption | null }) {
-  return (
-    <div className="rounded-2xl border border-line bg-sagebg p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-bold text-ink">마음 지도</p>
-          <p className="mt-1 text-xs font-medium text-saged">
-            고른 얼굴이 지도 위에 보여요
-          </p>
-        </div>
-        <EmotionFace emotionId={selectedEmotion?.id ?? 'calm'} compact />
-      </div>
-
-      <div className="mt-4 rounded-2xl bg-white p-4">
-        <div className="relative h-48 rounded-xl border border-line bg-gradient-to-br from-sagebg via-white to-cream">
-          <span className="absolute left-1/2 top-3 -translate-x-1/2 text-xs font-bold text-ink3">
-            움직이는 쪽
-          </span>
-          <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs font-bold text-ink3">
-            조용한 쪽
-          </span>
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-ink3">
-            힘든 쪽
-          </span>
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-ink3">
-            편안한 쪽
-          </span>
-          <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-line" />
-          <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-line" />
-          {selectedEmotion && (
-            <span
-              aria-label={`${selectedEmotion.label} 위치`}
-              className="absolute flex h-12 w-12 items-center justify-center rounded-full border-2 border-sage bg-white shadow-lg shadow-sagebg"
-              style={manikinPosition(selectedEmotion)}
-            >
-              <EmotionFace emotionId={selectedEmotion.id} compact />
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -273,9 +219,8 @@ export default function EmotionExpressionGame({
           </span>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
-          <div className="overflow-hidden rounded-2xl border border-line bg-mist">
-            <div className="relative min-h-[180px] sm:min-h-[220px]">
+        <div className="overflow-hidden rounded-2xl border border-line bg-mist">
+          <div className="relative min-h-[240px] sm:min-h-[320px]">
               {clipPosterUrl ? (
                 <div
                   role="img"
@@ -324,16 +269,11 @@ export default function EmotionExpressionGame({
             </div>
           </div>
 
-          <div className="hidden lg:block">
-            <MindMapPanel selectedEmotion={selectedEmotion} />
-          </div>
-        </div>
-
         <div>
-          <p className="text-base font-bold text-ink">
+          <p className="text-lg font-black text-ink sm:text-xl">
             {childName}, {scenePrompt}
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {EMOTION_OPTIONS.map((option) => {
               const isSelected = option.id === selectedEmotionId;
 
@@ -344,17 +284,18 @@ export default function EmotionExpressionGame({
                   aria-pressed={isSelected}
                   disabled={isSubmitted}
                   onClick={() => setSelectedEmotionId(option.id)}
-                  className={`min-h-[88px] rounded-2xl border-2 p-3 text-left transition-all active:scale-[0.98] disabled:cursor-default ${
+                  className={`flex min-h-[150px] flex-col items-center justify-center gap-3 rounded-3xl border-2 p-3 text-center transition-all active:scale-[0.97] disabled:cursor-default ${
                     isSelected
                       ? `${option.className} ring-4 ring-sagebg`
-                      : 'border-line bg-white text-ink2 hover:border-sage hover:bg-mist'
+                      : 'border-line bg-white text-ink hover:border-sage hover:bg-mist'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
-                    <EmotionFace emotionId={option.id} compact />
-                    <span className="text-base font-black">{option.label}</span>
+                  <span className="flex h-24 w-24 items-center justify-center">
+                    <span className="scale-[1.6]">
+                      <EmotionFace emotionId={option.id} />
+                    </span>
                   </span>
-                  <span className="mt-2 block text-xs font-semibold opacity-80">{option.helper}</span>
+                  <span className="text-xl font-black sm:text-2xl">{option.label}</span>
                 </button>
               );
             })}
@@ -396,9 +337,6 @@ export default function EmotionExpressionGame({
           </div>
         )}
 
-        <div className="lg:hidden">
-          <MindMapPanel selectedEmotion={selectedEmotion} />
-        </div>
       </div>
     </section>
   );
