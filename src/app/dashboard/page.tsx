@@ -127,6 +127,15 @@ type DashboardSummary = {
   };
   c6Map?: C6MapItem[];
   homeAssignments?: HomeAssignment[];
+  learningProfile?: LearningProfileView;
+};
+
+type LearningProfileView = {
+  enoughData: boolean;
+  conditionInsight: string | null;
+  strength: { label: string; note: string } | null;
+  struggle: { label: string; note: string } | null;
+  tools: { toolKey: string; parentLabel: string; signal: string; note: string }[];
 };
 
 type C6MapItem = {
@@ -354,6 +363,7 @@ function DashboardContent() {
       ? summary.homeAssignments
       : FALLBACK_HOME_ASSIGNMENTS;
   const nextC6Seed = c6Map.find((tool) => tool.state === 'next_seed') ?? c6Map[0];
+  const learningProfile = summaryError ? undefined : summary?.learningProfile;
 
   return (
     <main className="min-h-screen bg-cream pb-28 text-ink [word-break:keep-all]">
@@ -544,6 +554,26 @@ function DashboardContent() {
             <p className="mt-3 text-sm font-semibold leading-relaxed text-ink2">
               아이가 오늘 어떤 방식으로 보고, 잇고, 만들었는지 남기는 지도예요.
             </p>
+            {learningProfile?.enoughData && learningProfile.conditionInsight && (
+              <div className="mt-5 rounded-2xl border border-saged/20 bg-mist p-4">
+                <p className="text-xs font-black uppercase tracking-[.14em] text-saged">우리 아이는 이렇게 배워요</p>
+                <p className="mt-2 text-lg font-black leading-snug text-ink">{learningProfile.conditionInsight}</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {learningProfile.strength && (
+                    <div className="rounded-xl bg-sagebg px-3 py-2">
+                      <p className="text-[11px] font-black text-saged">잘 해내는 놀이</p>
+                      <p className="mt-0.5 text-sm font-bold leading-relaxed text-ink2">{learningProfile.strength.note}</p>
+                    </div>
+                  )}
+                  {learningProfile.struggle && learningProfile.struggle.label !== learningProfile.strength?.label && (
+                    <div className="rounded-xl bg-cream px-3 py-2 ring-1 ring-line">
+                      <p className="text-[11px] font-black text-clay">함께 더 해보면 좋은 놀이</p>
+                      <p className="mt-0.5 text-sm font-bold leading-relaxed text-ink2">{learningProfile.struggle.note}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {c6Map.map((tool) => (
                 <C6MapCard key={tool.key} tool={tool} />

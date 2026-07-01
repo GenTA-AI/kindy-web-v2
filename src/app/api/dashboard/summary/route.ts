@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { aggregateC6Profile, c6HomeAssignments, c6NextStep } from '@/lib/game/c6-profile';
+import { buildLearningProfile } from '@/lib/game/learning-profile';
 import { parseLocalPreviewGameCookie, LOCAL_PREVIEW_GAME_COOKIE } from '@/lib/local-preview-game';
 import { isSupabaseServiceConfigured, supabase } from '@/lib/supabase';
 import type { GameRoundResult, GameType } from '@/types/game';
@@ -98,6 +99,26 @@ function buildSummary(input: {
     body,
   }));
 
+  // 학습 조건 진단 — 빈도가 아닌 숙련(정확도·속도·끈기) 기반. 가드레일 준수:
+  // 클라이언트엔 정성 필드만 노출(내부 수치 accuracy/latency 는 서버에만).
+  const lp = buildLearningProfile(input.rounds);
+  const learningProfile = {
+    enoughData: lp.enoughData,
+    conditionInsight: lp.conditionInsight,
+    strength: lp.strengthTool
+      ? { label: lp.strengthTool.parentLabel, note: lp.strengthTool.parentNote }
+      : null,
+    struggle: lp.struggleTool
+      ? { label: lp.struggleTool.parentLabel, note: lp.struggleTool.parentNote }
+      : null,
+    tools: lp.perTool.map((t) => ({
+      toolKey: t.toolKey,
+      parentLabel: t.parentLabel,
+      signal: t.signal,
+      note: t.parentNote,
+    })),
+  };
+
   return {
     totalRounds: input.rounds.length,
     sessionCount: input.sessionCount,
@@ -123,6 +144,7 @@ function buildSummary(input: {
     },
     c6Map,
     homeAssignments,
+    learningProfile,
   };
 }
 
