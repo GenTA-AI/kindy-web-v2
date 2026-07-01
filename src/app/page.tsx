@@ -77,6 +77,14 @@ const TRUST = [
   '다음 추천은 활동 기록만 참고',
 ];
 
+// 신뢰 앵커 — 대표 확인 = 입증가능(교수=공동창업자·감수 계약, 공공도서관 실운영).
+// 경계: '진단'은 Kindy 소프트웨어(교수 감수 커리큘럼 '기반'). 생각도구 원천은 내부귀속.
+const CREDENTIALS = [
+  ['이철재 교수 감수', '호서대 30년 창의사고 교육 커리큘럼을 바탕으로 설계하고 감수받았어요.'],
+  ['공공도서관에서 운영 중', '실제 공공도서관 프로그램으로 아이들이 이용하고 있어요.'],
+  ['사람이 검수한 콘텐츠', '아이가 보는 이야기는 사람이 확인한 뒤에만 공개돼요.'],
+];
+
 const STORY_OS = [
   ['아이 화면', '모리와 이야기 숲을 탐험해요. 한 화면엔 한 가지 행동만 나오고, 광고와 결제 화면은 보이지 않아요.'],
   ['보호자 기록장', '이번 주 이야기, 아이가 고른 답, 끝낸 놀이, 다음 대화 힌트를 한곳에서 봐요.'],
@@ -367,6 +375,20 @@ export default function Home() {
       </header>
 
       <main>
+        <section className="border-b border-line bg-white">
+          <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-4 px-5 py-8 sm:px-8 md:grid-cols-3">
+            {CREDENTIALS.map(([title, body]) => (
+              <article key={title} className="flex items-start gap-3 rounded-2xl border border-line bg-cream px-4 py-4">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sagebg text-xs font-black text-saged">✓</span>
+                <div>
+                  <h2 className="text-sm font-black text-ink">{title}</h2>
+                  <p className="mt-1 text-xs font-semibold leading-relaxed text-ink2">{body}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <section className="border-b border-line bg-cream">
           <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-4 px-5 py-10 sm:px-8 md:grid-cols-3">
             {FIRST_LOOK.map(([title, body]) => (
