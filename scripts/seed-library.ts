@@ -20,6 +20,7 @@ const stubLibrary: LibrarySeed[] = [
     video_url: '/demo-videos/mori-starlight-seed.mp4',
     thumbnail_url: '/ip/generated/mori-village-hero.png',
     subtitles_url: '/demo-videos/mori-starlight-seed.vtt',
+    c6_focus: 'observe',
     character_name: '모리',
     published: true,
     featured: true,

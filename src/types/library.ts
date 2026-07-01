@@ -20,6 +20,8 @@ export interface LibraryVideo {
   subtitles_url?: string | null;
   script?: unknown | null;
   scenes?: LibraryVideoScene[] | null;
+  /** 이 영상이 주로 연습시키는 C6 도구(observe|imagine|pattern|transform|design|compose). 선별 개인화용. */
+  c6_focus?: string | null;
   episode_unit_sec?: number | null;
   character_name: string;
   view_count: number;

@@ -10,6 +10,10 @@ import { getSupabase, isSupabaseServiceConfigured } from '@/lib/supabase';
 import { FREE_TRIAL_SESSION_LIMIT, getMembershipGateState } from '@/lib/subscription';
 import { localPreviewLibraryVideoForAge } from '@/lib/library-preview';
 import { VILLAGE_FIRST_VIDEO_FALLBACK } from '@/lib/art-assets';
+import { buildLearningProfile } from '@/lib/game/learning-profile';
+import { orderLibraryByWeakTool } from '@/lib/game/library-selection';
+import type { C6ToolKey } from '@/lib/game/c6-profile';
+import type { GameRoundResult, GameType } from '@/types/game';
 import { LOCAL_PREVIEW_CHILD_COOKIE, parseLocalPreviewChildCookie } from '@/lib/local-preview-child';
 import { topicLabel } from '@/lib/topic-label';
 import type { Child } from '@/types';
@@ -100,6 +104,41 @@ async function queryPublishedVideos(input: {
 
   if (error) return [];
   return (data ?? []) as LibraryVideo[];
+}
+
+const SELECTION_GAME_TYPES = new Set<GameType>([
+  'G1_match', 'G2_sort', 'G3_sequence', 'G4_listen', 'G5_find',
+  'Q_quiz', 'emotion_expression', 'hidden_friend', 'decorate',
+]);
+
+/** 아이 최근 라운드 → 약점 C6 도구(선별 개인화용). 표본 부족/미설정 시 null. */
+async function loadChildWeakTool(childId: string): Promise<C6ToolKey | null> {
+  if (!isSupabaseServiceConfigured()) return null;
+  const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await getSupabase()
+    .from('game_rounds')
+    .select('game_type, difficulty, objective_code, standard_anchor, score, max_score, latency_ms, retried, reward_payload')
+    .eq('child_id', childId)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(120);
+  const rounds = ((data ?? []) as Record<string, unknown>[])
+    .filter((r) => SELECTION_GAME_TYPES.has(r.game_type as GameType))
+    .map((r): GameRoundResult => ({
+      game_type: r.game_type as GameType,
+      difficulty: typeof r.difficulty === 'number' ? r.difficulty : 1,
+      objective_code: (r.objective_code as string | null) ?? null,
+      standard_anchor: (r.standard_anchor as string | null) ?? null,
+      score: (r.score as number | null) ?? null,
+      max_score: (r.max_score as number | null) ?? null,
+      latency_ms: (r.latency_ms as number | null) ?? null,
+      retried: Boolean(r.retried),
+      reward_payload:
+        r.reward_payload && typeof r.reward_payload === 'object' && !Array.isArray(r.reward_payload)
+          ? (r.reward_payload as GameRoundResult['reward_payload'])
+          : null,
+    }));
+  return buildLearningProfile(rounds).struggleTool?.toolKey ?? null;
 }
 
 async function loadLibraryVideos(input: {
@@ -276,6 +315,9 @@ export default async function PlayPage({ searchParams }: PlayPageProps) {
   // 콘텐츠 수직 슬라이스: 기본 세계 = 동물 마을("사라진 반짝빛"). ?world=engine 로 기존 엔진 세션.
   const useVillage = requestedWorld !== 'engine';
 
+  // 선별 기반 초개인화 — 아이 약점 C6 도구로 라이브러리를 재정렬(공유 풀, 한계비용 0).
+  const weakTool = await loadChildWeakTool(selectedChild.id);
+
   if (useVillage) {
     const villageSeed = stableSeed(`${selectedChild.id}:animal-village:home-play`);
     const plan = buildAnimalVillagePlan(villageSeed);
@@ -288,7 +330,9 @@ export default async function PlayPage({ searchParams }: PlayPageProps) {
       limit: 2,
     });
     const villageVideos =
-      loadedVillageVideos.length > 0 ? loadedVillageVideos : [VILLAGE_FIRST_VIDEO_FALLBACK];
+      loadedVillageVideos.length > 0
+        ? orderLibraryByWeakTool(loadedVillageVideos, weakTool)
+        : [VILLAGE_FIRST_VIDEO_FALLBACK];
 
     return (
       <SessionShell
@@ -312,12 +356,15 @@ export default async function PlayPage({ searchParams }: PlayPageProps) {
     topic,
     round_count: ROUND_COUNT,
   });
-  const videos = await loadLibraryVideos({
-    requestedVideoId,
-    topic,
-    ageBand,
-    limit: rounds.length + 1,
-  });
+  const videos = orderLibraryByWeakTool(
+    await loadLibraryVideos({
+      requestedVideoId,
+      topic,
+      ageBand,
+      limit: rounds.length + 1,
+    }),
+    weakTool,
+  );
 
   if (videos.length === 0) {
     return <EmptyLibraryState childId={selectedChild.id} topic={topic} />;

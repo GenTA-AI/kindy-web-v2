@@ -22,6 +22,7 @@ export const VILLAGE_FIRST_VIDEO_FALLBACK: LibraryVideo = {
   thumbnail_url: HERO_VILLAGE_IMAGE_SRC,
   subtitles_url: '/demo-videos/mori-starlight-seed.vtt',
   scenes: null,
+  c6_focus: 'observe', // 사라진 반짝빛 단서 찾기 = 자세히 관찰하기
   episode_unit_sec: null,
   character_name: '모리',
   view_count: 0,
