@@ -1,33 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DB_URL="${DATABASE_URL:-${SUPABASE_DB_URL:-}}"
+# DEPRECATED (2026-07-02, docs/07 P0-1): 수동 전용 스크립트(0008/0099)가
+# supabase/manual/ 로 이동해 supabase/migrations/ 는 전부 자동 적용해도 안전하다.
+# 프로비저닝 정본 경로는 Supabase CLI:
+#
+#   supabase link --project-ref <ref>
+#   supabase db push
+#
+# 이 스크립트는 psql 로 마이그레이션 일부만 골라 적용하던 과거 방식의 잔재이며,
+# 0010-0020 이 빠져 있어 프로비저닝 용도로 쓰면 안 된다.
 
-SAFE_MIGRATIONS=(
-  "supabase/migrations/0006_rls_policies.sql"
-  "supabase/migrations/0007_waitlist_invite.sql"
-)
-
-echo "Applying safe migrations only: 0006_rls_policies.sql, 0007_waitlist_invite.sql"
-echo "Manual only: 0008_demo_parent_cleanup.sql (destructive cleanup)"
-echo "Manual only: 0099_rls_disable_rollback.sql (emergency rollback)"
-
-if [[ -z "${DB_URL}" ]]; then
-  echo "DATABASE_URL or SUPABASE_DB_URL is not set."
-  echo "Run manually after setting one of them, for example:"
-  echo "  DATABASE_URL='postgresql://...' scripts/apply-migrations.sh"
-  exit 0
-fi
-
-if ! command -v psql >/dev/null 2>&1; then
-  echo "psql is required to apply only 0006 and 0007 without auto-running 0008/0099." >&2
-  exit 1
-fi
-
-for migration in "${SAFE_MIGRATIONS[@]}"; do
-  echo "Applying ${migration}"
-  psql "${DB_URL}" -v ON_ERROR_STOP=1 -f "${ROOT_DIR}/${migration}"
-done
-
-echo "Done. 0008 and 0099 were not applied."
+echo "DEPRECATED: use 'supabase db push' (supabase/migrations/ is now fully safe to auto-apply)."
+echo "Manual-only scripts live in supabase/manual/ (see its README)."
+exit 1
