@@ -14,6 +14,8 @@ import { withFreshLibraryMediaUrls } from '@/lib/library-media';
 import { VILLAGE_FIRST_VIDEO_FALLBACK } from '@/lib/art-assets';
 import { buildLearningProfile } from '@/lib/game/learning-profile';
 import { orderLibraryByWeakTool } from '@/lib/game/library-selection';
+import { orderLibraryByGrowthAxis, pickGrowthAxisFromProfiles } from '@/lib/c6/library-order';
+import type { C6AxisId } from '@/lib/c6/axes';
 import type { C6ToolKey } from '@/lib/game/c6-profile';
 import type { GameRoundResult, GameType } from '@/types/game';
 import { LOCAL_PREVIEW_CHILD_COOKIE, parseLocalPreviewChildCookie } from '@/lib/local-preview-child';
@@ -141,6 +143,17 @@ async function loadChildWeakTool(childId: string): Promise<C6ToolKey | null> {
           : null,
     }));
   return buildLearningProfile(rounds).struggleTool?.toolKey ?? null;
+}
+
+async function loadChildGrowthAxis(childId: string): Promise<C6AxisId | null> {
+  if (!isSupabaseServiceConfigured()) return null;
+
+  const { data } = await getSupabase()
+    .from('child_growth_profiles')
+    .select('axis_id, current_level, evidence_count')
+    .eq('child_id', childId);
+
+  return pickGrowthAxisFromProfiles(data ?? []);
 }
 
 async function loadLibraryVideos(input: {
@@ -318,8 +331,12 @@ export default async function PlayPage({ searchParams }: PlayPageProps) {
   // 콘텐츠 수직 슬라이스: 기본 세계 = 동물 마을("사라진 반짝빛"). ?world=engine 로 기존 엔진 세션.
   const useVillage = requestedWorld !== 'engine';
 
-  // 선별 기반 초개인화 — 아이 약점 C6 도구로 라이브러리를 재정렬(공유 풀, 한계비용 0).
-  const weakTool = await loadChildWeakTool(selectedChild.id);
+  // 선별 기반 초개인화 — 성장 프로필이 있으면 C6 축, 없으면 기존 약점 도구로 재정렬.
+  const growthAxis = await loadChildGrowthAxis(selectedChild.id);
+  const weakTool = growthAxis ? null : await loadChildWeakTool(selectedChild.id);
+  const orderLibrary = (videos: LibraryVideo[]): LibraryVideo[] => (
+    growthAxis ? orderLibraryByGrowthAxis(videos, growthAxis) : orderLibraryByWeakTool(videos, weakTool)
+  );
 
   if (useVillage) {
     const villageSeed = stableSeed(`${selectedChild.id}:animal-village:home-play`);
@@ -334,7 +351,7 @@ export default async function PlayPage({ searchParams }: PlayPageProps) {
     });
     const villageVideos =
       loadedVillageVideos.length > 0
-        ? orderLibraryByWeakTool(loadedVillageVideos, weakTool)
+        ? orderLibrary(loadedVillageVideos)
         : [VILLAGE_FIRST_VIDEO_FALLBACK];
 
     return (
@@ -360,14 +377,13 @@ export default async function PlayPage({ searchParams }: PlayPageProps) {
     topic,
     round_count: ROUND_COUNT,
   });
-  const videos = orderLibraryByWeakTool(
+  const videos = orderLibrary(
     await loadLibraryVideos({
       requestedVideoId,
       topic,
       ageBand,
       limit: rounds.length + 1,
     }),
-    weakTool,
   );
 
   if (videos.length === 0) {

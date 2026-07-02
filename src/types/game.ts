@@ -37,6 +37,12 @@ export interface GameRoundParams {
   asset_pool_id: string;
   item_count: number;
   time_limit_sec?: number;
+  template_id?: string;
+  prompt_ko?: string;
+  items?: Array<{ token?: string; id?: string; label_ko?: string; label?: string; category?: string }>;
+  categories?: string[];
+  answer_token?: string;
+  option_tokens?: string[];
 }
 
 /** 세션 막(act) — 정서 사건 해결(emotion) → 나만의 방법 만들기(creativity). */
