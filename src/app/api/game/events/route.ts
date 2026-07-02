@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseServiceConfigured, supabase } from '@/lib/supabase';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
+import {
+  C6_AXIS_IDS,
+  THINKING_TOOLS,
+  type C6AxisId,
+  type ThinkingTool,
+} from '@/lib/c6/axes';
+import { processRoundGrowth } from '@/lib/c6/diagnosis-agent';
 import { LOCAL_PREVIEW_CHILD_ID } from '@/lib/local-preview-child';
 import {
   LOCAL_PREVIEW_GAME_COOKIE,
@@ -37,6 +44,11 @@ const ALLOWED_GAME_TYPES = new Set<GameType>([
 const MAX_DIFFICULTY = 10;
 const MAX_SCORE = 100000;
 const MAX_LATENCY_MS = 60 * 60 * 1000;
+const MAX_ROUND_ELAPSED_MS = 60 * 60 * 1000;
+const MAX_ROUND_COUNT_SIGNAL = 50;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ALLOWED_C6_AXIS_IDS = new Set<string>(C6_AXIS_IDS);
+const ALLOWED_THINKING_TOOLS = new Set<string>(THINKING_TOOLS);
 
 type GameEventBody = {
   event?: unknown;
@@ -54,6 +66,12 @@ type GameSessionRef = {
   id: string;
   child_id: string;
   rounds_completed: number | null;
+  child_age: number | null;
+};
+
+type OwnedChildRef = {
+  id: string;
+  age: number | null;
 };
 
 function unauthorized() {
@@ -101,6 +119,44 @@ function nullableLatency(v: unknown): number | null {
 
 function jsonObject(v: unknown): Record<string, unknown> | null {
   return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+}
+
+function optionalBoundedInt(v: unknown, min: number, max: number): number | null | undefined {
+  if (v === null || v === undefined || v === '') return undefined;
+  return boundedInt(v, min, max);
+}
+
+function optionalBoolean(v: unknown): boolean | null | undefined {
+  if (v === null || v === undefined || v === '') return undefined;
+  return typeof v === 'boolean' ? v : null;
+}
+
+function optionalJsonObject(v: unknown): Record<string, unknown> | null | undefined {
+  if (v === null || v === undefined || v === '') return undefined;
+  return jsonObject(v);
+}
+
+function optionalString(v: unknown): string | null | undefined {
+  if (v === null || v === undefined || v === '') return undefined;
+  return str(v);
+}
+
+function optionalAxisId(v: unknown): C6AxisId | null | undefined {
+  const value = optionalString(v);
+  if (value === undefined || value === null) return value;
+  return ALLOWED_C6_AXIS_IDS.has(value) ? (value as C6AxisId) : null;
+}
+
+function optionalThinkingTool(v: unknown): ThinkingTool | null | undefined {
+  const value = optionalString(v);
+  if (value === undefined || value === null) return value;
+  return ALLOWED_THINKING_TOOLS.has(value) ? (value as ThinkingTool) : null;
+}
+
+function optionalUuid(v: unknown): string | null | undefined {
+  const value = optionalString(v);
+  if (value === undefined || value === null) return value;
+  return UUID_PATTERN.test(value) ? value : null;
 }
 
 function parseContext(v: unknown): 'home' | 'kiosk' | null {
@@ -156,6 +212,32 @@ function parseRoundResult(v: unknown): GameRoundResult | { error: string } {
   }
 
   const rewardPayload = jsonObject(result.reward_payload) as RewardDelta | null;
+  const axisId = optionalAxisId(result.axis_id);
+  if (axisId === null) return { error: 'invalid axis_id' };
+
+  const thinkingTool = optionalThinkingTool(result.thinking_tool);
+  if (thinkingTool === null) return { error: 'invalid thinking_tool' };
+
+  const storySeedId = optionalUuid(result.story_seed_id);
+  if (storySeedId === null) return { error: 'invalid story_seed_id' };
+
+  const worldRegion = optionalString(result.world_region);
+  if (worldRegion === null) return { error: 'invalid world_region' };
+
+  const elapsedMs = optionalBoundedInt(result.elapsed_ms, 0, MAX_ROUND_ELAPSED_MS);
+  if (elapsedMs === null) return { error: 'invalid elapsed_ms' };
+
+  const hintCount = optionalBoundedInt(result.hint_count, 0, MAX_ROUND_COUNT_SIGNAL);
+  if (hintCount === null) return { error: 'invalid hint_count' };
+
+  const retryCount = optionalBoundedInt(result.retry_count, 0, MAX_ROUND_COUNT_SIGNAL);
+  if (retryCount === null) return { error: 'invalid retry_count' };
+
+  const isCorrect = optionalBoolean(result.is_correct);
+  if (isCorrect === null) return { error: 'invalid is_correct' };
+
+  const responsePayload = optionalJsonObject(result.response_payload);
+  if (responsePayload === null) return { error: 'invalid response_payload' };
 
   return {
     game_type: gameType as GameType,
@@ -167,19 +249,36 @@ function parseRoundResult(v: unknown): GameRoundResult | { error: string } {
     latency_ms: latencyMs,
     retried: typeof result.retried === 'boolean' ? result.retried : false,
     reward_payload: rewardPayload,
+    ...(axisId !== undefined ? { axis_id: axisId } : {}),
+    ...(thinkingTool !== undefined ? { thinking_tool: thinkingTool } : {}),
+    ...(storySeedId !== undefined ? { story_seed_id: storySeedId } : {}),
+    ...(worldRegion !== undefined ? { world_region: worldRegion } : {}),
+    ...(elapsedMs !== undefined ? { elapsed_ms: elapsedMs } : {}),
+    ...(hintCount !== undefined ? { hint_count: hintCount } : {}),
+    ...(retryCount !== undefined ? { retry_count: retryCount } : {}),
+    ...(isCorrect !== undefined ? { is_correct: isCorrect } : {}),
+    ...(responsePayload !== undefined ? { response_payload: responsePayload } : {}),
   };
 }
 
-async function verifyChildOwner(childId: string, parentId: string) {
+async function getOwnedChildRef(childId: string, parentId: string): Promise<OwnedChildRef | null> {
   const { data, error } = await supabase
     .from('children')
-    .select('id')
+    .select('id, age')
     .eq('id', childId)
     .eq('parent_id', parentId)
     .maybeSingle();
 
   if (error) throw error;
-  return Boolean(data);
+  if (!data) return null;
+  return {
+    id: data.id as string,
+    age: typeof data.age === 'number' ? data.age : null,
+  };
+}
+
+async function verifyChildOwner(childId: string, parentId: string) {
+  return Boolean(await getOwnedChildRef(childId, parentId));
 }
 
 async function getOwnedGameSession(gameSessionId: string, parentId: string): Promise<GameSessionRef | null> {
@@ -192,13 +291,14 @@ async function getOwnedGameSession(gameSessionId: string, parentId: string): Pro
   if (sessionError) throw sessionError;
   if (!session?.child_id) return null;
 
-  const owned = await verifyChildOwner(session.child_id as string, parentId);
-  if (!owned) return null;
+  const child = await getOwnedChildRef(session.child_id as string, parentId);
+  if (!child) return null;
 
   return {
     id: session.id as string,
     child_id: session.child_id as string,
     rounds_completed: typeof session.rounds_completed === 'number' ? session.rounds_completed : 0,
+    child_age: child.age,
   };
 }
 
@@ -256,26 +356,50 @@ async function handleRoundCompleted(event: GameEvent, body: GameEventBody, paren
     return badGameEvent();
   }
 
-  const { error: roundError } = await supabase
-    .from('game_rounds')
-    .insert({
-      game_session_id: session.id,
-      child_id: session.child_id,
-      round_index: roundIndex,
-      game_type: result.game_type,
-      difficulty: result.difficulty,
-      objective_code: result.objective_code,
-      standard_anchor: result.standard_anchor,
-      score: result.score,
-      max_score: result.max_score,
-      latency_ms: result.latency_ms,
-      retried: result.retried,
-      reward_payload: result.reward_payload,
-    });
+  const roundInsert: Record<string, unknown> = {
+    game_session_id: session.id,
+    child_id: session.child_id,
+    round_index: roundIndex,
+    game_type: result.game_type,
+    difficulty: result.difficulty,
+    objective_code: result.objective_code,
+    standard_anchor: result.standard_anchor,
+    score: result.score,
+    max_score: result.max_score,
+    latency_ms: result.latency_ms,
+    retried: result.retried,
+    reward_payload: result.reward_payload,
+  };
 
-  if (roundError) {
+  if (result.axis_id) roundInsert.axis_id = result.axis_id;
+  if (result.thinking_tool) roundInsert.thinking_tool = result.thinking_tool;
+  if (result.story_seed_id) roundInsert.story_seed_id = result.story_seed_id;
+  if (result.world_region) roundInsert.world_region = result.world_region;
+  if (typeof result.elapsed_ms === 'number') roundInsert.elapsed_ms = result.elapsed_ms;
+  if (typeof result.hint_count === 'number') roundInsert.hint_count = result.hint_count;
+  if (typeof result.retry_count === 'number') roundInsert.retry_count = result.retry_count;
+  if (result.response_payload) roundInsert.response_payload = result.response_payload;
+
+  const { data: roundData, error: roundError } = await supabase
+    .from('game_rounds')
+    .insert(roundInsert)
+    .select('id')
+    .single();
+
+  if (roundError || !roundData) {
     console.error('[game-events:round-insert]', roundError);
     return gameSaveError();
+  }
+
+  try {
+    await processRoundGrowth(supabase, {
+      roundId: roundData.id as string,
+      childId: session.child_id,
+      round: result,
+      age: session.child_age,
+    });
+  } catch (error) {
+    console.error('[growth-agent]', error);
   }
 
   const { error: sessionError } = await supabase

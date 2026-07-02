@@ -71,6 +71,15 @@ export interface GameRoundResult {
   latency_ms: number | null;
   retried: boolean;
   reward_payload: RewardDelta | null;
+  axis_id?: string | null;
+  thinking_tool?: string | null;
+  story_seed_id?: string | null;
+  world_region?: string | null;
+  elapsed_ms?: number | null;
+  hint_count?: number | null;
+  retry_count?: number | null;
+  is_correct?: boolean | null;
+  response_payload?: Record<string, unknown> | null;
 }
 
 /** 누적 보상/컬렉션 상태. */
