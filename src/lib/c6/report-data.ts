@@ -98,7 +98,7 @@ const STAGE_LABELS: Record<GrowthStage, string> = {
   shining: '환하게 빛나요',
 };
 
-const FORBIDDEN_SURFACE_PATTERN = /진단|평가|점수|등급|또래|부족|발달 지연|\bC[1-6](?:\b|_)|커리큘럼|(?:^|[^A-Za-z])AI(?:[^A-Za-z]|$)/i;
+const FORBIDDEN_SURFACE_PATTERN = /진단|평가|점수|등급|또래|부족|발달 지연|인공지능|알고리즘|모델|분석|\bC[1-6](?:\b|_)|커리큘럼|(?:^|[^A-Za-z])AI(?:[^A-Za-z]|$)/i;
 
 function numberValue(value: number | string | null | undefined, fallback: number): number {
   const number = typeof value === 'number' ? value : Number(value);
@@ -130,7 +130,7 @@ function safeText(value: string | null | undefined): string | null {
 function subjectName(childName: string): string {
   const trimmed = childName.trim();
   if (!trimmed || trimmed === '우리 아이') return '아이는';
-  return `${trimmed}이는`;
+  return withJosa(trimmed, '은/는');
 }
 
 function lineWithClarityPrefix(profile: GrowthProfileSnapshot | null, stage: GrowthStage, line: string): string {
@@ -168,7 +168,7 @@ function buildStrengthLine(childName: string, profiles: readonly GrowthProfileSn
   }
 
   const nextConcept = growthAxis?.parent_label ?? strengthAxis.parent_label;
-  return `${subjectName(childName)} ${strengthAxis.world_region}에서 작은 단서를 찾는 데 오래 머물렀어요. 다음에는 이 관찰 강점을 활용해 ${withJosa(nextConcept, '을/를')} 이어갈게요.`;
+  return `${subjectName(childName)} ${strengthAxis.world_region}에서 작은 단서를 찾는 데 오래 머물렀어요. 다음에는 이 잘 들어온 힘을 살려 ${withJosa(nextConcept, '을/를')} 이어갈게요.`;
 }
 
 function buildGrowthLine(profiles: readonly GrowthProfileSnapshot[]): string {
@@ -247,7 +247,7 @@ function buildThinkingToolLines(rows: readonly ThinkingRoundRow[]): string[] {
   }
 
   return [
-    `최근 놀이에서는 ${formatKoreanList(topTools)}이 자주 열렸어요.`,
+    `최근 놀이에서는 ${withJosa(formatKoreanList(topTools), '이/가')} 자주 열렸어요.`,
     `다음 놀이에서도 ${topTools[0]} 흐름을 살려 짧게 이어갈게요.`,
   ];
 }

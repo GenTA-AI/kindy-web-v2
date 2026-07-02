@@ -55,30 +55,6 @@ export default async function StartPage({
           </div>
         </div>
 
-        <div className="mb-4 rounded-2xl border border-line bg-white p-5 shadow-sm">
-          <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-sage">
-            이렇게 시작해요
-          </div>
-          <ol className="space-y-3 text-sm font-semibold text-ink2">
-            <li className="flex gap-3">
-              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-sagebg text-xs font-black text-saged">1</span>
-              <span><b className="text-ink">보호자 계정 만들기</b> — 이메일로 1분이면 끝나요.</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-sagebg text-xs font-black text-saged">2</span>
-              <span><b className="text-ink">아이 이름표 만들기</b> — 이름과 나이에 맞춰 길이를 맞춰요.</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-sagebg text-xs font-black text-saged">3</span>
-              <span>
-                <b className="text-ink">{isAiDiagnosis ? '다음 놀이 이어가기' : '웹에서 바로 플레이'}</b>
-                {' '}
-                — {isAiDiagnosis ? '영상과 단서 놀이로 다음 기록을 만들어요.' : '영상, 단서 질문, 놀이를 이어가요.'}
-              </span>
-            </li>
-          </ol>
-        </div>
-
         <Link
           href="/auth/login?next=/onboarding"
           className="block w-full rounded-2xl bg-saged px-6 py-4 text-center text-base font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.98]"

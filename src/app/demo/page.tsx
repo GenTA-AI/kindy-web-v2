@@ -39,9 +39,6 @@ export default function DemoIndex() {
       <div className="mx-auto max-w-md">
         <p className="text-[11px] font-black uppercase tracking-wider text-sage">모리 미리보기</p>
         <h1 className="mt-1 text-2xl font-black">지금 확인할 화면</h1>
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-ink2">
-          고객이 실제로 보게 될 체험, 아이 플레이, 보호자 기록 화면만 모았습니다.
-        </p>
 
         <div className="mt-8 space-y-3">
           {DEMOS.map((demo) => (

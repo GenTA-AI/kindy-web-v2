@@ -131,7 +131,7 @@ export default function MoriDemoJourney() {
               label="모리"
               withGlow={false}
             />
-            <p className="mt-5 text-xs font-black uppercase tracking-[.16em] text-sage">첫 관찰 카드</p>
+            <p className="mt-5 text-xs font-black uppercase tracking-[.16em] text-sage">첫 씨앗 카드</p>
             <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">
               모리가 작은 씨앗을
               <br />

@@ -19,20 +19,19 @@ function StartCtaBlock({ className = '' }: { className?: string }) {
     <div className={className}>
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link
-          href={DEMO_HREF}
-          className="inline-flex min-h-14 items-center justify-center rounded-full bg-saged px-7 text-base font-extrabold text-white shadow-[0_14px_28px_-14px_rgba(35,49,38,.55)] transition hover:bg-ink active:scale-[0.98]"
-        >
-          1분 체험 먼저 보기
-        </Link>
-        <Link
           href={START_HREF}
-          className="inline-flex min-h-14 items-center justify-center rounded-full border border-line bg-white px-7 text-base font-extrabold text-ink transition hover:border-sages hover:bg-mist active:scale-[0.98]"
+          className="inline-flex min-h-14 items-center justify-center rounded-full bg-saged px-7 text-base font-extrabold text-white shadow-[0_14px_28px_-14px_rgba(35,49,38,.55)] transition hover:bg-ink active:scale-[0.98]"
         >
           무료로 시작하기
         </Link>
+        <Link
+          href={DEMO_HREF}
+          className="inline-flex min-h-14 items-center justify-center rounded-full px-5 text-base font-extrabold text-saged transition hover:bg-mist active:scale-[0.98]"
+        >
+          1분 체험 보기
+        </Link>
       </div>
-      <p className="mt-3 text-sm font-bold text-sage">로그인 없이 바로 체험 · 보호자 계정 1분이면 무료로 시작</p>
-      <p className="mt-1 text-xs font-semibold leading-relaxed text-ink3">
+      <p className="mt-3 text-xs font-semibold leading-relaxed text-ink3">
         {PRICE_LINE}. 아이 화면에는 광고·결제 버튼·자동재생 압박이 보이지 않아요.
       </p>
       <button
@@ -54,12 +53,6 @@ function StartCtaBlock({ className = '' }: { className?: string }) {
   );
 }
 
-const STEPS = [
-  ['영상 한 편을 본다', '모리와 동물 마을 친구들의 짧은 이야기'],
-  ['질문과 놀이를 한다', '아이가 고른 답과 끝낸 놀이가 기록돼요'],
-  ['보호자는 오늘 기록을 본다', '잘 맞은 놀이와 다음에 해볼 놀이가 남아요'],
-];
-
 const THINKING_TOOLS = [
   '자세히 보기',
   '머릿속에 그려보기',
@@ -74,7 +67,7 @@ const TRUST = [
   '아이 화면엔 광고·결제·자동재생 압박 없음',
   '한 편이 끝나면 보호자 기록으로 멈춤',
   '모든 콘텐츠 사람 검수 후 공개',
-  '다음 추천은 활동 기록만 참고',
+  '다음 이야기는 활동 기록만 참고',
 ];
 
 // 신뢰 앵커 — 대표 확인 = 입증가능(교수=공동창업자·감수 계약, 공공도서관 실운영).
@@ -105,7 +98,7 @@ const FIRST_LOOK = [
 ];
 
 const DIAGNOSIS_SIGNALS = [
-  ['영상 뒤 단서 질문', '“해님이 숨으면 무엇이 보였지?”처럼 방금 본 장면과 소리를 떠올려요.', '관찰'],
+  ['영상 뒤 단서 질문', '“해님이 숨으면 무엇이 보였지?”처럼 방금 본 장면과 소리를 떠올려요.', '장면 보기'],
   ['마음 고르기', '“꾸미는 지금 어떤 마음일까?” 얼굴과 상황 단서를 보고 골라요.', '마음 읽기'],
   ['숨은 친구 찾기', '풀숲에 숨은 도토를 찾아요. 어디를 다시 살펴봤는지도 남아요.', '자세히 보기'],
   ['닮은 선물 찾기', '친구와 어울리는 선물을 이어 보며 비슷한 점을 찾아요.', '닮은 것 잇기'],
@@ -146,18 +139,18 @@ const ENTRY_FLOW = [
     childAction: '기록 보기',
     parentTitle: '오늘 놀이가 기록돼요',
     parentLine: '이미 잘 들어온 놀이와 한 번 더 해보면 좋은 놀이를 부드럽게 보여줘요.',
-    result: '맞고 틀림보다 완료한 활동, 다시 본 순간, 만든 선택을 중심으로 다음 놀이를 추천해요.',
+    result: '맞고 틀림보다 완료한 활동, 다시 본 순간, 만든 선택을 중심으로 다음 놀이가 남아요.',
     href: SAMPLE_REPORT_HREF,
     cta: '놀이 기록 보기',
   },
   {
     label: '보호자 화면',
     title: '이번 주 흐름을 확인해요',
-    childTitle: '다음 이야기 추천',
+    childTitle: '다음 이야기',
     childLine: '이번엔 무늬 언덕에서 비슷한 점을 찾아볼까?',
     childAction: '새 모험 열기',
     parentTitle: '오늘 무엇을 했는지 보여요',
-    parentLine: '완료한 영상, 단서 질문, 놀이 기록, 다음 추천이 한 화면에 모입니다.',
+    parentLine: '완료한 영상, 단서 질문, 놀이 기록, 다음 이야기 길도 한 화면에 모입니다.',
     result: '아이에게는 모험으로 보이고, 보호자에게는 대화 힌트와 다음 놀이로 정리돼요.',
     href: SAMPLE_REPORT_HREF,
     cta: '기록 예시 보기',
@@ -178,9 +171,6 @@ function EntryFlowDemo() {
         <div>
           <p className="text-xs font-black uppercase tracking-[.16em] text-sage">시작부터 기록까지</p>
           <h2 className="mt-3 text-3xl font-black sm:text-4xl">모리와 한 편을 놀면, 오늘 기록이 남아요</h2>
-          <p className="mt-4 text-base font-semibold leading-relaxed text-ink2">
-            아이는 모리와 영상을 보고, 짧은 단서 질문과 놀이를 지나갑니다. 보호자는 아이가 무엇을 잘 보고 어디에서 다시 살펴봤는지 확인합니다.
-          </p>
 
           <div className="mt-6 grid gap-2">
             {ENTRY_FLOW.map((step, index) => {
@@ -226,7 +216,7 @@ function EntryFlowDemo() {
             </button>
             <Link
               href={active.href}
-              className="inline-flex min-h-12 items-center justify-center rounded-full bg-saged px-6 text-sm font-black text-white transition hover:bg-ink active:scale-[0.98]"
+              className="inline-flex min-h-12 items-center justify-center rounded-full border border-line bg-white px-6 text-sm font-black text-saged transition hover:bg-mist active:scale-[0.98]"
             >
               {active.cta}
             </Link>
@@ -292,10 +282,7 @@ function DiagnosisPreviewSection() {
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-5 py-14 sm:px-8 lg:grid-cols-[.86fr_1.14fr] lg:py-20">
         <div>
           <p className="text-xs font-black uppercase tracking-[.16em] text-sage">무엇을 묻고 보나요</p>
-          <h2 className="mt-3 text-3xl font-black sm:text-4xl">아이에게는 놀이, 보호자에게는 관찰 기록</h2>
-          <p className="mt-4 text-base font-semibold leading-relaxed text-ink2">
-            모리는 검사지를 내밀지 않아요. 영상 뒤의 짧은 단서 질문과 놀이에서 어떤 장면을 골랐는지, 다시 살펴봤는지, 끝까지 만들었는지 모아 “지금 잘 들어온 놀이”와 “다음에 더 해볼 놀이”를 보여줘요.
-          </p>
+          <h2 className="mt-3 text-3xl font-black sm:text-4xl">아이에게는 놀이, 보호자에게는 오늘 기록</h2>
           <div className="mt-6 rounded-[28px] border border-line bg-white p-5">
             <p className="text-sm font-black text-sage">오늘 예시</p>
             <p className="mt-2 text-xl font-black leading-snug text-ink">
@@ -331,9 +318,6 @@ export default function Home() {
           </Link>
           <span className="hidden text-sm font-bold text-ink3 sm:inline">모리의 이야기 숲</span>
           <span className="flex-1" />
-          <Link href={START_HREF} className="inline-flex min-h-11 items-center rounded-full bg-saged px-5 text-sm font-extrabold text-white transition hover:bg-ink">
-            무료로 시작
-          </Link>
         </div>
       </nav>
 
@@ -350,13 +334,7 @@ export default function Home() {
             <p className="mt-5 max-w-[36rem] text-[17px] font-semibold leading-relaxed text-ink2 sm:text-xl">
               모리의 짧은 이야기를 보고, 바로 이어지는 질문과 놀이를 해요. 끝나면 보호자는 아이가 무엇을 자세히 봤고 어떤 놀이가 잘 맞았는지 확인합니다.
             </p>
-            <p className="mt-4 max-w-[34rem] text-base font-bold leading-relaxed text-saged">
-              영상으로 배우고, 놀이로 확인하고, 부모는 오늘을 기록으로 봅니다.
-            </p>
             <StartCtaBlock className="mt-8" />
-            <a href="#entry-flow" className="mt-4 inline-flex min-h-11 items-center text-sm font-black text-saged underline underline-offset-[4px] hover:text-ink">
-              아이 기록이 남는 방식 보기
-            </a>
           </div>
 
           <div className="relative mx-auto w-full max-w-[520px]">
@@ -365,9 +343,6 @@ export default function Home() {
               <div className="absolute inset-x-5 bottom-5 rounded-[28px] border border-white/70 bg-cream/90 p-4 shadow-lg backdrop-blur">
                 <p className="text-[11px] font-black uppercase tracking-[.16em] text-sage">첫 모험</p>
                 <h2 className="mt-1 text-xl font-black">책정령 모리와 동물 마을 친구들</h2>
-                <p className="mt-1 text-sm font-semibold leading-relaxed text-ink2">
-                  아이 화면엔 광고와 결제 화면 없이, 모리와 이야기가 먼저 보입니다.
-                </p>
               </div>
             </div>
           </div>
@@ -428,7 +403,7 @@ export default function Home() {
               <p className="text-xs font-black uppercase tracking-[.16em] text-sage">아이의 플레이 루프</p>
               <h2 className="mt-3 text-3xl font-black sm:text-4xl">모리와 따라가면 자연스럽게 한 편이 끝나요</h2>
               <p className="mt-4 text-base font-semibold leading-relaxed text-ink2">
-                나무집에서 시작해 문을 열고, 영상을 보고, 짧은 놀이를 합니다. 보호자에게는 그 여정이 오늘의 관찰 기록으로 남습니다.
+                나무집에서 시작해 문을 열고, 영상을 보고, 짧은 놀이를 합니다. 보호자에게는 그 여정이 오늘 기록으로 남습니다.
               </p>
             </div>
             <div className="grid gap-3">
@@ -457,31 +432,10 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="border-y border-line bg-mist">
-          <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
-            <div className="mb-10">
-              <p className="text-xs font-black uppercase tracking-[.16em] text-sage">첫 플레이 3스텝</p>
-              <h2 className="mt-3 text-3xl font-black sm:text-4xl">무료 체험 안에서 바로 느껴집니다</h2>
-            </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {STEPS.map(([title, body], index) => (
-                <article key={title} className="rounded-[28px] border border-line bg-white p-6 shadow-sm">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sagebg text-sm font-black text-saged">{index + 1}</span>
-                  <h3 className="mt-5 text-xl font-black">{title}</h3>
-                  <p className="mt-2 text-sm font-semibold leading-relaxed text-ink2">{body}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-5 py-16 sm:px-8 lg:grid-cols-[1fr_1fr] lg:py-24">
           <div>
             <p className="text-xs font-black uppercase tracking-[.16em] text-sage">6가지 생각 놀이</p>
             <h2 className="mt-3 text-3xl font-black sm:text-4xl">아이에게는 놀이 이름으로 보여줘요</h2>
-            <p className="mt-4 text-base font-semibold leading-relaxed text-ink2">
-              내부적으로는 아이의 사고 과정을 나누어 보지만, 화면에서는 자세히 보기, 규칙 찾기처럼 바로 이해되는 놀이 이름으로 안내합니다.
-            </p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {THINKING_TOOLS.map((tool) => (
@@ -546,20 +500,6 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mx-auto w-full max-w-6xl px-5 pb-16 sm:px-8">
-          <div className="rounded-[36px] border border-line bg-white px-6 py-12 text-center shadow-sm sm:px-10">
-            <p className="text-sm font-black text-sage">아이에게는 모리의 첫 모험, 보호자에게는 첫 놀이 기록</p>
-            <h2 className="mt-3 text-3xl font-black sm:text-4xl">우리 아이의 첫 모험, 지금 무료로.</h2>
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link href={START_HREF} className="inline-flex min-h-14 items-center justify-center rounded-full bg-saged px-8 text-base font-black text-white transition hover:bg-ink active:scale-[0.98]">
-                무료로 시작
-              </Link>
-              <Link href={SAMPLE_REPORT_HREF} className="inline-flex min-h-14 items-center justify-center rounded-full border border-line bg-cream px-8 text-base font-black text-saged transition hover:bg-mist active:scale-[0.98]">
-                기록 예시 보기
-              </Link>
-            </div>
-          </div>
-        </section>
       </main>
     </div>
   );

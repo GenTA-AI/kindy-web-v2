@@ -57,12 +57,6 @@ type RoundRow = {
 
 type DiagnosisSummaryItem = readonly [label: string, title: string, body: string];
 
-const REPORT_FLOW = [
-  ['영상', '짧은 이야기를 봐요'],
-  ['질문·놀이', '고르고 만들며 확인해요'],
-  ['기록', '보호자가 오늘 흐름을 봐요'],
-];
-
 const VALID_GAME_TYPES = new Set<GameType>([
   'G1_match',
   'G2_sort',
@@ -381,7 +375,7 @@ function GrowthMapSections({ report }: { report: ParentReportGrowthData }) {
       <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
         <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[.16em] text-sage">잘 들어간 학습 문</p>
-          <h2 className="mt-2 text-2xl font-black">관찰 강점으로 이어가요</h2>
+          <h2 className="mt-2 text-2xl font-black">잘 들어온 문으로 이어가요</h2>
           <p className="mt-4 text-sm font-semibold leading-relaxed text-ink2">{report.strengthLine}</p>
         </section>
 
@@ -418,7 +412,7 @@ function GrowthRecommendationPanel({
 }) {
   return (
     <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[.16em] text-clay">다음 추천</p>
+      <p className="text-xs font-black uppercase tracking-[.16em] text-clay">다음 이야기</p>
       <h2 className="mt-2 text-2xl font-black">오늘 이어갈 이야기 문</h2>
       {recommendation.storyTitles.length > 0 && (
         <div className="mt-5 grid gap-3">
@@ -430,7 +424,7 @@ function GrowthRecommendationPanel({
         </div>
       )}
       <div className="mt-5 rounded-2xl bg-sagebg p-4">
-        <p className="text-xs font-black text-sage">추천 이유</p>
+        <p className="text-xs font-black text-sage">모리가 남긴 이유</p>
         <p className="mt-2 text-sm font-semibold leading-relaxed text-ink2">{recommendation.reason}</p>
       </div>
       <Link
@@ -611,17 +605,9 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
             </h1>
             <p className="mt-4 max-w-2xl text-base font-semibold leading-relaxed text-white/82">
               {sampleMode
-                ? '실제 가입 전 확인할 수 있는 예시 화면입니다. 오늘 한 놀이가 어떻게 기록되는지 먼저 보여줍니다.'
+                ? '오늘 한 놀이가 어떻게 기록되는지 먼저 봅니다.'
                 : '아이가 실제로 한 활동과 모리가 발견한 작은 단서를 정리합니다.'}
             </p>
-            <div className="mt-5 grid gap-2 sm:grid-cols-3">
-              {REPORT_FLOW.map(([label, body]) => (
-                <div key={label} className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
-                  <p className="text-xs font-black text-white">{label}</p>
-                  <p className="mt-1 text-xs font-semibold leading-relaxed text-white/72">{body}</p>
-                </div>
-              ))}
-            </div>
           </section>
 
           <section className="overflow-hidden rounded-[34px] border border-line bg-white shadow-sm">
@@ -640,7 +626,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
         <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1.05fr_.95fr]">
           <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[.16em] text-sage">기록 요약</p>
-            <h2 className="mt-2 text-2xl font-black">다음에 해볼 놀이를 추천해요</h2>
+            <h2 className="mt-2 text-2xl font-black">다음에 해볼 놀이</h2>
             <div className="mt-5 grid gap-3">
               {diagnosisItems.map(([label, title, body]) => (
                 <div key={label} className="rounded-2xl bg-mist p-4">
@@ -660,7 +646,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
             />
           ) : (
             <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
-              <p className="text-xs font-black uppercase tracking-[.16em] text-clay">이번 주 추천</p>
+              <p className="text-xs font-black uppercase tracking-[.16em] text-clay">이번 주 이야기</p>
               <h2 className="mt-2 text-2xl font-black">영상과 단서 놀이 3일 흐름</h2>
               <div className="mt-5 grid gap-3">
                 {homeAssignments.map(([day, title, body]) => (
@@ -712,7 +698,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
                 </p>
                 <h2 className="mt-2 text-2xl font-black leading-snug">{highlight}</h2>
                 <p className="mt-3 text-sm font-semibold leading-relaxed text-ink2">
-                  관찰 가능한 활동 횟수만 사용합니다. 아이의 성향이나 능력을 단정하지 않아요.
+                  활동 횟수만 사용합니다. 아이를 단정하지 않아요.
                 </p>
               </section>
 
@@ -728,8 +714,8 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
             <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[.16em] text-sage">놀이 관찰 기록</p>
-                  <h2 className="mt-2 text-2xl font-black">관찰 가능한 활동량</h2>
+                  <p className="text-xs font-black uppercase tracking-[.16em] text-sage">놀이 기록</p>
+                  <h2 className="mt-2 text-2xl font-black">이번 주 활동량</h2>
                 </div>
                 <span className="rounded-full bg-sagebg px-3 py-1 text-xs font-black text-saged">주간</span>
               </div>
@@ -745,12 +731,10 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
         <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[.16em] text-sage">놀이 관찰 지도</p>
-              <h2 className="mt-2 text-2xl font-black">해본 놀이와 다음 추천</h2>
+              <p className="text-xs font-black uppercase tracking-[.16em] text-sage">놀이 지도</p>
+              <h2 className="mt-2 text-2xl font-black">해본 놀이와 다음 놀이</h2>
               <p className="mt-3 max-w-3xl text-sm font-semibold leading-relaxed text-ink2">
-                {growthReport
-                  ? '아이가 실제로 끝낸 놀이를 여섯 가지 활동 방식으로도 함께 남겨요. 한 놀이가 두 방식에 함께 남을 수 있고, 빈칸은 다음에 해볼 놀이 후보예요.'
-                  : '아이가 실제로 끝낸 놀이를 여섯 가지 활동 방식으로 정리합니다. 한 놀이가 두 방식에 함께 남을 수 있고, 빈칸은 부족 판정이 아니라 다음에 해볼 놀이 후보예요.'}
+                끝낸 놀이와 다음에 해볼 놀이만 남겨요.
               </p>
             </div>
             <div className="rounded-2xl bg-sagebg p-4 lg:w-72">
@@ -793,7 +777,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
 
           <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[.16em] text-clay">자주 고른 단서</p>
-            <h2 className="mt-2 text-2xl font-black">취향은 빈도 패턴으로만 봅니다</h2>
+            <h2 className="mt-2 text-2xl font-black">자주 고른 단서를 모았어요</h2>
             <dl className="mt-5 space-y-3">
               {taste.map((item) => (
                 <div key={item.label_ko} className="rounded-2xl bg-cream p-4">
@@ -802,9 +786,6 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
                 </div>
               ))}
             </dl>
-            <p className="mt-4 text-xs font-semibold leading-relaxed text-ink3">
-              이 항목은 아이를 규정하지 않고, 다음 이야기를 고르는 참고로만 사용합니다.
-            </p>
           </section>
         </section>
       </div>
