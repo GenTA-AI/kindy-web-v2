@@ -1,9 +1,9 @@
 # GCP Cloud Build — Kindy 컨테이너 이미지 빌드.
 #
-# 사용:
+# 사용 (주소처럼 콤마가 들어갈 수 있는 값이 있으므로 gcloud 구분자 이스케이프 ^;^ 사용):
 #   gcloud builds submit \
 #     --config=cloudbuild.yaml \
-#     --substitutions=_SUPABASE_URL=https://xxx.supabase.co,_SUPABASE_ANON_KEY=eyJ...,_TOSS_CLIENT_KEY=live_ck_...,_SITE_URL=https://kindy.kr,_BIZ_REPRESENTATIVE_NAME=홍길동,_BIZ_REGISTRATION_NUMBER=000-00-00000,_BIZ_MAIL_ORDER_NUMBER=제0000-서울강남-0000호,_BIZ_ADDRESS='서울 ...',_BIZ_PHONE=02-0000-0000,_BIZ_EMAIL=support@kindy.kr,_TAG=latest
+#     --substitutions='^;^_SUPABASE_URL=https://xxx.supabase.co;_SUPABASE_ANON_KEY=eyJ...;_TOSS_CLIENT_KEY=live_ck_...;_SITE_URL=https://kindy.kr;_BIZ_REPRESENTATIVE_NAME=홍길동;_BIZ_REGISTRATION_NUMBER=000-00-00000;_BIZ_MAIL_ORDER_NUMBER=제0000-서울강남-0000호;_BIZ_ADDRESS=서울 강남구 ..., 3층;_BIZ_PHONE=02-0000-0000;_BIZ_EMAIL=support@kindy.kr;_KINDY_START_BASE=;_TAG=latest'
 #
 # 결과: gcr.io/$PROJECT_ID/kindy:$_TAG 이미지가 Google Container Registry 에 push 됨.
 #

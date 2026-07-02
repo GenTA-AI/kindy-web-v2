@@ -14,14 +14,15 @@ import { getSignedUrls } from '@/lib/supabase-storage';
 const SERVE_SIGNED_URL_EXPIRY_SEC = 60 * 60 * 6;
 
 interface LibraryMediaRow {
-  video_url: string;
-  thumbnail_url: string | null;
+  video_url: string | null;
+  thumbnail_url?: string | null;
   subtitles_url?: string | null;
   video_path?: string | null;
   thumbnail_path?: string | null;
   subtitles_path?: string | null;
 }
 
+/** library_videos 뿐 아니라 videos(비스포크) 행도 수용한다 — video_url/video_path 계약 동일. */
 export async function withFreshLibraryMediaUrls<T extends LibraryMediaRow>(rows: T[]): Promise<T[]> {
   const paths = new Set<string>();
   for (const row of rows) {
@@ -39,10 +40,20 @@ export async function withFreshLibraryMediaUrls<T extends LibraryMediaRow>(rows:
     return rows;
   }
 
-  return rows.map((row) => ({
-    ...row,
-    video_url: (row.video_path && signed.get(row.video_path)) || row.video_url,
-    thumbnail_url: (row.thumbnail_path && signed.get(row.thumbnail_path)) || row.thumbnail_url,
-    subtitles_url: ((row.subtitles_path && signed.get(row.subtitles_path)) || row.subtitles_url) ?? null,
-  }));
+  return rows.map((row) => {
+    const next = { ...row };
+    if (row.video_path) {
+      const url = signed.get(row.video_path);
+      if (url) next.video_url = url;
+    }
+    if (row.thumbnail_path) {
+      const url = signed.get(row.thumbnail_path);
+      if (url) next.thumbnail_url = url;
+    }
+    if (row.subtitles_path) {
+      const url = signed.get(row.subtitles_path);
+      if (url) next.subtitles_url = url;
+    }
+    return next;
+  });
 }

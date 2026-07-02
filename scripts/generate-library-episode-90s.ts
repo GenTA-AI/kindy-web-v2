@@ -386,6 +386,20 @@ async function main(): Promise<void> {
 
   console.log(`[${now()}] library 90s batch start selected=${selected.length} limit=${limitCount ?? 'all'} mode=${ANIMATION_MODE} skip_lipsync=${SKIP_LIPSYNC} tier=${SEEDANCE_TIER}`);
 
+  // P0-3 프리플라이트: migration 0021(*_path 컬럼) 미적용 DB에서 유료 생성이 끝난 뒤
+  // insert 단계에서야 실패하는 것을 막는다 — 생성 시작 전에 컬럼 존재를 확인.
+  {
+    const { error: pathColumnError } = await getSupabase()
+      .from('library_videos')
+      .select('video_path')
+      .limit(1);
+    if (pathColumnError) {
+      throw new Error(
+        `library_videos.video_path 확인 실패 — supabase/migrations/0021_library_media_paths.sql 적용 후 재실행: ${pathColumnError.message}`
+      );
+    }
+  }
+
   const results: EpisodeReport[] = [];
   for (const { index, spec } of selected) {
     const result = await processEpisode(index, spec);

@@ -3,6 +3,8 @@ import { getSupabase, isSupabaseServiceConfigured } from '@/lib/supabase';
 import { inngest } from '@/inngest/client';
 import type { VideoBrief } from '@/lib/video-providers/director.types';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
+import { withFreshLibraryMediaUrls } from '@/lib/library-media';
+import type { Video } from '@/types';
 
 function unauthorized() {
   return NextResponse.json({ error: '보호자 로그인이 필요해요.' }, { status: 401 });
@@ -88,7 +90,8 @@ export async function GET(request: NextRequest) {
       return videoListError();
     }
 
-    return NextResponse.json(data);
+    // P0-3 후속: 비스포크 완료 영상도 video_path 기준 요청당 재서명(30일 서명 URL 박제 방지).
+    return NextResponse.json(await withFreshLibraryMediaUrls((data ?? []) as Video[]));
   } catch (error) {
     console.error('[videos:list]', error);
     return videoListError();

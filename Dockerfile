@@ -8,8 +8,12 @@
 #
 # ffmpeg/ffprobe 는 video-pipeline 의 concat 단계 및 last-frame 추출에 사용.
 #
-# 빌드:  docker build -t gcr.io/$PROJECT/kindy:latest .
+# 빌드:  docker build -t gcr.io/$PROJECT/kindy:latest \
+#          --build-arg NEXT_PUBLIC_SUPABASE_URL=... --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
+#          --build-arg NEXT_PUBLIC_TOSS_CLIENT_KEY=... --build-arg NEXT_PUBLIC_BIZ_REPRESENTATIVE_NAME=... \
+#          (BIZ 6종 전체 — 빠지면 결제 CTA가 "결제 준비 중"으로 잠김, 아래 ARG 목록 참조) .
 # 테스트: docker run -p 8080:8080 --env-file .env.local gcr.io/$PROJECT/kindy:latest
+#        (주의: NEXT_PUBLIC_* 는 빌드 타임 인라인 — --env-file 로는 결제 버튼이 안 열린다)
 # 배포:  gcloud run deploy kindy --image=gcr.io/$PROJECT/kindy:latest --region=asia-northeast3 --allow-unauthenticated
 
 # ═══════════════════════════════════════════════════════

@@ -82,6 +82,11 @@ export async function getSignedUrls(
   for (const item of data) {
     if (item.path && item.signedUrl && !item.error) byPath.set(item.path, item.signedUrl);
   }
+  // 개별 실패(삭제·이동된 객체)는 무증상으로 30일 폴백 URL에 얹혀 가므로 반드시 로그를 남긴다.
+  const missing = paths.filter((p) => !byPath.has(p));
+  if (missing.length > 0) {
+    console.error(`[storage:signedUrls] ${missing.length}/${paths.length} path(s) failed to sign:`, missing.slice(0, 10));
+  }
   return byPath;
 }
 

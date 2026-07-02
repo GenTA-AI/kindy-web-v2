@@ -14,4 +14,11 @@
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/manual/0099_rls_disable_rollback.sql
 ```
 
+과거에 `db push`로 0008/0099가 이미 히스토리에 기록된 환경이 있다면(현재 계획상 없음 — 프로드는 미프로비저닝):
+
+```bash
+supabase migration repair --status reverted 0008 0099   # 히스토리 정리
+npx tsx scripts/verify-rls.ts                            # RLS 상태 검증 (0099가 실행된 적 있으면 0006/0016 정책 재적용)
+```
+
 이력: 2026-07-02 docs/07 감사 P0-1 — 이 두 파일이 migrations에 있어 `db push` 시 자동 적용되는 함정을 제거.
