@@ -1,0 +1,83 @@
+{
+  "project": {
+    "name": "아트앤사이언스 환경교육 오프닝 영상",
+    "client": "아트앤사이언스",
+    "target_audience": "초등학생 (8-13세)",
+    "total_episodes": 5,
+    "navigator_character": "물결이"
+  },
+  "visual_style": {
+    "overall_tone": "warm, magical, educational, Pixar-like underwater world",
+    "color_palette": {
+      "primary": ["deep ocean blue (#1A5276)", "turquoise (#17A2B8)", "coral pink (#FF6B6B)"],
+      "secondary": ["sand gold (#F4D03F)", "seafoam green (#A3E4D7)", "pearl white (#F8F9FA)"],
+      "mood_dark": ["midnight blue (#0C2340)", "deep purple (#2C1654)"],
+      "mood_bright": ["sunlit aqua (#00D4FF)", "golden shimmer (#FFD700)"]
+    },
+    "art_direction": "2D stylized illustration with soft gradients, rounded shapes, gentle lighting. Similar to children's picture book meets modern animation concept art. NOT photorealistic.",
+    "character_style": "cute anthropomorphic sea creatures with expressive large eyes, simple facial features, soft body shapes. Approachable and friendly for children.",
+    "background_style": "layered underwater scenes with depth-of-field effect, light rays filtering through water surface, subtle particle effects (bubbles, plankton)",
+    "lighting": "warm bioluminescent glow mixed with natural sunlight filtering from above. Soft shadows, no harsh contrasts."
+  },
+  "mulgyeol_character": {
+    "description": "바다 요정, 큰 물방울 형태로 반짝이며 떠다님",
+    "visual_prompt_base": "a cute glowing water droplet fairy character named Mulgyeol, translucent blue body with sparkle effects, large expressive eyes, small crown of tiny bubbles, floating gracefully, friendly and magical appearance",
+    "emotions": {
+      "bright": "sparkling eyes, wide smile, radiating soft light",
+      "serious": "slightly dimmed glow, focused expression, gentle frown",
+      "excited": "intense sparkle, bouncing motion, bright golden highlights",
+      "mysterious": "half-lidded eyes, swirling internal glow, purple-blue tones"
+    }
+  },
+  "prompt_rules": {
+    "language": "English (for Imagen API)",
+    "mandatory_prefix": "Children's educational animation concept art, 2D stylized illustration,",
+    "mandatory_suffix": "soft lighting, pastel underwater palette, rounded shapes, Pixar-inspired, high quality, detailed",
+    "negative_prompt": "photorealistic, scary, dark horror, sharp edges, violent, blood, realistic human faces, 3D render, low quality, blurry, text, watermark",
+    "aspect_ratio": "16:9",
+    "style_consistency_tags": [
+      "children's picture book style",
+      "soft gradient shading",
+      "warm underwater lighting",
+      "cute anthropomorphic sea creatures",
+      "educational animation concept art"
+    ]
+  },
+  "episode_themes": {
+    "1": {
+      "title": "해양 산성화",
+      "title_en": "Ocean Acidification",
+      "mood": "mysterious → concerned → hopeful",
+      "key_colors": "turquoise fading to pale/sickly green to show acidification effect",
+      "characters": ["물결이", "조개", "물고기", "산호"]
+    },
+    "2": {
+      "title": "해양 소음 공해",
+      "title_en": "Ocean Noise Pollution",
+      "mood": "peaceful → disrupted → questioning",
+      "key_colors": "calm blue disrupted by harsh red/orange sound wave visuals",
+      "characters": ["물결이", "돌고래", "바다거북", "고래", "물고기"]
+    },
+    "3": {
+      "title": "부력의 원리",
+      "title_en": "Buoyancy Principle",
+      "mood": "adventurous → curious → creative",
+      "key_colors": "golden sunset, warm wood tones, deep ocean blue",
+      "characters": ["물결이", "내레이션"]
+    },
+    "4": {
+      "title": "잠수함의 원리와 심해 생물",
+      "title_en": "Submarine & Deep Sea Creatures",
+      "mood": "mysterious → awe → wonder",
+      "key_colors": "dark navy gradually revealing bioluminescent neon colors",
+      "characters": ["물결이", "대왕오징어", "심해아귀", "초대형 등각류"]
+    },
+    "5": {
+      "title": "어류 해부학",
+      "title_en": "Fish Anatomy",
+      "mood": "familiar → surprised → curious",
+      "key_colors": "warm kitchen tones transitioning to vibrant underwater colors",
+      "characters": ["물결이", "멸치", "고등어", "복어", "주인공"]
+    }
+  }
+}

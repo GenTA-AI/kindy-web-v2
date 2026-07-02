@@ -7,3 +7,6 @@ onboarding-forest-journey: c6-diagnosis-agent
 demo-funnel-c6: c6-axes-foundation
 parent-report-v2: c6-recommendation-agent
 minimal-invisible-pass: onboarding-forest-journey demo-funnel-c6 parent-report-v2
+studio-bible-casting:
+studio-voice-editor: studio-bible-casting
+studio-director-qc-runner: studio-voice-editor

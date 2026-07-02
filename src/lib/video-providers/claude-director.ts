@@ -13,6 +13,10 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import {
+  ANIMAL_VILLAGE_BIBLE,
+  EPISODE_VOICE_EMOTIONS,
+} from '../../content/studio/animal-village-bible';
 import type { VideoBrief, VideoScript, DirectorResult } from './director.types';
 
 /** Opus 4.7 pricing (per million tokens, 2026-07 correction) */
@@ -29,6 +33,11 @@ const SONNET_PRICING = {
   cacheWrite: 3.75,
   cacheRead: 0.3,
 };
+
+const ANIMAL_VILLAGE_CASTING_TABLE = ANIMAL_VILLAGE_BIBLE.cast
+  .map((member) => `- ${member.id} / ${member.nameKo} / ${member.description} / fixed voice: ${member.voice}`)
+  .join('\n');
+const ANIMAL_VILLAGE_EMOTION_WORDS = EPISODE_VOICE_EMOTIONS.join(' | ');
 
 /**
  * 시스템 프롬프트 — 감독 에이전트의 역할, 스타일 가이드, 예시를 포함.
@@ -85,6 +94,11 @@ volumetric lighting, blue and white color grade.
   - \`Charon\` — 9살 남자아이, 답답한 톤
   - \`Despina\` — 8살 여자아이, 불안한 톤
   - \`Enceladus\` — 10살 남자아이, 차분하고 깊은 톤
+- **동물 마을(모리) 세계관 브리프일 때 캐스팅 고정**:
+${ANIMAL_VILLAGE_CASTING_TABLE}
+  - 내레이터는 \`${ANIMAL_VILLAGE_BIBLE.narrator.voice}\`: ${ANIMAL_VILLAGE_BIBLE.narrator.style}
+  - 캐스트 voice는 절대 바꾸지 않는다. characters[0]은 모리(toto)로 둔다.
+  - 씬별 감정 어휘는 ${ANIMAL_VILLAGE_EMOTION_WORDS} 를 권장한다. character_speaking 씬이 EpisodeScript 계열이면 speakerId와 voiceEmotion을 함께 지정한다.
 - **캐릭터 id**: 영문 소문자 + underscore (예: \`guruni\`, \`water_droplet\`).
 - **씬 id**: \`s01\`, \`s02\` 형식.
 - **대사 언어**: 한국어 (raw text, 따옴표 없이).

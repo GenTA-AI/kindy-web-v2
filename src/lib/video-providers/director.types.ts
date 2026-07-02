@@ -113,6 +113,8 @@ export interface VideoScript {
   directorNotes?: string;
 }
 
+export type EpisodeVoiceEmotion = 'bright' | 'serious' | 'excited' | 'storytelling' | 'whisper';
+
 // 90s episode pipeline 의 풍부한 씬 메타. 기존 VideoScript 와 별개 — 구조가 다름.
 export interface EpisodeScene {
   index: number;
@@ -122,6 +124,8 @@ export interface EpisodeScene {
   // narration 또는 character_speaking 둘 다 narrationText 또는 dialogueText 중 하나 채워짐
   narrationText?: string;    // type='narration' 일 때 — 보이스오버 한국어 텍스트
   dialogueText?: string;     // type='character_speaking' 일 때 — 캐릭터가 화면 보고 말하는 한국어
+  speakerId?: string;        // type='character_speaking' 일 때 — 동물마을 캐스트 id
+  voiceEmotion?: EpisodeVoiceEmotion; // 캐릭터 보이스 감정 어휘
   waitBeatSec?: number;      // direct_question 후 침묵 (Blue's Clues)
 
   // 시각 메타

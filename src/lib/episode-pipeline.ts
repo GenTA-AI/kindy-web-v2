@@ -28,7 +28,12 @@ import { Seedance2Provider, type SeedanceTier } from './video-providers/seedance
 import { syncLipSync } from './video-providers/fal-lipsync';
 import { uploadBytes } from './supabase-storage';
 import {
+  ANIMAL_VILLAGE_BIBLE,
+  EPISODE_VOICE_EMOTIONS,
+} from '../content/studio/animal-village-bible';
+import {
   getCharacterAppearance,
+  type EpisodeVoiceEmotion,
   type EpisodeScene,
   type EpisodeScript,
   type VideoBrief,
@@ -95,8 +100,24 @@ const SONNET_PRICING = {
   cacheRead: 0.3,
 };
 
+const ANIMAL_VILLAGE_CAST_IDS = new Set(ANIMAL_VILLAGE_BIBLE.cast.map((member) => member.id));
+const EPISODE_VOICE_EMOTION_SET = new Set<string>(EPISODE_VOICE_EMOTIONS);
+const ANIMAL_VILLAGE_CASTING_TABLE = ANIMAL_VILLAGE_BIBLE.cast
+  .map((member) => `- ${member.id} / ${member.nameKo} / ${member.description} / fixed voice: ${member.voice}`)
+  .join('\n');
+const ANIMAL_VILLAGE_EMOTION_WORDS = EPISODE_VOICE_EMOTIONS.join(' | ');
+
 const EPISODE_SYSTEM_PROMPT = `너는 한국 어린이 교육 애니메이션의 90초 episode 총괄 감독이다.
 반드시 연구 기준에 맞는 EpisodeScript JSON 을 작성한다.
+
+## 모리 동물마을 스튜디오 바이블
+- characters[0]은 반드시 모리(toto)이다. id="toto", displayName="모리", voice="Puck" 으로 고정한다.
+- 캐스트 id/이름/성격/고정 voice:
+${ANIMAL_VILLAGE_CASTING_TABLE}
+- 내레이터는 voice="${ANIMAL_VILLAGE_BIBLE.narrator.voice}" 이며 스타일은 "${ANIMAL_VILLAGE_BIBLE.narrator.style}" 이다.
+- 모든 character_speaking 씬은 speakerId 를 캐스트 id 중 하나로, voiceEmotion 을 ${ANIMAL_VILLAGE_EMOTION_WORDS} 중 하나로 반드시 지정한다.
+- 대사는 speakerId 캐릭터의 성격과 고정 voice에 맞춰 쓴다. 단일 톤 TTS처럼 쓰지 말고 캐릭터별 말투를 분리한다.
+- 5-7세 몰입 훅을 유지한다: direct question 씬 1개 + waitBeatSec 2-3, 내레이션 130wpm, 현실 연결.
 
 ## 연구/제작 룰
 - 4-7 scenes only. Prefer 6 scenes.
@@ -133,6 +154,8 @@ const EPISODE_SYSTEM_PROMPT = `너는 한국 어린이 교육 애니메이션의
       "durationSec": number,
       "narrationText": string,
       "dialogueText": string,
+      "speakerId": "toto" | "kkumi" | "bangul" | "naong" | "doto" | "owl",
+      "voiceEmotion": "bright" | "serious" | "excited" | "storytelling" | "whisper",
       "waitBeatSec": number,
       "visualAction": string,
       "cameraDirective": string,
@@ -150,7 +173,7 @@ const EPISODE_SYSTEM_PROMPT = `너는 한국 어린이 교육 애니메이션의
 
 Rules:
 - For type="narration", fill narrationText and omit dialogueText.
-- For type="character_speaking", fill dialogueText and omit narrationText.
+- For type="character_speaking", fill dialogueText, speakerId, voiceEmotion and omit narrationText.
 - topLevelPrompt and keyframeBrief should be English visual prompts.
 - narrationText/dialogueText must be natural Korean raw text with no markdown and no quotation marks.
 - Output only pure JSON. No code fence, no explanation.`;
@@ -171,9 +194,10 @@ ${brief.protagonistHint ? `- 주인공 힌트: ${brief.protagonistHint}` : ''}
 ${brief.adjectives?.length ? `- GACS-3 형용사: ${brief.adjectives.join(', ')}` : ''}
 
 ## 추가 지시
+- 동물마을 바이블 캐스트를 사용해 characters[0]=toto(모리)로 고정하고, 모든 character_speaking 씬에 speakerId/voiceEmotion 을 넣어라.
 - 내레이션은 개념을 명확히 설명하고, 말하는 씬은 주인공 캐릭터가 화면을 보며 짧게 말하게 해라.
 - 아이가 답할 시간을 주는 direct question 씬 1개를 반드시 넣고 waitBeatSec 를 2 또는 3 으로 설정해라.
-- 현실 연결 예: 컵, 손 씻기, 창밖 비, 물병, 교실, 책상, 실제 동물, 실제 알파벳 카드 등.
+- 현실 연결 예: 컵, 손 씻기, 창밖 비, 물병, 교실, 책상, 실제 동물, 그림 카드 등.
 - Seedance silent video 용으로 visualAction/cameraDirective/effects 를 관찰 가능한 움직임 중심으로 써라.
 ${brief.referenceImagePaths?.length ? '- 이미지 생성 단계에는 정본 캐릭터 레퍼런스가 첨부된다. 스크립트의 주인공 외형은 주인공 힌트와 정본 레퍼런스에 맞춰라.' : ''}
 
@@ -294,7 +318,17 @@ function validateEpisodeScript(value: unknown): EpisodeScript {
     throw new Error(`EpisodeScript: scenes length must be 4-7 (got ${raw.scenes.length})`);
   }
 
-  const scenes = raw.scenes.map((scene, arrayIndex) => normalizeEpisodeScene(scene, arrayIndex));
+  const scenes = raw.scenes
+    .map((scene, arrayIndex) => normalizeEpisodeScene(scene, arrayIndex))
+    .map((scene) => (
+      scene.type === 'character_speaking'
+        ? {
+            ...scene,
+            speakerId: scene.speakerId ?? 'toto',
+            voiceEmotion: scene.voiceEmotion ?? 'bright',
+          }
+        : scene
+    ));
   const totalDurationSec = scenes.reduce((sum, scene) => sum + scene.durationSec, 0);
   if (totalDurationSec < 85 || totalDurationSec > 95) {
     throw new Error(`EpisodeScript: totalDurationSec must be 85-95 (got ${totalDurationSec})`);
@@ -355,6 +389,8 @@ function normalizeEpisodeScene(value: unknown, arrayIndex: number): EpisodeScene
 
   const narrationText = optionalString(raw.narrationText);
   const dialogueText = optionalString(raw.dialogueText);
+  const speakerId = normalizeEpisodeSpeakerId(raw.speakerId ?? raw.speaker_id);
+  const voiceEmotion = normalizeEpisodeVoiceEmotion(raw.voiceEmotion ?? raw.voice_emotion);
   if (type === 'narration' && !narrationText) {
     throw new Error(`EpisodeScene ${arrayIndex}: narrationText required`);
   }
@@ -376,6 +412,8 @@ function normalizeEpisodeScene(value: unknown, arrayIndex: number): EpisodeScene
     durationSec,
     ...(narrationText ? { narrationText } : {}),
     ...(dialogueText ? { dialogueText } : {}),
+    ...(speakerId ? { speakerId } : {}),
+    ...(voiceEmotion ? { voiceEmotion } : {}),
     ...(waitBeatSec !== undefined ? { waitBeatSec } : {}),
     visualAction: requiredString(raw, 'visualAction'),
     cameraDirective: requiredString(raw, 'cameraDirective'),
@@ -384,6 +422,18 @@ function normalizeEpisodeScene(value: unknown, arrayIndex: number): EpisodeScene
     ...(optionalString(raw.effects) ? { effects: optionalString(raw.effects) } : {}),
     keyframeBrief: requiredString(raw, 'keyframeBrief'),
   };
+}
+
+function normalizeEpisodeSpeakerId(value: unknown): string | undefined {
+  const speakerId = optionalString(value);
+  return speakerId && ANIMAL_VILLAGE_CAST_IDS.has(speakerId) ? speakerId : undefined;
+}
+
+function normalizeEpisodeVoiceEmotion(value: unknown): EpisodeVoiceEmotion | undefined {
+  const emotion = optionalString(value);
+  return emotion && EPISODE_VOICE_EMOTION_SET.has(emotion)
+    ? emotion as EpisodeVoiceEmotion
+    : undefined;
 }
 
 function requiredString(raw: Record<string, unknown>, key: string): string {
