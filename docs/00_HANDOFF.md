@@ -9,11 +9,13 @@
 > 코드 P0 4건 해소 완료(2026-07-02): P0-1 0099/0008→supabase/manual(`70a859e`) · P0-2 결제 인라인+빌드 ARG(`8ee83cd`)
 > · P0-3 서명 URL→path 재서명, migration 0021(`47d31d4`) · P0-6 privacy §5 국외이전 고지(`980a7c6`).
 > Codex 개발노트(2026-07-02): `docs/08_CODEX_EXECUTION_PLAN_2026-07-02.md` 실행. 인터랙티브 영상 최소 구현(`InteractiveVideoPlayer` + scene graph + `/play` 통합), 결제 이메일 no-op/Resend 배선, 랜딩/구독 카피 완화, 401 재로그인 분기, Toss pending no-op, production test key 차단, function EXECUTE revoke migration 0022, Opus 단가 정정. 검증: `tsc` 그린, `lint` 그린, `build` 그린. 브라우저: `/`와 `/demo/ai-diagnosis` 클릭 QA 완료, `/play`는 로그인 보호로 `/auth/login?next=%2Fplay` redirect 확인(로그인 세션에서 저장 네트워크 QA 필요).
+> Claude 3차(2026-07-02): Codex 실행분 리뷰 완료 — 플레이어 결함 3건 수정(iOS 자동재생 탭 폴백·자동선택
+> 타이머 경합 ref 가드·미존재 씬 시 완료 보장) 후 `afaff38` 커밋. **다음 단계 정본: `docs/09_NEXT_PLAN_2026-07-02.md`**
+> (트랙 A 콘텐츠 생산 사이클이 최우선 — 코드가 더는 병목이 아님).
 > ⚠️ 결제용 NEXT_PUBLIC_*(TOSS·BIZ 6종)는 **빌드 타임** 주입이다 — cloudbuild substitution에 실값을 넘겨야 결제가 열린다(런타임 env로는 불가).
 > Repo: `/Users/jongwonlee/dev/kindy-web`
 > Current branch at handoff check: `codex/ai-diagnosis-demo`
-> Current HEAD at handoff check: `726b399 fix(payments): P1-1/2/3/12/15 — dunning·선청구·무청구 재시작·실패 알림·동의 서버 강제`
-> Current working tree: 2026-07-02 Codex 실행 플랜 변경분이 아직 uncommitted.
+> Current HEAD at handoff check: `afaff38` (Codex 실행분 + Claude 리뷰 수정 커밋됨). 이전: `726b399 fix(payments): P1-1/2/3/12/15 — dunning·선청구·무청구 재시작·실패 알림·동의 서버 강제`
 > Main Codex implementation commit: `4f15848 Polish Mori web launch experience`
 > Rule: base is `main`, open **DRAFT PR only**, never push to base. Read `docs/LESSONS.md` before implementation. For code changes, also read the relevant Next.js 16 guide in `node_modules/next/dist/docs/`.
 
