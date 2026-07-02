@@ -1,5 +1,7 @@
 # Kindy — 현재 진행 상태 (2026-04-28)
 
+> ⚠️ HISTORICAL (2026-04-28 기준) — 최신 운영 정본은 docs/RUNBOOK.md, 런칭 갭은 docs/07, 코드 기준은 docs/SERVICE_OVERVIEW.md
+
 세션 재개 시 이 문서 + `UX_AUDIT.md` + memory 폴더 먼저 확인.
 
 ## ✅ 완료

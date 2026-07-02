@@ -1,6 +1,9 @@
 // MVP 라이브러리 매트릭스: 3 스타일 × 2 주제 × 2 연령 = 12편.
 // 운영자가 brief 를 직접 편집해서 새 영상 생성 가능.
 
+/** 이 영상이 주로 연습시키는 C6 창의도구 — 선별 기반 초개인화(약점 우선 배치)에 사용. 0020 참조. */
+export type C6Focus = 'observe' | 'imagine' | 'pattern' | 'transform' | 'design' | 'compose';
+
 export interface LibraryBriefSpec {
   title: string;              // library_videos.title
   description: string;
@@ -12,7 +15,18 @@ export interface LibraryBriefSpec {
   rough_synopsis: string;
   learning_goals: string[];
   target_duration_sec: number; // 기본 30
+  c6_focus: C6Focus;
 }
+
+// topic_subject → 주로 연습되는 C6 창의도구.
+// 여러 곳의 물을 찾아 살피기·글자 모양 관찰 = observe, 물방울이 모여 비가 되는 흐름/순서 = pattern,
+// 동물과 영어 이름·소리를 연결·유추 = imagine.
+const C6_FOCUS_BY_SUBJECT: Record<string, C6Focus> = {
+  '물은 어디서 와요?': 'observe',
+  '비는 왜 올까요?': 'pattern',
+  'ABC 첫 만남': 'observe',
+  '동물 이름 영어로': 'imagine',
+};
 
 const BASE_MIRI_HINT = [
   '**인간형 여자아이 주인공 "미리(Miri)"**, 8~9세, K-pop 아이돌 스타일의 밝은 한국 어린이 캐릭터.',
@@ -34,7 +48,7 @@ function miriHint(style: 'princess' | 'kpop' | 'space'): string {
   return `${BASE_MIRI_HINT} ${variants[style]}`;
 }
 
-export const LIBRARY_MATRIX: LibraryBriefSpec[] = [
+const RAW_MATRIX: Omit<LibraryBriefSpec, 'c6_focus'>[] = [
   {
     title: '공주 미리와 물의 여행',
     description: '마법 성 정원에서 물이 어디에서 오는지 살펴보는 5세 과학 영상',
@@ -228,3 +242,8 @@ export const LIBRARY_MATRIX: LibraryBriefSpec[] = [
     target_duration_sec: 30,
   },
 ];
+
+export const LIBRARY_MATRIX: LibraryBriefSpec[] = RAW_MATRIX.map((spec) => ({
+  ...spec,
+  c6_focus: C6_FOCUS_BY_SUBJECT[spec.topic_subject] ?? 'observe',
+}));

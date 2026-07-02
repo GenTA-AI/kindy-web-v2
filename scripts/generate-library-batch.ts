@@ -586,6 +586,8 @@ async function processBrief(index: number, spec: LibraryBriefSpec): Promise<Brie
         subtitles_path: SKIP_WHISPER ? null : `${storagePrefix}/subtitles.vtt`,
         character_name: mainCharacter(script).displayName ?? '미리',
         script,
+        // P1-5: 선별 기반 초개인화 태그. 매트릭스가 채운다(0020). null=미태깅.
+        c6_focus: spec.c6_focus ?? null,
         published: false,
         featured: false,
       })

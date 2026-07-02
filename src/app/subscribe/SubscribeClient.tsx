@@ -81,11 +81,18 @@ export default function SubscribeClient({
       if (!businessComplete) {
         throw new Error('결제 준비가 끝나면 바로 시작할 수 있어요.');
       }
-      if (!billingConsent) {
+      // 이미 구독 중(past_due 카드 재등록 포함)이면 동의 증적이 이미 있으므로 체크박스를 다시 요구하지 않는다.
+      if (!billingConsent && !isSubscribed) {
         throw new Error('매월 자동 결제 동의에 체크해 주세요.');
       }
-      // 정기결제 동의를 서버에 기록(법적 증적). 실패해도 결제 흐름은 막지 않는다.
-      await fetch('/api/subscription/consent', { method: 'POST' }).catch(() => {});
+      // 정기결제 동의를 서버에 기록(법적 증적). 서버(billing-key)가 증적 존재를 강제하므로
+      // 기록에 실패하면 여기서 멈춘다 (P1-15).
+      if (!isSubscribed) {
+        const consentRes = await fetch('/api/subscription/consent', { method: 'POST' });
+        if (!consentRes.ok) {
+          throw new Error('동의 저장이 잠시 어려워요. 잠시 후 다시 시도해 주세요.');
+        }
+      }
       const tossPayments = await loadTossPayments(clientKey);
       const payment = tossPayments.payment({ customerKey: parentId });
       await payment.requestBillingAuth({
@@ -252,9 +259,21 @@ export default function SubscribeClient({
               </div>
             </div>
             {subscription?.status === 'past_due' && (
-              <div className="mt-4 rounded-xl bg-cream px-3 py-2 text-xs font-bold leading-relaxed text-clay">
-                결제 확인이 필요해도 아이 기록은 사라지지 않아요. 카드 상태를 확인해 주세요.
-              </div>
+              <>
+                <div className="mt-4 rounded-xl bg-cream px-3 py-2 text-xs font-bold leading-relaxed text-clay">
+                  결제가 확인되지 않았어요. 아이 기록은 사라지지 않으니, 카드를 다시 등록하면 바로 이어져요.
+                </div>
+                <button
+                  onClick={startCardRegistration}
+                  disabled={pending !== null || !hasTossClientKey}
+                  className="mt-3 w-full rounded-2xl bg-saged px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.98] disabled:opacity-60"
+                >
+                  {pending === 'card' ? '카드 등록창 여는 중…' : '카드 다시 등록하기'}
+                </button>
+                <p className="mt-2 text-center text-[11px] font-semibold text-ink3">
+                  새 카드로 바꾸면 다음 결제부터 새 카드로 자동 결제돼요.
+                </p>
+              </>
             )}
             {!cancelConfirmOpen ? (
               <button
@@ -310,7 +329,10 @@ export default function SubscribeClient({
                 />
                 <span className="text-xs font-semibold leading-relaxed text-ink2">
                   매월 {krw(PRICE_KRW)}이 등록한 카드로 <strong className="font-black text-ink">자동 결제</strong>되는
-                  정기결제에 동의합니다. 첫 달은 카드 등록 즉시 결제되고, 이후 매월 같은 날 자동 결제돼요.
+                  정기결제에 동의합니다.{' '}
+                  {isCanceledButPremium
+                    ? `남은 이용 기간에는 결제되지 않고, ${formatDate(entitlement.premium_until)}부터 자동 결제가 이어져요.`
+                    : '첫 달은 카드 등록 즉시 결제되고, 이후 매월 같은 날 자동 결제돼요.'}{' '}
                   언제든 해지할 수 있고, 환불·청약철회는 아래 안내를 따릅니다.
                 </span>
               </label>
@@ -323,7 +345,9 @@ export default function SubscribeClient({
               {pending === 'card'
                 ? '카드 등록창 여는 중…'
                 : checkoutReady
-                  ? '카드 등록하고 월 구독 시작'
+                  ? isCanceledButPremium
+                    ? '구독 다시 시작하기'
+                    : '카드 등록하고 월 구독 시작'
                   : '결제 준비 중'}
             </button>
             <p className="mt-3 text-center text-[11px] font-semibold text-ink3">

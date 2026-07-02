@@ -13,7 +13,7 @@ import type { GameRoundResult, GameType } from '@/types/game';
  * 흐름: 최근 라운드 → learning-profile 약점 진단 → bespoke 브리프 → videos 큐 + inngest 발사.
  *
  * 보안/비용: KINDY_OPERATOR_KEY 헤더 게이트(임의 호출로 fal.ai 비용 폭발 방지) +
- *   아이당 진행중(queued/processing) 영상 있으면 재큐 안 함(중복 생성 방지).
+ *   아이당 진행중(queued/generating) 영상 있으면 재큐 안 함(중복 생성 방지).
  *
  * header: x-operator-key: <KINDY_OPERATOR_KEY>
  * body:   { childId: string, targetDurationSec?: number }
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     .from('videos')
     .select('id, status')
     .eq('child_id', childId)
-    .in('status', ['queued', 'processing'])
+    .in('status', ['queued', 'generating'])
     .limit(1);
   if (inflight && inflight.length > 0) {
     return NextResponse.json(

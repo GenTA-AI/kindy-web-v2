@@ -52,6 +52,8 @@ function SuccessContent() {
   const [error, setError] = useState<string | null>(null);
   const [cardSummary, setCardSummary] = useState<string | null>(null);
   const [periodEnd, setPeriodEnd] = useState<string | null>(null);
+  // 유료 기간이 남아 있으면 서버가 청구 없이 카드 교체/재시작만 한다(charged=false).
+  const [charged, setCharged] = useState(true);
   const startedRef = useRef(false);
   const periodEndLabel = formatDate(periodEnd);
 
@@ -78,6 +80,7 @@ function SuccessContent() {
         }
         setCardSummary(data.cardSummary ?? null);
         setPeriodEnd(data.subscription?.current_period_end ?? null);
+        setCharged(data.charged !== false);
         setPhase('done');
       } catch (e) {
         setError(e instanceof Error ? e.message : '결제 처리에 실패했어요.');
@@ -111,9 +114,15 @@ function SuccessContent() {
         {phase === 'done' && (
           <section aria-live="polite">
             <CheckIcon />
-            <h1 className="mb-2 text-2xl font-black leading-snug text-ink">모리 멤버십이 시작됐어요</h1>
+            <h1 className="mb-2 text-2xl font-black leading-snug text-ink">
+              {charged ? '모리 멤버십이 시작됐어요' : '카드가 새로 등록됐어요'}
+            </h1>
             <p className="mb-5 text-sm font-semibold leading-relaxed text-ink2">
-              {cardSummary ? `${cardSummary} 카드로 첫 달 결제가 완료됐어요.` : '첫 달 결제가 완료됐어요.'}
+              {charged
+                ? cardSummary
+                  ? `${cardSummary} 카드로 첫 달 결제가 완료됐어요.`
+                  : '첫 달 결제가 완료됐어요.'
+                : '남은 이용 기간에는 결제되지 않고, 다음 결제일부터 새 카드로 자동 결제돼요.'}
               {periodEndLabel ? (
                 <>
                   <br />

@@ -1,3 +1,6 @@
+/** 이 영상이 주로 연습시키는 C6 창의도구 — 선별 기반 초개인화(약점 우선 배치)에 사용. 0020 참조. */
+export type C6Focus = 'observe' | 'imagine' | 'pattern' | 'transform' | 'design' | 'compose';
+
 export interface LibraryEpisodeSpec {
   title: string;
   description: string;
@@ -8,9 +11,20 @@ export interface LibraryEpisodeSpec {
   topic_subject: string;
   rough_synopsis: string;
   learning_goals: string[];
+  c6_focus: C6Focus;
 }
 
 export const EPISODE_UNIT_SEC = 90;
+
+// topic_subject → 주로 연습되는 C6 창의도구.
+// 여러 곳의 물을 찾아 살피기·글자 모양 관찰 = observe, 물방울이 모여 비가 되는 흐름/순서 = pattern,
+// 동물과 영어 이름·소리를 연결·유추 = imagine.
+const C6_FOCUS_BY_SUBJECT: Record<string, C6Focus> = {
+  '물은 어디서 와요?': 'observe',
+  '비는 왜 올까요?': 'pattern',
+  'ABC 첫 만남': 'observe',
+  '동물 이름 영어로': 'imagine',
+};
 
 const BASE_MIRI_HINT = [
   '**인간형 여자아이 주인공 "미리(Miri)"**, 8~9세, K-pop 아이돌 스타일의 밝은 한국 어린이 캐릭터.',
@@ -32,7 +46,7 @@ function miriHint(style: 'princess' | 'kpop' | 'space'): string {
   return `${BASE_MIRI_HINT} ${variants[style]}`;
 }
 
-export const LIBRARY_MATRIX_90S: LibraryEpisodeSpec[] = [
+const RAW_MATRIX_90S: Omit<LibraryEpisodeSpec, 'c6_focus'>[] = [
   {
     title: '공주 미리의 물 여행 에피소드',
     description: '성 정원과 집 안의 컵을 오가며 물이 어디에서 오는지 배우는 90초 과학 에피소드',
@@ -214,3 +228,8 @@ export const LIBRARY_MATRIX_90S: LibraryEpisodeSpec[] = [
     ],
   },
 ];
+
+export const LIBRARY_MATRIX_90S: LibraryEpisodeSpec[] = RAW_MATRIX_90S.map((spec) => ({
+  ...spec,
+  c6_focus: C6_FOCUS_BY_SUBJECT[spec.topic_subject] ?? 'observe',
+}));

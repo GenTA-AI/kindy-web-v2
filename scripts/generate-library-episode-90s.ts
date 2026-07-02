@@ -263,6 +263,8 @@ async function processEpisode(index: number, spec: LibraryEpisodeSpec): Promise<
         character_name: output.script.characters[0]?.displayName ?? '미리',
         script: output.script,
         scenes: buildSceneRows(output.scenes),
+        // P1-5: 선별 기반 초개인화 태그. 매트릭스가 채운다(0020). null=미태깅.
+        c6_focus: spec.c6_focus ?? null,
         episode_unit_sec: 90,
         published: false,
         featured: false,

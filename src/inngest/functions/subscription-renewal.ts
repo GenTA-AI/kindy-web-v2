@@ -10,7 +10,15 @@
  *     orderId 를 거부해 이중청구 불가. purchases.order_id unique 로 한 번 더 방어.
  *   - 이미 paid 인 orderId 가 있으면 청구를 건너뛰고 기간만 연장(부분실패 복구 멱등).
  *   - 구독 1건 = step.run 1개 → Inngest 가 성공 step 을 캐시해 함수 재시도 시 재청구 안 함.
- *   - 청구 실패 → status='past_due' + purchase failed. (만료/유예 정책은 후속.)
+ *   - 청구 실패 → status='past_due' + purchase failed.
+ *
+ * dunning (docs/07 P1-1/P1-2):
+ *   - active 는 만료 24시간 전부터 선청구 → 매월 전 구독자가 최대 24시간 접근을 잃던
+ *     결정론적 암전 제거 (기간 연장은 직전 period_end 기준이라 과금 손실 없음).
+ *   - past_due 는 만료 후 7일까지 매일 재시도 (orderId 는 periodKey 로 동일 → 토스가
+ *     승인된 orderId 재사용만 거부하므로 실패 건 재청구 가능).
+ *   - 7일 재시도 소진 → status='expired' 로 종결. 실패가 1건이라도 있으면 런을 throw 로
+ *     끝내 Inngest 대시보드에서 빨간불이 보이게 한다 (P1-12).
  *
  * 운영: 프로덕션에서 INNGEST_EVENT_KEY/SIGNING_KEY(Inngest Cloud) 설정 + 배포 시
  *   PUT /api/inngest 로 함수가 등록돼야 cron 이 실제로 돈다.
@@ -51,11 +59,15 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
     await markPastDue(sub.id);
     return { subscriptionId: sub.id, result: 'failed', reason: 'no_billing_key' };
   }
-  const { data: bk } = await supabase
+  const { data: bk, error: bkError } = await supabase
     .from('billing_keys')
     .select('billing_key')
     .eq('id', sub.billing_key_id)
     .maybeSingle();
+  if (bkError) {
+    // 일시적 DB 오류 — 상태를 건드리지 않고 실패 보고만 (다음 런에서 재시도).
+    return { subscriptionId: sub.id, result: 'failed', reason: `billing_keys query: ${bkError.message}` };
+  }
   if (!bk?.billing_key) {
     await markPastDue(sub.id);
     return { subscriptionId: sub.id, result: 'failed', reason: 'billing_key_missing' };
@@ -167,17 +179,49 @@ export const subscriptionRenewal = inngest.createFunction(
   },
   async ({ step, logger }) => {
     const due = await step.run('select-due', async () => {
-      const { data, error } = await supabase
+      const nowIso = new Date().toISOString();
+      // P1-2: 만료 24시간 전부터 선청구 — 04:00 cron 과 만료 시각 사이의 접근 공백 제거.
+      const chargeWindowEnd = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      // P1-1: past_due 는 만료 후 7일까지 매일 재시도.
+      const retryWindowStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      const { data: active, error: activeError } = await supabase
         .from('subscriptions')
         .select('id, parent_id, billing_key_id, current_period_end, price_krw')
         .eq('status', 'active')
-        .lte('current_period_end', new Date().toISOString())
+        .lte('current_period_end', chargeWindowEnd)
         .limit(200);
-      if (error) throw new Error(`select due subscriptions: ${error.message}`);
-      return (data ?? []) as DueSubscription[];
+      if (activeError) throw new Error(`select due active: ${activeError.message}`);
+
+      const { data: pastDue, error: pastDueError } = await supabase
+        .from('subscriptions')
+        .select('id, parent_id, billing_key_id, current_period_end, price_krw')
+        .eq('status', 'past_due')
+        .lte('current_period_end', nowIso)
+        .gte('current_period_end', retryWindowStart)
+        .limit(200);
+      if (pastDueError) throw new Error(`select due past_due: ${pastDueError.message}`);
+
+      return [...(active ?? []), ...(pastDue ?? [])] as DueSubscription[];
     });
 
-    logger.info('subscription-renewal: due', { count: due.length });
+    // P1-1: 재시도 윈도(7일)를 소진한 past_due 는 expired 로 종결 — 영원한 좀비 방지.
+    const expired = await step.run('expire-stale-past-due', async () => {
+      const retryWindowStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .update({ status: 'expired', updated_at: new Date().toISOString() })
+        .eq('status', 'past_due')
+        .lt('current_period_end', retryWindowStart)
+        .select('id, parent_id');
+      if (error) throw new Error(`expire stale past_due: ${error.message}`);
+      for (const row of data ?? []) {
+        await supabase.rpc('sync_entitlement', { p_parent_id: row.parent_id });
+      }
+      return (data ?? []).length;
+    });
+
+    logger.info('subscription-renewal: due', { count: due.length, expired });
 
     const outcomes: RenewOutcome[] = [];
     for (const sub of due) {
@@ -186,13 +230,26 @@ export const subscriptionRenewal = inngest.createFunction(
       outcomes.push(outcome);
     }
 
+    const failures = outcomes.filter((o) => o.result === 'failed');
     const summary = {
       processed: due.length,
       charged: outcomes.filter((o) => o.result === 'charged').length,
       extended: outcomes.filter((o) => o.result === 'extended').length,
-      failed: outcomes.filter((o) => o.result === 'failed').length,
+      failed: failures.length,
+      expired,
     };
     logger.info('subscription-renewal: done', summary);
+
+    // P1-12: 실패를 삼키지 않는다 — 런을 실패로 끝내 Inngest 대시보드/알림에 노출.
+    // (renew-* step 은 이미 성공 캐시돼 재시도에도 재청구 없음.)
+    if (failures.length > 0) {
+      console.error('[subscription-renewal] failures', JSON.stringify(failures));
+      throw new Error(
+        `subscription-renewal: ${failures.length}/${due.length} renewals failed — ${failures
+          .map((f) => `${f.subscriptionId}:${'reason' in f ? f.reason : ''}`)
+          .join(' | ')}`,
+      );
+    }
     return summary;
   },
 );

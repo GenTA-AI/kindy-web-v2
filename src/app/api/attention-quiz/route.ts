@@ -99,8 +99,17 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    if (!lib?.script) {
-      return NextResponse.json({ error: 'library video or script not found' }, { status: 404 });
+    if (!lib) {
+      return NextResponse.json({ error: 'library video not found' }, { status: 404 });
+    }
+    if (!lib.script) {
+      // P1-6: 파이프라인 이전 시드 영상(모리 동물마을 번들)은 script 가 없다.
+      // 404 로 끊지 않고 장면 단서 폴백 질문을 돌려줘 시청→단서놀이→기록 루프를 유지한다.
+      // 폴백 질문은 모리 동물마을 시드에 맞춰져 있다(유일한 null-script 발행 콘텐츠).
+      return NextResponse.json({
+        questions: LOCAL_PREVIEW_ATTENTION_QUESTIONS,
+        meta: { source: 'null-script-fallback' },
+      });
     }
 
     script = lib.script as VideoScript;
