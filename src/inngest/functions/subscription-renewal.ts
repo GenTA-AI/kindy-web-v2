@@ -41,6 +41,7 @@ interface DueSubscription {
   billing_key_id: string | null;
   current_period_end: string | null;
   price_krw: number;
+  status: 'active' | 'past_due';
 }
 
 /** 결제주기 식별자 — 결정적 orderId 용 (current_period_end 날짜). */
@@ -58,7 +59,7 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
   // 0) 빌링키 확보 (복호화)
   if (!sub.billing_key_id) {
     await markPastDue(sub.id);
-    notifyRenewalFailure(sub.parent_id, '등록된 카드 정보를 찾지 못했어요.');
+    notifyRenewalFailure(sub, '등록된 카드 정보를 찾지 못했어요.');
     return { subscriptionId: sub.id, result: 'failed', reason: 'no_billing_key' };
   }
   const { data: bk, error: bkError } = await supabase
@@ -72,7 +73,7 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
   }
   if (!bk?.billing_key) {
     await markPastDue(sub.id);
-    notifyRenewalFailure(sub.parent_id, '등록된 카드 정보를 찾지 못했어요.');
+    notifyRenewalFailure(sub, '등록된 카드 정보를 찾지 못했어요.');
     return { subscriptionId: sub.id, result: 'failed', reason: 'billing_key_missing' };
   }
 
@@ -123,7 +124,7 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
     const reason = error instanceof TossApiError ? `${error.code}: ${error.message}` : '결제 승인 오류';
     await supabase.from('purchases').update({ status: 'failed', failed_reason: reason }).eq('order_id', orderId);
     await markPastDue(sub.id);
-    notifyRenewalFailure(sub.parent_id, reason);
+    notifyRenewalFailure(sub, reason);
     return { subscriptionId: sub.id, result: 'failed', reason };
   }
 
@@ -133,7 +134,7 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
       .update({ status: 'failed', failed_reason: `status ${payment.status}`, raw_response: payment })
       .eq('order_id', orderId);
     await markPastDue(sub.id);
-    notifyRenewalFailure(sub.parent_id, `결제가 완료되지 않았어요. 상태: ${payment.status}`);
+    notifyRenewalFailure(sub, `결제가 완료되지 않았어요. 상태: ${payment.status}`);
     return { subscriptionId: sub.id, result: 'failed', reason: `status ${payment.status}` };
   }
 
@@ -182,8 +183,22 @@ async function markPastDue(subscriptionId: string): Promise<void> {
     .eq('id', subscriptionId);
 }
 
-function notifyRenewalFailure(parentId: string, reason: string): void {
-  void sendRenewalFailureEmail({ parentId, reason }).catch(reportEmailFailure('renewal-failure'));
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function shouldNotifyRenewalFailure(sub: DueSubscription, now = new Date()): boolean {
+  if (sub.status === 'active') return true;
+  if (!sub.current_period_end) return false;
+
+  const periodEnd = new Date(sub.current_period_end);
+  if (Number.isNaN(periodEnd.getTime())) return false;
+
+  const daysPastDue = Math.floor((now.getTime() - periodEnd.getTime()) / DAY_MS);
+  return daysPastDue === 5;
+}
+
+function notifyRenewalFailure(sub: DueSubscription, reason: string): void {
+  if (!shouldNotifyRenewalFailure(sub)) return;
+  void sendRenewalFailureEmail({ parentId: sub.parent_id, reason }).catch(reportEmailFailure('renewal-failure'));
 }
 
 export const subscriptionRenewal = inngest.createFunction(
@@ -203,7 +218,7 @@ export const subscriptionRenewal = inngest.createFunction(
 
       const { data: active, error: activeError } = await supabase
         .from('subscriptions')
-        .select('id, parent_id, billing_key_id, current_period_end, price_krw')
+        .select('id, parent_id, billing_key_id, current_period_end, price_krw, status')
         .eq('status', 'active')
         .lte('current_period_end', chargeWindowEnd)
         .limit(200);
@@ -211,7 +226,7 @@ export const subscriptionRenewal = inngest.createFunction(
 
       const { data: pastDue, error: pastDueError } = await supabase
         .from('subscriptions')
-        .select('id, parent_id, billing_key_id, current_period_end, price_krw')
+        .select('id, parent_id, billing_key_id, current_period_end, price_krw, status')
         .eq('status', 'past_due')
         .lte('current_period_end', nowIso)
         .gte('current_period_end', retryWindowStart)

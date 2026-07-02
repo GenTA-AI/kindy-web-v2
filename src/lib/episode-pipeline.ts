@@ -7,6 +7,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { spawnSync } from 'node:child_process';
 import {
   copyFileSync,
+  existsSync,
   createWriteStream,
   mkdirSync,
   readFileSync,
@@ -105,7 +106,7 @@ const EPISODE_SYSTEM_PROMPT = `너는 한국 어린이 교육 애니메이션의
 - Exactly one character_speaking scene asks a direct question to the child and includes waitBeatSec: 2 or 3.
 - Korean narration should fit about 130 Korean words per minute. Keep text short enough for the scene duration.
 - Reality anchoring is required: every fantasy or stage moment must connect to a real-world object, action, or observation.
-- Mascot consistency is required: Miri must stay visually identical across all scenes.
+- Mascot consistency is required: the main recurring character must stay visually identical across all scenes.
 - Speaking scenes must use medium close-up or medium shot with the character facing camera so fal-ai/sync-lipsync can track the mouth.
 
 ## Output JSON schema
@@ -170,10 +171,11 @@ ${brief.protagonistHint ? `- 주인공 힌트: ${brief.protagonistHint}` : ''}
 ${brief.adjectives?.length ? `- GACS-3 형용사: ${brief.adjectives.join(', ')}` : ''}
 
 ## 추가 지시
-- 내레이션은 개념을 명확히 설명하고, 말하는 씬은 미리가 화면을 보며 짧게 말하게 해라.
+- 내레이션은 개념을 명확히 설명하고, 말하는 씬은 주인공 캐릭터가 화면을 보며 짧게 말하게 해라.
 - 아이가 답할 시간을 주는 direct question 씬 1개를 반드시 넣고 waitBeatSec 를 2 또는 3 으로 설정해라.
 - 현실 연결 예: 컵, 손 씻기, 창밖 비, 물병, 교실, 책상, 실제 동물, 실제 알파벳 카드 등.
 - Seedance silent video 용으로 visualAction/cameraDirective/effects 를 관찰 가능한 움직임 중심으로 써라.
+${brief.referenceImagePaths?.length ? '- 이미지 생성 단계에는 정본 캐릭터 레퍼런스가 첨부된다. 스크립트의 주인공 외형은 주인공 힌트와 정본 레퍼런스에 맞춰라.' : ''}
 
 EpisodeScript JSON 만 출력해라.`;
 }
@@ -415,7 +417,11 @@ function asStringArray(value: unknown, key: string): string[] {
   return items;
 }
 
-async function stepCharacterRef(script: EpisodeScript, refsDir: string): Promise<{ path: string; costUsd: number }> {
+async function stepCharacterRef(
+  script: EpisodeScript,
+  refsDir: string,
+  referenceImagePaths: string[] = []
+): Promise<{ path: string; costUsd: number }> {
   const googleKey = process.env.GOOGLE_API_KEY;
   if (!googleKey) throw new Error('GOOGLE_API_KEY missing');
 
@@ -432,9 +438,16 @@ SHEET: 4 body views (front, 3/4, side, back) + 4 mouth-focused expressions (neut
 
 STYLE: ${styleDirective(script)}
 
-Upper and lower lips MUST be clearly drawn in every view. Mouth >= 5% of face area. This sheet is the definitive design bible for all 90s scenes.`;
+Upper and lower lips MUST be clearly drawn in every view. Mouth >= 5% of face area. This sheet is the definitive design bible for all 90s scenes.
 
-  const result = await nano.generateImageFromFiles(prompt, [], '16:9');
+If reference images are attached, treat them as the canonical character design. Preserve the character identity, head shape, ear/horn silhouette, scarf, body proportions, and color palette. Remove any stray text, letters, logos, or floating marks that are not part of the canonical character.`;
+
+  const missingReferencePaths = referenceImagePaths.filter((path) => !existsSync(path));
+  if (missingReferencePaths.length > 0) {
+    throw new Error(`Character reference image missing: ${missingReferencePaths.join(', ')}`);
+  }
+
+  const result = await nano.generateImageFromFiles(prompt, referenceImagePaths, '16:9');
   const path = join(refsDir, 'character_ref.png');
   writeFileSync(path, result.bytes);
   return { path, costUsd: result.costUsd };
@@ -853,7 +866,7 @@ export async function runEpisodePipeline(input: EpisodeInput): Promise<EpisodeOu
   cost.director += director.costUsd;
   const script = director.script;
 
-  const ref = await stepCharacterRef(script, refsDir);
+  const ref = await stepCharacterRef(script, refsDir, input.brief.referenceImagePaths ?? []);
   cost.refs += ref.costUsd;
 
   const keyframes: string[] = [];

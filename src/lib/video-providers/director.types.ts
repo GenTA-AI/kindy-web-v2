@@ -20,6 +20,8 @@ export interface VideoBrief {
   tone: string;
   roughSynopsis?: string;
   protagonistHint?: string;
+  /** 이미지 생성 단계에 첨부할 정본 레퍼런스 파일 경로들 */
+  referenceImagePaths?: string[];
   /** GACS-3 상위 형용사 */
   adjectives?: string[];
 }

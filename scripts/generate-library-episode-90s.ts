@@ -8,8 +8,8 @@
 
 import 'dotenv/config';
 
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 import {
   EPISODE_UNIT_SEC,
@@ -119,6 +119,7 @@ function toVideoBrief(spec: LibraryEpisodeSpec): VideoBrief {
     tone: '밝고 따뜻하며 호기심을 자극하는',
     roughSynopsis: spec.rough_synopsis,
     protagonistHint: spec.protagonist_hint,
+    referenceImagePaths: spec.reference_image_paths?.map((path) => resolve(process.cwd(), path)),
   };
 }
 
@@ -260,7 +261,7 @@ async function processEpisode(index: number, spec: LibraryEpisodeSpec): Promise<
         video_path: output.finalVideoStoragePath,
         thumbnail_path: output.thumbnailStoragePath,
         subtitles_path: output.subtitlesStoragePath,
-        character_name: output.script.characters[0]?.displayName ?? '미리',
+        character_name: output.script.characters[0]?.displayName ?? '모리',
         script: output.script,
         scenes: buildSceneRows(output.scenes),
         // P1-5: 선별 기반 초개인화 태그. 매트릭스가 채운다(0020). null=미태깅.
@@ -387,6 +388,17 @@ async function main(): Promise<void> {
   }
 
   console.log(`[${now()}] library 90s batch start selected=${selected.length} limit=${limitCount ?? 'all'} mode=${ANIMATION_MODE} skip_lipsync=${SKIP_LIPSYNC} tier=${SEEDANCE_TIER}`);
+
+  // 정본 레퍼런스 프리플라이트 — 파이프라인 내부 검사(stepCharacterRef)는 director 호출($~0.8)
+  // 뒤에 오므로, 여기서 무비용으로 먼저 실패시킨다.
+  for (const { index, spec } of selected) {
+    const missing = (spec.reference_image_paths ?? [])
+      .map((path) => resolve(process.cwd(), path))
+      .filter((path) => !existsSync(path));
+    if (missing.length > 0) {
+      throw new Error(`[${index}] ${spec.title}: 정본 레퍼런스 이미지 없음 — ${missing.join(', ')}`);
+    }
+  }
 
   // P0-3 프리플라이트: migration 0021(*_path 컬럼) 미적용 DB에서 유료 생성이 끝난 뒤
   // insert 단계에서야 실패하는 것을 막는다 — 생성 시작 전에 컬럼 존재를 확인.

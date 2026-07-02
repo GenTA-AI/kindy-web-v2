@@ -12,10 +12,17 @@
 > Claude 3차(2026-07-02): Codex 실행분 리뷰 완료 — 플레이어 결함 3건 수정(iOS 자동재생 탭 폴백·자동선택
 > 타이머 경합 ref 가드·미존재 씬 시 완료 보장) 후 `afaff38` 커밋. **다음 단계 정본: `docs/09_NEXT_PLAN_2026-07-02.md`**
 > (트랙 A 콘텐츠 생산 사이클이 최우선 — 코드가 더는 병목이 아님).
+> Codex 개발노트(2026-07-02, docs/09 실행): 동물마을 90초 매트릭스 6편 추가, `LIBRARY_MATRIX_90S` 기본값을
+> 동물마을로 전환, 미리 매트릭스는 `LIBRARY_MATRIX_MIRI_DEPRECATED`로 보존. 90초 파이프라인에
+> `public/ip/mori-reference-no-a.jpg` 정본 레퍼런스 첨부를 연결하고 누락 시 유료 생성 전 실패하도록 수정.
+> dry-run `DRY_RUN=1 ANIMATION_MODE=limited LIMIT_COUNT=3 ...` 통과(꾸미·방울·나옹, 총 예상 `$3.31`).
+> 갱신 실패 메일은 active 첫 실패 1통 + past_due 5일차 리마인더 1통으로 완화. 검증: `tsc`, `lint`,
+> `build`, `git diff --check` 그린.
 > ⚠️ 결제용 NEXT_PUBLIC_*(TOSS·BIZ 6종)는 **빌드 타임** 주입이다 — cloudbuild substitution에 실값을 넘겨야 결제가 열린다(런타임 env로는 불가).
 > Repo: `/Users/jongwonlee/dev/kindy-web`
 > Current branch at handoff check: `codex/ai-diagnosis-demo`
-> Current HEAD at handoff check: `afaff38` (Codex 실행분 + Claude 리뷰 수정 커밋됨). 이전: `726b399 fix(payments): P1-1/2/3/12/15 — dunning·선청구·무청구 재시작·실패 알림·동의 서버 강제`
+> Current HEAD at handoff check: `5586919 docs(plan): 다음 플랜(09) — 콘텐츠 생산 사이클·실기기 QA·게이트 실행 순서 + 핸드오프 3차 갱신`
+> Current working tree: 2026-07-02 Codex docs/09 실행 변경분이 아직 uncommitted.
 > Main Codex implementation commit: `4f15848 Polish Mori web launch experience`
 > Rule: base is `main`, open **DRAFT PR only**, never push to base. Read `docs/LESSONS.md` before implementation. For code changes, also read the relevant Next.js 16 guide in `node_modules/next/dist/docs/`.
 
@@ -604,8 +611,10 @@ Don’t:
 1. 현재 HEAD에서 `npm run lint`, `npx tsc --noEmit`, `npm run build`.
 2. 모바일/데스크톱 Playwright screenshot으로 `/`, `/demo/ai-diagnosis`, `/start?from=ai-diagnosis`, `/onboarding`, `/play`, `/dashboard`, `/dashboard/report`, `/subscribe` QA.
 3. `/play` 인터랙티브 흐름을 Playwright로 실클릭 검증하고 `game_round_completed` 네트워크 콜을 확인.
-4. 첫 주 운영용 library matrix를 `c6_focus` 태그로 seed.
-5. 부모 기록장에서 "성장 증명" 섹션을 강화: 처음 해낸 것, 지난번보다 나아진 것, 오늘 해볼 한마디.
-6. Supabase/Toss/Inngest/Resend production 환경변수와 migration 적용 체크리스트 최종 확인.
+4. 대표가 키를 채운 뒤 `ANIMATION_MODE=limited LIMIT_COUNT=3 npx tsx --env-file=.env.local scripts/generate-library-episode-90s.ts`로 동물마을 첫 3편 실배치.
+5. 생성물 QC 후 `published=true` 발행, `/library`·`/play`에서 실제 영상 확인.
+6. `npx tsx --env-file=.env.local scripts/gen-village-tts.ts`로 동물마을 mp3 생성 후 커밋.
+7. 부모 기록장에서 "성장 증명" 섹션을 강화: 처음 해낸 것, 지난번보다 나아진 것, 오늘 해볼 한마디.
+8. Supabase/Toss/Inngest/Resend production 환경변수와 migration 적용 체크리스트 최종 확인.
 
 현재 상태는 "데모 가능한 웹 제품"에 가까워졌지만, 완전 런칭 직전에는 build, 결제 live 전환, Supabase production, mobile visual QA, 첫 콘텐츠 품질 검수가 남아 있다.
