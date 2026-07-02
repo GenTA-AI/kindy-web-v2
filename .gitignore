@@ -49,7 +49,6 @@ tmp/
 .codex/
 .agent/
 node_modules/
-.ai/
 dist/
 build/
 .next/

@@ -1,0 +1,9 @@
+# dependency graph: one line per package  ->  "<id>: <dep1> <dep2>"
+c6-axes-foundation:
+c6-evidence-engine: c6-axes-foundation
+c6-diagnosis-agent: c6-evidence-engine
+c6-recommendation-agent: c6-diagnosis-agent
+onboarding-forest-journey: c6-diagnosis-agent
+demo-funnel-c6: c6-axes-foundation
+parent-report-v2: c6-recommendation-agent
+minimal-invisible-pass: onboarding-forest-journey demo-funnel-c6 parent-report-v2
