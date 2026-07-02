@@ -4,6 +4,10 @@
 > Claude 확인(2026-07-02): 문서 정확 — 참조 커밋 SHA 전부 실재, git 로그와 일치.
 > 최신 코드 커밋 `aac6924`(감정 게임 5-7세 교정) 기준 `lint`·`tsc --noEmit`·`build` 그린 검증 완료.
 > 따라서 §8-1 "현재 HEAD build 재실행"은 이미 충족(그린). 이후 dc78042/3e98ec1은 docs-only.
+> Claude 2차(2026-07-02): HEAD `9b85771`에서 lint·tsc·build 그린 재확인. 런칭 갭 전수 감사(P0 6·P1 18) +
+> AI 영상 엔진 경쟁 조사 완료 — **`docs/07_LAUNCH_GAP_AND_VIDEO_ENGINE_RESEARCH_2026-07-02.md`가 §8의 상세 확장판.**
+> ⚠️ 주의: §3.7의 "env만 채우면 됨"은 결제 버튼에 한해 틀림(07 문서 P0-2 — business-info.ts 동적 env 조회 + Docker ARG 누락).
+> ⚠️ 주의: 프로드 `supabase db push` 전에 0099/0008 마이그레이션 이동 필수(07 문서 P0-1 — RLS 전면 해제 자동 적용됨).
 > Repo: `/Users/jongwonlee/dev/kindy-web`
 > Current branch at handoff check: `codex/ai-diagnosis-demo`
 > Current HEAD at handoff check: `dc78042 docs(session): 인터랙티브 영상 세션 설계 스펙 (승인됨)`
@@ -509,9 +513,14 @@ rg -n "87a1281a|33d09aac18c30e577d1ecc2fa52f3a35|FAL|fal\\.ai|fal-ai|FAL_KEY|FAL
 
 ## 8. 아직 부족하거나 다음에 봐야 할 것
 
+> **2026-07-02 갱신**: 아래 목록의 전수 감사 결과가 `docs/07_LAUNCH_GAP_AND_VIDEO_ENGINE_RESEARCH_2026-07-02.md`에
+> 있다(P0 6건·P1 18건·P2 34건, 전 건 file:line 증거 + 적대적 검증). 새로 발견된 P0: 0099 RLS 함정,
+> 결제 버튼 이중 결함(business-info 인라인 + Docker ARG), 서명 URL 30일 박제, 콘텐츠 재고 1편,
+> PIPA 국외이전 고지 누락. 아래 1번(build)은 해소 완료.
+
 출시 전 P0/P1:
 
-1. 현재 HEAD 기준 `npm run build` 재실행.
+1. ~~현재 HEAD 기준 `npm run build` 재실행.~~ ✅ 2026-07-02 `9b85771`에서 lint·tsc·build 그린.
 2. Supabase production env, RLS, migration 적용 상태 확인.
 3. Toss live key 전환 전 `BILLING_KEY_SECRET` 설정 필수.
 4. Inngest signing/event key와 subscription renewal cron 실제 동작 확인.
@@ -543,6 +552,7 @@ rg -n "87a1281a|33d09aac18c30e577d1ecc2fa52f3a35|FAL|fal\\.ai|fal-ai|FAL_KEY|FAL
 반드시 먼저 볼 문서:
 
 - `docs/00_HANDOFF.md` — 이 문서.
+- `docs/07_LAUNCH_GAP_AND_VIDEO_ENGINE_RESEARCH_2026-07-02.md` — 런칭 갭 전수 감사(P0/P1/P2) + AI 영상 엔진 경쟁 조사·로드맵. §8의 상세 확장판.
 - `docs/LESSONS.md` — 구현 전 필수 확인.
 - `docs/SERVICE_OVERVIEW.md` — 실제 코드 기준 서비스 이해 문서.
 - `docs/06_LAUNCH_UX_C6_BENCHMARK_2026-06-30.md` — 리서치/벤치마크/UX 점검 로그.
