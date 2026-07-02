@@ -1,6 +1,6 @@
 # Kindy Web Handoff — Codex ↔ Claude 공유 문서
 
-> Last updated: 2026-07-01 KST (Codex) · 2026-07-02 검토·최신화 (Claude)
+> Last updated: 2026-07-01 KST (Codex) · 2026-07-02 검토·최신화 (Claude) · 2026-07-02 Codex 실행노트 추가
 > Claude 확인(2026-07-02): 문서 정확 — 참조 커밋 SHA 전부 실재, git 로그와 일치.
 > 최신 코드 커밋 `aac6924`(감정 게임 5-7세 교정) 기준 `lint`·`tsc --noEmit`·`build` 그린 검증 완료.
 > 따라서 §8-1 "현재 HEAD build 재실행"은 이미 충족(그린). 이후 dc78042/3e98ec1은 docs-only.
@@ -8,10 +8,12 @@
 > AI 영상 엔진 경쟁 조사 완료 — **`docs/07_LAUNCH_GAP_AND_VIDEO_ENGINE_RESEARCH_2026-07-02.md`가 §8의 상세 확장판.**
 > 코드 P0 4건 해소 완료(2026-07-02): P0-1 0099/0008→supabase/manual(`70a859e`) · P0-2 결제 인라인+빌드 ARG(`8ee83cd`)
 > · P0-3 서명 URL→path 재서명, migration 0021(`47d31d4`) · P0-6 privacy §5 국외이전 고지(`980a7c6`).
+> Codex 개발노트(2026-07-02): `docs/08_CODEX_EXECUTION_PLAN_2026-07-02.md` 실행. 인터랙티브 영상 최소 구현(`InteractiveVideoPlayer` + scene graph + `/play` 통합), 결제 이메일 no-op/Resend 배선, 랜딩/구독 카피 완화, 401 재로그인 분기, Toss pending no-op, production test key 차단, function EXECUTE revoke migration 0022, Opus 단가 정정. 검증: `tsc` 그린, `lint` 그린, `build` 그린. 브라우저: `/`와 `/demo/ai-diagnosis` 클릭 QA 완료, `/play`는 로그인 보호로 `/auth/login?next=%2Fplay` redirect 확인(로그인 세션에서 저장 네트워크 QA 필요).
 > ⚠️ 결제용 NEXT_PUBLIC_*(TOSS·BIZ 6종)는 **빌드 타임** 주입이다 — cloudbuild substitution에 실값을 넘겨야 결제가 열린다(런타임 env로는 불가).
 > Repo: `/Users/jongwonlee/dev/kindy-web`
 > Current branch at handoff check: `codex/ai-diagnosis-demo`
-> Current HEAD at handoff check: `dc78042 docs(session): 인터랙티브 영상 세션 설계 스펙 (승인됨)`
+> Current HEAD at handoff check: `726b399 fix(payments): P1-1/2/3/12/15 — dunning·선청구·무청구 재시작·실패 알림·동의 서버 강제`
+> Current working tree: 2026-07-02 Codex 실행 플랜 변경분이 아직 uncommitted.
 > Main Codex implementation commit: `4f15848 Polish Mori web launch experience`
 > Rule: base is `main`, open **DRAFT PR only**, never push to base. Read `docs/LESSONS.md` before implementation. For code changes, also read the relevant Next.js 16 guide in `node_modules/next/dist/docs/`.
 
@@ -478,19 +480,17 @@ Migration files:
 
 Codex 구현 중 확인한 것:
 
-- `npm run lint` 성공.
-- `npx tsc --noEmit` 성공.
-- `npm run build`는 중간 버전에서 성공한 적이 있다.
-- 마지막 소규모 카피 변경 뒤 최신 build는 승인/사용량 제한 때문에 재실행하지 못했다.
-- 브라우저 QA는 `http://127.0.0.1:3027`, `3028`에서 다음 경로를 확인했다:
+- `npx tsc --noEmit` 성공(2026-07-02 Codex 실행 플랜 변경분 기준).
+- `npm run lint` 성공(2026-07-02 Codex 실행 플랜 변경분 기준).
+- `npm run build` 성공(Next.js 16.2.3, 48 pages 생성. 로컬 sandbox 제약 때문에 escalated로 실행).
+- `git diff --check` 성공.
+- 브라우저 QA는 `http://localhost:3020`에서 다음 경로를 확인했다:
   - `/`
   - `/demo/ai-diagnosis`
-  - `/start?from=ai-diagnosis`
   - `/auth/login`
-  - `/onboarding`
-  - `/sample/report`
-  - `/subscribe`
-- `/demo/ai-diagnosis`는 영상/선택/결과/CTA까지 클릭 확인했다.
+- `/` 랜딩: `5-7세` hero 문구, `/demo/ai-diagnosis` CTA, 고객 화면 금칙어/내부 분리 설명 없음 확인.
+- `/demo/ai-diagnosis`: 영상 1개, 금칙어/내부 분리 설명 없음 확인. `영상 봤어요` → 선택 3개 → 결과 → `무료 3편 이어보기`(`/start?from=ai-diagnosis`)·`보호자 기록 예시 보기` CTA까지 클릭 확인.
+- `/play`: 로그인 보호로 `/auth/login?next=%2Fplay` redirect 확인. 로그인 세션이 없어서 인터랙티브 선택 2회와 `game_round_completed` 네트워크 저장 QA는 아직 필요하다.
 - secret scan에서 사용자가 채팅에 준 fal.ai key literal은 repo에 없었다.
 
 다음 작업 전 권장 재검증:
@@ -528,7 +528,7 @@ rg -n "87a1281a|33d09aac18c30e577d1ecc2fa52f3a35|FAL|fal\\.ai|fal-ai|FAL_KEY|FAL
 5. `/api/videos/bespoke`는 `KINDY_OPERATOR_KEY` 없이 닫혀야 한다.
 6. 모바일 viewport에서 아이 플레이 UI와 랜딩 텍스트 overflow 재검증.
 7. 데모/본서비스 분리 설명이 고객 화면에 다시 생기지 않았는지 grep.
-8. `docs/superpowers`의 인터랙티브 영상 설계를 실제 플레이어로 구현할지 결정.
+8. ~~`docs/superpowers`의 인터랙티브 영상 설계를 실제 플레이어로 구현할지 결정.~~ ✅ 2026-07-02 Codex 최소 구현: 단일 mp4 timestamp scene graph + 큰 선택 오버레이 + 기존 `game_rounds` 기록 계약 연결. 남은 일은 정식 75초/씬별 클립 제작과 Playwright 실클릭 QA.
 9. 세계관 4권 확장 전, 동물 마을 첫 세션 품질과 retention을 먼저 본다.
 10. `docs/06_LAUNCH_UX_C6_BENCHMARK_2026-06-30.md`의 51개 점검 항목 중 코드와 어긋나는 항목이 생기면 즉시 업데이트한다.
 
@@ -601,10 +601,9 @@ Don’t:
 
 1. 현재 HEAD에서 `npm run lint`, `npx tsc --noEmit`, `npm run build`.
 2. 모바일/데스크톱 Playwright screenshot으로 `/`, `/demo/ai-diagnosis`, `/start?from=ai-diagnosis`, `/onboarding`, `/play`, `/dashboard`, `/dashboard/report`, `/subscribe` QA.
-3. `docs/superpowers/specs/2026-07-01-interactive-video-session-design.md`를 기준으로 `InteractiveVideoPlayer` 최소 버전 구현.
-4. 동물 마을 첫 세션을 scene graph로 옮기고, 기존 `game_rounds` 계약으로 선택 기록 저장.
-5. 첫 주 운영용 library matrix를 `c6_focus` 태그로 seed.
-6. 부모 기록장에서 "성장 증명" 섹션을 강화: 처음 해낸 것, 지난번보다 나아진 것, 오늘 해볼 한마디.
-7. Supabase/Toss/Inngest production 환경변수와 migration 적용 체크리스트 작성.
+3. `/play` 인터랙티브 흐름을 Playwright로 실클릭 검증하고 `game_round_completed` 네트워크 콜을 확인.
+4. 첫 주 운영용 library matrix를 `c6_focus` 태그로 seed.
+5. 부모 기록장에서 "성장 증명" 섹션을 강화: 처음 해낸 것, 지난번보다 나아진 것, 오늘 해볼 한마디.
+6. Supabase/Toss/Inngest/Resend production 환경변수와 migration 적용 체크리스트 최종 확인.
 
 현재 상태는 "데모 가능한 웹 제품"에 가까워졌지만, 완전 런칭 직전에는 build, 결제 live 전환, Supabase production, mobile visual QA, 첫 콘텐츠 품질 검수가 남아 있다.

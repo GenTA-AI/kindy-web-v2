@@ -123,7 +123,7 @@ const ENTRY_FLOW = [
     parentTitle: '짧게 보고 바로 이해해요',
     parentLine: '아이가 무엇을 자세히 봤는지, 어디에서 다시 살폈는지, 어떤 놀이를 끝까지 했는지 첫 기록을 보여줘요.',
     result: '마지막에는 아이 이름표를 만들고 다음 이야기를 열 수 있어요.',
-    href: '/demo/kiosk',
+    href: DEMO_HREF,
     cta: '짧은 체험 보기',
   },
   {
@@ -341,7 +341,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-[linear-gradient(180deg,#FBF7EF_0%,#F0F3EE_100%)]" />
         <div className="relative mx-auto grid min-h-[calc(88svh-64px)] w-full max-w-6xl grid-cols-1 items-center gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[1.02fr_.98fr] lg:py-14">
           <div className="max-w-2xl">
-            <p className="text-xs font-black uppercase tracking-[.18em] text-sage">영상 1편 · 짧은 질문 · 보호자 기록</p>
+            <p className="text-xs font-black uppercase tracking-[.18em] text-sage">5-7세 · 영상 1편 · 짧은 질문 · 보호자 기록</p>
             <h1 className="mt-4 text-[clamp(38px,7vw,72px)] font-black leading-[1.02]">
               아이는 영상으로 놀고,{' '}
               <br />

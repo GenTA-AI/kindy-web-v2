@@ -6,6 +6,7 @@
 // 포지셔닝: 부모 대면은 미래역량 언어. 점수·등수·"정서/창의 교육" 단어 금지.
 
 import type { GameType, SessionAct } from '@/types/game';
+import type { InteractiveSessionGraph } from '@/types/interactive-session';
 
 // Gemini TTS 아동 음성 id (src/lib/video-providers/types.ts CharacterVoice 와 동일).
 // 브라우저 Web Speech 는 품질이 낮아 폐기 — 사전 생성한 Gemini 아동 음성을 재생한다.
@@ -577,6 +578,92 @@ export const ANIMAL_VILLAGE: AnimalVillageWorld = {
   mascotId: 'toto',
   activities: ACTIVITY_TEMPLATES,
   sessions: [KKUMI_DAY_SESSION],
+};
+
+const MORI_STORY_VIDEO_CLIP = {
+  videoUrl: '/demo-videos/mori-starlight-seed.mp4',
+  posterUrl: '/ip/generated/mori-village-hero.png',
+  subtitlesUrl: '/demo-videos/mori-starlight-seed.vtt',
+};
+
+export const ANIMAL_VILLAGE_SCENE_GRAPH: InteractiveSessionGraph = {
+  startSceneId: 'festival-door',
+  scenes: [
+    {
+      id: 'festival-door',
+      videoClip: { ...MORI_STORY_VIDEO_CLIP, startSec: 0, endSec: 4.8 },
+      choice: {
+        id: 'kkumi-heart',
+        prompt_ko: '꾸미 얼굴에 어떤 마음이 보일까?',
+        format: 'emotion',
+        rejoin: 'tiny-clue',
+        options: [
+          {
+            id: 'warm-sad',
+            label_ko: '속상해요',
+            icon: 'sad',
+            branchScenes: ['warm-branch'],
+            tally: { warm: 1 },
+            objective_code: 'sel_social_awareness',
+          },
+          {
+            id: 'brave-worried',
+            label_ko: '걱정돼요',
+            icon: 'worried',
+            branchScenes: ['brave-branch'],
+            tally: { brave: 1 },
+            objective_code: 'sel_social_awareness',
+          },
+        ],
+      },
+    },
+    {
+      id: 'warm-branch',
+      videoClip: { ...MORI_STORY_VIDEO_CLIP, startSec: 4.8, endSec: 7.2 },
+    },
+    {
+      id: 'brave-branch',
+      videoClip: { ...MORI_STORY_VIDEO_CLIP, startSec: 4.8, endSec: 7.2 },
+    },
+    {
+      id: 'tiny-clue',
+      videoClip: { ...MORI_STORY_VIDEO_CLIP, startSec: 7.2, endSec: 11.4 },
+      choice: {
+        id: 'where-to-look',
+        prompt_ko: '반짝 단서를 어디에서 찾아볼까?',
+        format: 'clue',
+        rejoin: 'ending-warm',
+        options: [
+          {
+            id: 'look-grass',
+            label_ko: '풀숲',
+            icon: '🐿️',
+            tally: { warm: 1 },
+            objective_code: 'creativity_observe',
+          },
+          {
+            id: 'look-path',
+            label_ko: '별빛 길',
+            icon: '🌱',
+            tally: { brave: 1 },
+            objective_code: 'creativity_pattern',
+          },
+        ],
+      },
+    },
+    {
+      id: 'ending-warm',
+      videoClip: { ...MORI_STORY_VIDEO_CLIP, startSec: 11.4, endSec: 15 },
+    },
+    {
+      id: 'ending-brave',
+      videoClip: { ...MORI_STORY_VIDEO_CLIP, startSec: 11.4, endSec: 15 },
+    },
+  ],
+  endings: [
+    { threshold: { warm: 2 }, sceneId: 'ending-warm' },
+    { threshold: {}, sceneId: 'ending-brave' },
+  ],
 };
 
 export function getActivity(id: string): ActivityConfig | null {

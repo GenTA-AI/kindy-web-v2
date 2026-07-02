@@ -19,6 +19,7 @@ import {
   nextMonthlyPeriod,
   syncEntitlement,
 } from '@/lib/subscription';
+import { reportEmailFailure, sendFirstPaymentSuccessEmail } from '@/lib/mailer';
 
 /**
  * POST /api/payments/toss/billing-key
@@ -273,6 +274,15 @@ export async function POST(request: NextRequest) {
   await syncEntitlement(parentId);
 
   const state = await getSubscriptionState(parentId);
+  if (!alreadyPaid) {
+    void sendFirstPaymentSuccessEmail({
+      parentId,
+      orderId,
+      amountKrw: SUBSCRIPTION_PRICE_KRW,
+      periodEnd: state.entitlement.premium_until,
+    }).catch(reportEmailFailure('first-payment'));
+  }
+
   return NextResponse.json({
     ok: true,
     charged: !alreadyPaid,

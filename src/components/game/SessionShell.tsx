@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import LibraryPlayer from '@/components/LibraryPlayer';
 import MoriCharacter from '@/components/MoriCharacter';
+import InteractiveVideoPlayer from '@/components/game/InteractiveVideoPlayer';
 import EmotionExpressionGame from '@/components/game/EmotionExpressionGame';
 import PuzzleGame from '@/components/game/PuzzleGame';
 import HiddenFriendGame from '@/components/game/HiddenFriendGame';
@@ -25,6 +26,7 @@ import {
   type VillageSession,
 } from '@/data/worlds/animal-village';
 import type { LibraryVideo } from '@/types/library';
+import type { InteractiveSessionGraph } from '@/types/interactive-session';
 import type {
   CollectionState,
   GameEvent,
@@ -36,7 +38,7 @@ import type {
 } from '@/types/game';
 
 type SessionContext = 'home' | 'kiosk';
-type SessionStage = 'intro' | 'video' | 'transition' | 'round' | 'gate' | 'complete';
+type SessionStage = 'intro' | 'interactive' | 'video' | 'transition' | 'round' | 'gate' | 'complete';
 
 // 부모 대화 스타터 정적 폴백(SEL 프레이밍 · 효능/점수 클레임 없음).
 const DIALOGUE_STARTER_FALLBACK =
@@ -69,6 +71,8 @@ interface SessionShellProps {
   activities?: ActivityConfig[];
   /** 동물 마을 세션 시나리오(도입/전환/클로저 내레이션). */
   villageSession?: VillageSession;
+  /** 승인된 인터랙티브 영상 씬 그래프. 있으면 영상 사이 선택 오버레이 모드로 진행. */
+  interactiveGraph?: InteractiveSessionGraph;
 }
 
 const REPROMPT_DELAY_MS = 15000;
@@ -199,8 +203,10 @@ export default function SessionShell({
   videos,
   activities,
   villageSession,
+  interactiveGraph,
 }: SessionShellProps) {
   const isVillage = Boolean(villageSession && activities && activities.length > 0);
+  const useInteractive = Boolean(isVillage && interactiveGraph && interactiveGraph.scenes.length > 0);
   const { speak, muted, toggleMute, supported: voiceSupported } = useVoice();
   // 정답/완료 juice 트리거 + 마스코트 기분.
   const [juiceKey, setJuiceKey] = useState(0);
@@ -231,6 +237,7 @@ export default function SessionShell({
   const [roundCursor, setRoundCursor] = useState(0);
   const [difficulty, setDifficulty] = useState(() => rounds[0]?.params.difficulty ?? 1);
   const [collectionState, setCollectionState] = useState<CollectionState>(INITIAL_COLLECTION);
+  const collectionStateRef = useRef<CollectionState>(INITIAL_COLLECTION);
   const [lastDelta, setLastDelta] = useState<RewardDelta | null>(null);
   const [completedRounds, setCompletedRounds] = useState(0);
   const [isSavingRound, setIsSavingRound] = useState(false);
@@ -240,6 +247,7 @@ export default function SessionShell({
   const gameSessionIdRef = useRef<string | null>(null);
   const startedSessionKeyRef = useRef<string | null>(null);
   const completedSessionRef = useRef(false);
+  const interactiveRoundIndexRef = useRef(0);
   const sessionKey = `${context}:${childId ?? 'anonymous'}:${topic}:${sessionSeed}`;
 
   const currentAct = acts[actCursor] ?? null;
@@ -271,6 +279,11 @@ export default function SessionShell({
   const currentVideoIndex = currentAct ? actVideoIndex(actCursor) : -1;
   const currentVideo = currentVideoIndex >= 0 ? playableVideos[currentVideoIndex] : null;
   const totalSlots = Math.max(1, rounds.length);
+  const interactiveChoiceCount = useMemo(
+    () => interactiveGraph?.scenes.filter((scene) => Boolean(scene.choice)).length ?? 0,
+    [interactiveGraph],
+  );
+  const progressTotalSlots = useInteractive ? Math.max(1, interactiveChoiceCount) : totalSlots;
   const isFinalRound = roundCursor >= rounds.length - 1;
   const isLastRoundOfAct = currentAct ? roundCursor >= currentAct.endIndex : isFinalRound;
   const hasNextAct = actCursor < acts.length - 1;
@@ -315,12 +328,13 @@ export default function SessionShell({
       type: 'game_started',
       payload: {
         rounds_total: rounds.length,
+        interactive_choice_count: useInteractive ? progressTotalSlots : undefined,
         video_count: playableVideos.length,
         session_seed: sessionSeed,
         topic,
       },
     });
-  }, [emitSessionEvent, playableVideos.length, rounds.length, sessionKey, sessionSeed, topic]);
+  }, [emitSessionEvent, playableVideos.length, progressTotalSlots, rounds.length, sessionKey, sessionSeed, topic, useInteractive]);
 
   const emitCompletionOnce = useCallback(
     async (state: CollectionState, sessionIdOverride?: string | null) => {
@@ -331,7 +345,7 @@ export default function SessionShell({
         {
           type: 'game_completed',
           payload: {
-            rounds_total: rounds.length,
+            rounds_total: useInteractive ? progressTotalSlots : rounds.length,
             total_stars: state.total_stars,
             stickers_count: state.stickers.length,
             collection_count: collectionCount(state),
@@ -341,7 +355,7 @@ export default function SessionShell({
       );
       return result.ok;
     },
-    [emitSessionEvent, rounds.length],
+    [emitSessionEvent, progressTotalSlots, rounds.length, useInteractive],
   );
 
   const handleRoundComplete = useCallback(
@@ -363,6 +377,7 @@ export default function SessionShell({
       const nextRoundCount = Math.min(rounds.length, roundCursor + 1);
 
       setCollectionState(nextState);
+      collectionStateRef.current = nextState;
       setLastDelta(delta);
       setCompletedRounds(nextRoundCount);
       setRoundResults((prev) => [...prev, resultWithReward]);
@@ -426,6 +441,78 @@ export default function SessionShell({
     ],
   );
 
+  const handleInteractiveRoundResult = useCallback(
+    async (rawResult: GameRoundResult) => {
+      setIsSavingRound(true);
+      const roundIndex = interactiveRoundIndexRef.current;
+      interactiveRoundIndexRef.current += 1;
+
+      const delta = rawResult.reward_payload ?? rewardForRound(rawResult);
+      const resultWithReward: GameRoundResult = {
+        ...rawResult,
+        reward_payload: delta,
+      };
+      const previousState = collectionStateRef.current;
+      const nextState = applyReward(previousState, delta);
+      const nextRoundCount = Math.min(progressTotalSlots, roundIndex + 1);
+
+      setCollectionState(nextState);
+      collectionStateRef.current = nextState;
+      setLastDelta(delta);
+      setCompletedRounds(nextRoundCount);
+      setRoundResults((prev) => [...prev, resultWithReward]);
+      setDifficulty(nextDifficulty(difficulty, resultWithReward));
+      fireJuice();
+      setMascotMood('cheer');
+      setMascotMessage(`${childName} 해냈어!`);
+
+      try {
+        const roundEvent = await emitSessionEvent({
+          type: 'game_round_completed',
+          round_index: roundIndex,
+          result: resultWithReward,
+        });
+        if (!roundEvent.ok) setRecordingIssue(true);
+        const activeSessionId = roundEvent.game_session_id ?? gameSessionIdRef.current;
+
+        if (collectionCount(nextState) > collectionCount(previousState)) {
+          const collectionEvent = await emitSessionEvent(
+            {
+              type: 'collection_progress',
+              round_index: roundIndex,
+              payload: {
+                delta,
+                total_stars: nextState.total_stars,
+                stickers_count: nextState.stickers.length,
+                collection_count: collectionCount(nextState),
+              },
+            },
+            activeSessionId,
+          );
+          if (!collectionEvent.ok) setRecordingIssue(true);
+        }
+      } finally {
+        setIsSavingRound(false);
+      }
+    },
+    [
+      childName,
+      difficulty,
+      emitSessionEvent,
+      fireJuice,
+      progressTotalSlots,
+    ],
+  );
+
+  const handleInteractiveComplete = useCallback(
+    async () => {
+      const completionOk = await emitCompletionOnce(collectionStateRef.current);
+      if (!completionOk) setRecordingIssue(true);
+      setStage('complete');
+    },
+    [emitCompletionOnce],
+  );
+
   function continueAfterGate() {
     if (isFinalRound) {
       setStage('complete');
@@ -456,6 +543,10 @@ export default function SessionShell({
   // 영상이 없을 때: 동물 마을은 인트로 카드가 이미 1막 도입을 했으므로 바로 라운드,
   // 일반 세션은 전환 카드로 진입.
   function startSession() {
+    if (useInteractive) {
+      setStage('interactive');
+      return;
+    }
     if (firstHasVideo) {
       setStage('video');
       return;
@@ -520,10 +611,12 @@ export default function SessionShell({
   }
 
   if (stage === 'complete') {
-    const watchedVideoCount = acts.reduce(
-      (sum, _act, index) => sum + (actVideoIndex(index) >= 0 ? 1 : 0),
-      0,
-    );
+    const watchedVideoCount = useInteractive
+      ? 1
+      : acts.reduce(
+          (sum, _act, index) => sum + (actVideoIndex(index) >= 0 ? 1 : 0),
+          0,
+        );
     // (b) 부모 대화 스타터: 세션 누적 라운드 결과로 1개 생성, 없으면 정적 폴백.
     const sessionStarters = dialogueStarters(aggregateSelActivities(roundResults));
     const dialogueStarter = sessionStarters[0] ?? DIALOGUE_STARTER_FALLBACK;
@@ -638,7 +731,7 @@ export default function SessionShell({
             </nav>
           )}
 
-          <RewardMeta state={collectionState} lastDelta={lastDelta} totalSlots={totalSlots} />
+          <RewardMeta state={collectionState} lastDelta={lastDelta} totalSlots={progressTotalSlots} />
         </div>
       </main>
     );
@@ -676,7 +769,7 @@ export default function SessionShell({
             </div>
             <div className="flex items-center gap-2">
               <div className="rounded-full bg-sagebg px-4 py-3 text-center">
-                <p className="text-lg font-black text-saged">{completedRounds}/{rounds.length}</p>
+                <p className="text-lg font-black text-saged">{completedRounds}/{progressTotalSlots}</p>
                 <p className="mt-0.5 text-[11px] font-black text-sage">오늘 단서</p>
               </div>
               {voiceSupported && (
@@ -695,7 +788,7 @@ export default function SessionShell({
           {isVillage && (
             <div
               aria-label={`오늘 단서 ${completedRounds}개 완료`}
-              aria-valuemax={rounds.length}
+              aria-valuemax={progressTotalSlots}
               aria-valuemin={0}
               aria-valuenow={completedRounds}
               className="mt-4 h-2 overflow-hidden rounded-full bg-sagebg"
@@ -703,7 +796,7 @@ export default function SessionShell({
             >
               <div
                 className="h-full rounded-full bg-saged transition-all duration-500"
-                style={{ width: `${Math.min(100, Math.round((completedRounds / Math.max(1, rounds.length)) * 100))}%` }}
+                style={{ width: `${Math.min(100, Math.round((completedRounds / Math.max(1, progressTotalSlots)) * 100))}%` }}
               />
             </div>
           )}
@@ -768,6 +861,18 @@ export default function SessionShell({
               문 열래
             </button>
           </section>
+        )}
+
+        {stage === 'interactive' && interactiveGraph && (
+          <div className="space-y-4">
+            <InteractiveVideoPlayer
+              graph={interactiveGraph}
+              childName={childName}
+              onRoundResult={handleInteractiveRoundResult}
+              onComplete={handleInteractiveComplete}
+            />
+            <RewardMeta state={collectionState} lastDelta={lastDelta} totalSlots={progressTotalSlots} />
+          </div>
         )}
 
         {stage === 'video' && currentVideo && (
@@ -918,7 +1023,7 @@ export default function SessionShell({
               )}
             </section>
 
-            <RewardMeta state={collectionState} lastDelta={lastDelta} totalSlots={totalSlots} />
+            <RewardMeta state={collectionState} lastDelta={lastDelta} totalSlots={progressTotalSlots} />
           </div>
         )}
 
@@ -943,7 +1048,7 @@ export default function SessionShell({
               </button>
             </div>
 
-            <RewardMeta state={collectionState} lastDelta={lastDelta} totalSlots={totalSlots} />
+            <RewardMeta state={collectionState} lastDelta={lastDelta} totalSlots={progressTotalSlots} />
           </section>
         )}
       </div>

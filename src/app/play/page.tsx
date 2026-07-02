@@ -6,6 +6,7 @@ import SessionShell from '@/components/game/SessionShell';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { planSession } from '@/lib/game/engine';
 import { buildAnimalVillagePlan } from '@/lib/game/village-session';
+import { ANIMAL_VILLAGE_SCENE_GRAPH } from '@/data/worlds/animal-village';
 import { getSupabase, isSupabaseServiceConfigured } from '@/lib/supabase';
 import { FREE_TRIAL_SESSION_LIMIT, getMembershipGateState } from '@/lib/subscription';
 import { localPreviewLibraryVideoForAge } from '@/lib/library-preview';
@@ -348,6 +349,7 @@ export default async function PlayPage({ searchParams }: PlayPageProps) {
         videos={villageVideos}
         activities={plan.activities}
         villageSession={plan.session}
+        interactiveGraph={ANIMAL_VILLAGE_SCENE_GRAPH}
       />
     );
   }

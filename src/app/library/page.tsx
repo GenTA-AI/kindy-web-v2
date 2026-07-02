@@ -33,6 +33,10 @@ function trialGateFromBody(body: unknown): TrialGateState | null {
   return { completedTrialSessions, remainingTrialSessions, trialLimit };
 }
 
+function loginHref(next: string): string {
+  return `/auth/login?next=${encodeURIComponent(next)}`;
+}
+
 function isSameLocalDay(value: string | null | undefined): boolean {
   if (!value) return false;
   const date = new Date(value);
@@ -73,6 +77,10 @@ function LibraryContent() {
       try {
         const res = await fetch(`/api/children/${childId}`);
         if (cancelled) return;
+        if (res.status === 401) {
+          router.replace(loginHref(`/library?childId=${encodeURIComponent(childId)}`));
+          return;
+        }
         if (res.ok) {
           const body = (await res.json()) as Pick<Child, 'name' | 'age'>;
           setChildName(body.name ?? null);
@@ -107,6 +115,11 @@ function LibraryContent() {
         const body: unknown = await res.json().catch(() => null);
         if (cancelled) return;
 
+        if (res.status === 401) {
+          router.replace(loginHref(`/library?childId=${encodeURIComponent(childId)}`));
+          return;
+        }
+
         if (res.ok && body && typeof body === 'object' && !Array.isArray(body) && 'latestCompletedAt' in body) {
           setSummary({ latestCompletedAt: typeof body.latestCompletedAt === 'string' ? body.latestCompletedAt : null });
         } else {
@@ -122,7 +135,7 @@ function LibraryContent() {
     return () => {
       cancelled = true;
     };
-  }, [childId]);
+  }, [childId, router]);
 
   useEffect(() => {
     if (!childId) {
@@ -146,6 +159,9 @@ function LibraryContent() {
           const libraryBody = body as { videos?: LibraryVideo[] } | null;
           setTrialGate(null);
           setVideos(libraryBody?.videos ?? []);
+        } else if (res.status === 401) {
+          router.replace(loginHref(`/library?childId=${encodeURIComponent(childId)}`));
+          return;
         } else if (res.status === 402) {
           setVideos([]);
           setTrialGate(trialGateFromBody(body));

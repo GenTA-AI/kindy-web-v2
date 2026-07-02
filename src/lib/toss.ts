@@ -60,6 +60,9 @@ function getSecretKey(): string {
   if (!key) {
     throw new Error('TOSS_SECRET_KEY is not set. Add it to .env.local (test_sk_* for TEST mode).');
   }
+  if (process.env.NODE_ENV === 'production' && key.startsWith('test_')) {
+    throw new Error('TOSS_SECRET_KEY uses a test key in production. Set a live_* Toss secret key.');
+  }
   return key;
 }
 

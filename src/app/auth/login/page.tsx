@@ -31,7 +31,7 @@ const EMAIL_CODE_ERROR_MESSAGE = '코드를 보내지 못했어요. 이메일 �
 const VERIFY_CODE_ERROR_MESSAGE = '코드가 올바르지 않거나 만료됐어요. 새 코드를 받아주세요.';
 
 function safeNextPath(value: string | null): string {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) {
+  if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) {
     return '/dashboard';
   }
 

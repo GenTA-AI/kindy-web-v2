@@ -75,6 +75,8 @@ BIZ 6종 중 하나라도 비면 결제 CTA가 잠긴다.
 | `INNGEST_EVENT_KEY` | `kindy-inngest-event-key` | **미등록 — §4** |
 | `TOSS_SECRET_KEY` (live_sk_) | `kindy-toss-secret-key` | **런칭 전 생성·등록 필요** |
 | `BILLING_KEY_SECRET` | `kindy-billing-key-secret` | **런칭 전 생성·등록 필요 — §6** |
+| `RESEND_API_KEY` | `kindy-resend-api-key` | **결제 이메일 발송용 — §7** |
+| `RESEND_FROM_EMAIL` | `kindy-resend-from-email` | 옵션. 미설정 시 `Kindy <support@kindy.kr>` |
 | `KINDY_OPERATOR_KEY` | `kindy-operator-key` | 비스포크 생성 게이트(대표만 보유) |
 
 `INNGEST_DEV`는 로컬 전용 env다 — 프로덕션에는 존재하면 안 되며 `scripts/deploy-cloud-run.sh`가 제거한다. 전체 목록·설명은 `.env.local.example` 참조.
@@ -137,7 +139,32 @@ BIZ 6종 중 하나라도 비면 결제 CTA가 잠긴다.
 
 ---
 
-## 7. 일일 5분 체크 (SQL 3개)
+## 7. 결제 이메일(Resend)
+
+코드 경로: `src/lib/mailer.ts`.
+
+발송되는 이메일:
+
+- 첫 결제 성공: 결제 금액, 주문번호, 이용 기간, 구독 확인/해지 링크.
+- 갱신 성공: 결제 금액, 주문번호, 다음 이용 기간, 구독 확인/해지 링크.
+- 갱신 실패: 결제 확인 안내와 `/subscribe` 카드 재등록 링크.
+
+메일은 결제 흐름을 막지 않는다. `RESEND_API_KEY`가 없으면 `console.warn` 후 no-op이며, Resend 장애나 발송 실패는 `console.error`만 남긴다.
+
+운영 설정:
+
+```bash
+printf %s "re_..." | gcloud secrets create kindy-resend-api-key --data-file=-
+printf %s "Kindy <support@kindy.kr>" | gcloud secrets create kindy-resend-from-email --data-file=-
+gcloud run services update kindy --region=asia-northeast3 \
+  --update-secrets=RESEND_API_KEY=kindy-resend-api-key:latest,RESEND_FROM_EMAIL=kindy-resend-from-email:latest
+```
+
+발신 도메인은 Resend에서 별도로 인증해야 한다. 인증 전에는 테스트 도메인/제한 발송만 가능하다.
+
+---
+
+## 8. 일일 5분 체크 (SQL 3개)
 
 Supabase SQL Editor에서 매일 1회.
 
@@ -173,7 +200,7 @@ limit 50;
 
 ---
 
-## 8. 콘텐츠 발행 절차 (published=false → QC → 발행)
+## 9. 콘텐츠 발행 절차 (published=false → QC → 발행)
 
 생성물은 `published=false`로 저장되어 고객에게 노출되지 않는다. 사람이 한 편씩 검수한 뒤에만 발행한다.
 
@@ -192,3 +219,20 @@ limit 50;
    update library_videos set published = true where id = '<video_id>';
    ```
    발행 전 published 재고 확인: `select count(*) from library_videos where published = true;`
+
+### 동물 마을 음성 mp3 생성
+
+`/public/audio/village/`는 더 이상 `.gitignore`에 막혀 있지 않다. 운영자가 Google 키를 채운 뒤 생성한 mp3는 커밋 대상이다.
+
+```bash
+npx tsx --env-file=.env.local scripts/gen-village-tts.ts
+```
+
+생성 후 확인:
+
+```bash
+find public/audio/village -type f | wc -l
+git status --short public/audio/village src/data/worlds/animal-village-voice.json
+```
+
+키가 없으면 현재 앱은 `useVoice`의 Web Speech 폴백으로 동작하지만, 5-7세 타겟에서는 실제 mp3를 런칭 전에 넣는 것을 권장한다.

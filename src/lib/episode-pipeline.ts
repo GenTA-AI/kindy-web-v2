@@ -81,10 +81,10 @@ type SceneAudio = {
 };
 
 const OPUS_PRICING = {
-  input: 15.0,
-  output: 75.0,
-  cacheWrite: 18.75,
-  cacheRead: 1.5,
+  input: 5.0,
+  output: 25.0,
+  cacheWrite: 6.25,
+  cacheRead: 0.5,
 };
 
 const SONNET_PRICING = {

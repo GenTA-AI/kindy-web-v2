@@ -33,6 +33,7 @@ import {
   nextMonthlyPeriod,
   syncEntitlement,
 } from '@/lib/subscription';
+import { reportEmailFailure, sendRenewalFailureEmail, sendRenewalSuccessEmail } from '@/lib/mailer';
 
 interface DueSubscription {
   id: string;
@@ -57,6 +58,7 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
   // 0) 빌링키 확보 (복호화)
   if (!sub.billing_key_id) {
     await markPastDue(sub.id);
+    notifyRenewalFailure(sub.parent_id, '등록된 카드 정보를 찾지 못했어요.');
     return { subscriptionId: sub.id, result: 'failed', reason: 'no_billing_key' };
   }
   const { data: bk, error: bkError } = await supabase
@@ -70,6 +72,7 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
   }
   if (!bk?.billing_key) {
     await markPastDue(sub.id);
+    notifyRenewalFailure(sub.parent_id, '등록된 카드 정보를 찾지 못했어요.');
     return { subscriptionId: sub.id, result: 'failed', reason: 'billing_key_missing' };
   }
 
@@ -120,6 +123,7 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
     const reason = error instanceof TossApiError ? `${error.code}: ${error.message}` : '결제 승인 오류';
     await supabase.from('purchases').update({ status: 'failed', failed_reason: reason }).eq('order_id', orderId);
     await markPastDue(sub.id);
+    notifyRenewalFailure(sub.parent_id, reason);
     return { subscriptionId: sub.id, result: 'failed', reason };
   }
 
@@ -129,6 +133,7 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
       .update({ status: 'failed', failed_reason: `status ${payment.status}`, raw_response: payment })
       .eq('order_id', orderId);
     await markPastDue(sub.id);
+    notifyRenewalFailure(sub.parent_id, `결제가 완료되지 않았어요. 상태: ${payment.status}`);
     return { subscriptionId: sub.id, result: 'failed', reason: `status ${payment.status}` };
   }
 
@@ -143,12 +148,18 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
     })
     .eq('order_id', orderId);
 
-  await extendPeriod(sub);
+  const nextPeriodEnd = await extendPeriod(sub);
+  void sendRenewalSuccessEmail({
+    parentId: sub.parent_id,
+    orderId,
+    amountKrw: sub.price_krw,
+    periodEnd: nextPeriodEnd,
+  }).catch(reportEmailFailure('renewal-success'));
   return { subscriptionId: sub.id, result: 'charged' };
 }
 
 /** 결제주기를 직전 종료일 기준으로 1개월 연장(공백 없이 연속). */
-async function extendPeriod(sub: DueSubscription): Promise<void> {
+async function extendPeriod(sub: DueSubscription): Promise<string> {
   const from = sub.current_period_end ? new Date(sub.current_period_end) : new Date();
   const { start, end } = nextMonthlyPeriod(from);
   await supabase
@@ -161,6 +172,7 @@ async function extendPeriod(sub: DueSubscription): Promise<void> {
     })
     .eq('id', sub.id);
   await syncEntitlement(sub.parent_id);
+  return end.toISOString();
 }
 
 async function markPastDue(subscriptionId: string): Promise<void> {
@@ -168,6 +180,10 @@ async function markPastDue(subscriptionId: string): Promise<void> {
     .from('subscriptions')
     .update({ status: 'past_due', updated_at: new Date().toISOString() })
     .eq('id', subscriptionId);
+}
+
+function notifyRenewalFailure(parentId: string, reason: string): void {
+  void sendRenewalFailureEmail({ parentId, reason }).catch(reportEmailFailure('renewal-failure'));
 }
 
 export const subscriptionRenewal = inngest.createFunction(

@@ -68,6 +68,10 @@ export async function POST(request: NextRequest) {
   }
 
   const nextStatus = mapTossStatusToPurchaseStatus(payment.status);
+  if (nextStatus === 'pending') {
+    return NextResponse.json({ ok: true, skipped: 'payment pending', status: nextStatus });
+  }
+
   if (purchase.status === nextStatus) {
     return NextResponse.json({ ok: true, idempotent: true, status: nextStatus });
   }

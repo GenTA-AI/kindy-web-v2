@@ -162,6 +162,10 @@ function safeName(child: Child | null): string {
   return name || '우리 아이';
 }
 
+function loginHref(next: string): string {
+  return `/auth/login?next=${encodeURIComponent(next)}`;
+}
+
 function summaryMetric(summary: DashboardSummary | null, kind: 'sessions' | 'rounds' | 'retry'): string {
   if (!summary) return '확인 중';
   if (kind === 'sessions') {
@@ -208,6 +212,11 @@ function DashboardContent() {
       const res = await fetch(`/api/children?id=${childId}`);
       const data: unknown = await res.json().catch(() => null);
 
+      if (res.status === 401) {
+        router.replace(loginHref(`/dashboard?childId=${encodeURIComponent(childId)}`));
+        return;
+      }
+
       if (!res.ok || !data || typeof data !== 'object' || Array.isArray(data) || !('id' in data)) {
         setChild(null);
         setChildError(true);
@@ -220,7 +229,7 @@ function DashboardContent() {
     } finally {
       setLoadingChild(false);
     }
-  }, [childId]);
+  }, [childId, router]);
 
   useEffect(() => {
     if (childId) return;
@@ -232,6 +241,10 @@ function DashboardContent() {
         const res = await fetch('/api/children');
         const list: unknown = await res.json().catch(() => null);
         if (cancelled) return;
+        if (res.status === 401) {
+          router.replace(loginHref('/dashboard'));
+          return;
+        }
         if (Array.isArray(list) && list.length === 0) {
           router.replace('/onboarding');
           return;
@@ -268,6 +281,11 @@ function DashboardContent() {
         const data: unknown = await res.json().catch(() => null);
         if (cancelled) return;
 
+        if (res.status === 401) {
+          router.replace(loginHref(`/dashboard?childId=${encodeURIComponent(childId)}`));
+          return;
+        }
+
         if (!res.ok || !data || typeof data !== 'object' || Array.isArray(data)) {
           setSummary(null);
           setSummaryError(true);
@@ -288,7 +306,7 @@ function DashboardContent() {
     return () => {
       cancelled = true;
     };
-  }, [childId, summaryReloadToken]);
+  }, [childId, router, summaryReloadToken]);
 
   if (!childId) {
     if (!childrenRedirectChecked) {

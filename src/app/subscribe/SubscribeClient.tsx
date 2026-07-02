@@ -23,7 +23,7 @@ function formatDate(iso: string | null): string {
 }
 
 const BENEFITS = [
-  { title: '매주 새 모리 이야기', desc: '짧은 영상 뒤에 단서 찾기와 만들기 놀이가 이어져요.' },
+  { title: '계속 늘어나는 모리 이야기', desc: '짧은 영상 뒤에 단서 찾기와 만들기 놀이가 이어져요.' },
   { title: '아이 선택에 맞춘 추천', desc: '고른 단서와 놀이 기록을 바탕으로 다음 이야기를 골라요.' },
   { title: '보호자 기록과 대화 힌트', desc: '오늘 해낸 놀이와 집에서 나눌 질문을 보여줘요.' },
 ];

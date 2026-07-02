@@ -65,7 +65,7 @@
 - **P1-8. 엔진이 실 프로덕션 배치를 한 번도 완주한 적 없음** — 유일 기록이 dryRun=true·successCount=0(`tmp/library-90s/report.json`); publish 스크립트 부재; 서명 URL·vtt·모바일 재생·실 비용 전부 미검증. 수정: `LIMIT_COUNT=3` 실배치 → 휴먼 QC → 소형 publish 스크립트.
 
 #### UX·모바일 (3건)
-- **P1-9. 아이 음성 mp3 20개 전부가 gitignore — 정상 배포에 실 TTS가 없음** — `/public/audio/village/` 이미지에 0개, 재생성 배포 훅 없음; 못 읽는 5-7세가 로봇 Web Speech(iOS는 무음 가능) 폴백. 수정: mp3 커밋 또는 이미지 빌드에 TTS 단계 + 인트로 탭에서 iOS 오디오 unlock.
+- **P1-9. 부분 해소(2026-07-02 Codex)** — `/public/audio/village/` gitignore 제거 + 인터랙티브 플레이어 첫 탭에서 iOS 오디오 unlock best-effort 추가. **남은 것**: 운영자가 `GOOGLE_API_KEY` 채운 뒤 `npx tsx --env-file=.env.local scripts/gen-village-tts.ts` 실행 → 생성 mp3 커밋.
 - **P1-10. error.tsx / not-found.tsx / loading.tsx 전무** — 일시적 Supabase 오류가 영어 'Application error' 백지 화면. 수정: 루트 error/not-found 2파일(모리 카드 스타일).
 - **P1-11. LibraryPlayer(실고객 플레이어)만 playsInline 누락** — iPhone Safari가 매 영상 강제 전체화면, 자막 토글·'단서 놀이 할래' 버튼 소실. 데모 플레이어 둘은 설정돼 있음 → 유료 경로만 누락. **수정 한 줄.**
 
@@ -76,15 +76,15 @@
 
 #### 법무 (4건)
 - **P1-15. 정기결제 동의 증적이 fire-and-forget** — `SubscribeClient.tsx:88` `.catch(()=>{})`, 청구 서버가 증적 존재를 강제 안 함 → 분쟁 시 건별 증적 부재 가능. 수정: 빌링키 발급 전 서버 insert-or-verify, 실패 시 중단.
-- **P1-16. 결제 관련 이메일·통지 전무** — 전상법 §13(2) 계약서면(전자문서) 교부 및 실패 안내 공백. 이메일 인프라 0건. 수정: 첫 결제·갱신 성공 메일 + past_due 안내 메일(Resend 등).
+- **P1-16. ✅ 해소(2026-07-02 Codex)** — `src/lib/mailer.ts` 추가(Resend REST, `RESEND_API_KEY` 없으면 no-op), 첫 결제 성공·갱신 성공·갱신 실패 메일 배선. 메일 실패는 결제 흐름을 막지 않고 로그만 남긴다. 운영 남은 것: `RESEND_API_KEY`/`RESEND_FROM_EMAIL` Secret Manager 주입.
 - **P1-17. game_rounds의 점수·반응속도·난이도 수집이 privacy 고지 항목에 없음**(PIPA §30 열거 누락) — learning-profile이 정확도·지연 백분위로 프로파일링하는데 privacy.md:17은 완료/재도전/꾸미기만 열거. 수정: 항목 추가 + 프로파일링 1줄 + 동의 버전 bump.
 - **P1-18. AI 생성물 표시 부재**(AI기본법 §31, 2026-01-22 시행) — 고객 표면 전체 AI 표시 grep 0; terms.md:56 'AI 보조'는 축소 기술(실제는 영상 자체가 생성형). 수정: '모리 이야기는 AI로 만들어요' 상시 라벨 + terms §8 개정. → Part B-3, C-5 참조(라벨을 신뢰 자산으로).
 
 ### A-3. 개선 (P2) — 34건 요약
 
-검증 후 하향 7건: 로그인 open redirect 백슬래시 우회(수정 2줄, 즉시 반영 권장) · 생성 매트릭스가 전부 옛 '미리' 브랜드(동물마을 매트릭스 작성 필요) · **bespoke 영상 전달 표면 부재**(생성·과금은 되나 어떤 UI도 videos 테이블을 안 읽음 — 20가구는 대외 공유로 우회 가능) · Inngest 재시도가 파이프라인 전체 재과금(~$15/실패건) · 입 오버레이 전 씬 고정 좌표 · preview TTS 단일 의존 · TTS 초과분 무음 잘림.
+검증 후 하향 7건: ~~로그인 open redirect 백슬래시 우회(수정 2줄)~~ ✅ 2026-07-02 Codex · 생성 매트릭스가 전부 옛 '미리' 브랜드(동물마을 매트릭스 작성 필요) · **bespoke 영상 전달 표면 부재**(생성·과금은 되나 어떤 UI도 videos 테이블을 안 읽음 — 20가구는 대외 공유로 우회 가능) · Inngest 재시도가 파이프라인 전체 재과금(~$15/실패건) · 입 오버레이 전 씬 고정 좌표 · preview TTS 단일 의존 · TTS 초과분 무음 잘림.
 
-미검증 27건 중 런칭 관련 주요: 갱신 부분 실패 시 duplicate-orderId를 청구 실패로 오판(결제된 고객 past_due) · 웹훅이 pending을 'canceled'로 매핑 · 프로드 test 키 무경고 · public 함수 EXECUTE가 anon에 열림(REVOKE 1개) · kiosk 익명 ingest 무제한 · proxy 매처가 bespoke curl을 401로 차단(런칭 전 쿠키 없는 curl 테스트 필수) · **모리 정본 레퍼런스 미사용 — 캐릭터 시트를 빈 ref로 생성**(`episode-pipeline.ts:437`, `public/ip/mori-reference*.jpg` 미주입) · 인터랙티브 스펙과 산출 포맷 불일치(씬별 클립 미출력) · Opus 단가 3배 과대(원가 왜곡) · fal.ai 총액 캡 없음 · 랜딩 '커리큘럼' 용어 가드레일 히트 1건 · 법정대리인 확인이 자가선언뿐.
+미검증 27건 중 런칭 관련 주요: 갱신 부분 실패 시 duplicate-orderId를 청구 실패로 오판(결제된 고객 past_due) · ~~웹훅이 pending을 'canceled'로 매핑~~ ✅ 2026-07-02 Codex · ~~프로드 test 키 무경고~~ ✅ 2026-07-02 Codex · ~~public 함수 EXECUTE가 anon에 열림(REVOKE 1개)~~ ✅ migration 0022 · kiosk 익명 ingest 무제한 · proxy 매처가 bespoke curl을 401로 차단(런칭 전 쿠키 없는 curl 테스트 필수) · **모리 정본 레퍼런스 미사용 — 캐릭터 시트를 빈 ref로 생성**(`episode-pipeline.ts:437`, `public/ip/mori-reference*.jpg` 미주입) · 인터랙티브 스펙과 산출 포맷 불일치(씬별 클립 미출력은 남음, 단일 mp4 timestamp 최소 플레이어는 2026-07-02 구현) · ~~Opus 단가 3배 과대(원가 왜곡)~~ ✅ 2026-07-02 Codex · fal.ai 총액 캡 없음 · ~~랜딩 '커리큘럼' 용어 가드레일 히트 1건~~ ✅ 2026-07-02 이전 반영 + hero CTA 보정 · 법정대리인 확인이 자가선언뿐.
 
 전체 상세는 감사 원본(세션 스크래치패드) 참조. 코드 수정 시 이 문서 갱신.
 
@@ -145,6 +145,7 @@
 
 ### C-3. 인터랙티브 scene graph 플레이어 — 진행 확정, 엔진 정렬 선행
 - PBS Kids 선례로 방향 타당성 확보. 승인 스펙(`docs/superpowers/specs/2026-07-01-interactive-video-session-design.md`)대로 진행.
+- **2026-07-02 Codex 최소 구현 완료**: `src/types/interactive-session.ts`, `src/components/game/InteractiveVideoPlayer.tsx`, `ANIMAL_VILLAGE_SCENE_GRAPH`, `/play` 통합. 현재는 단일 `/demo-videos/mori-starlight-seed.mp4`를 timestamp로 나눠 쓰는 fallback이며, 선택 결과는 기존 `game_rounds` 계약으로 저장한다.
 - **엔진 측 선행 작업**: episode-pipeline이 현재 단일 mp4만 출력 — **씬별 클립(s0N.mp4) + scenes 매니페스트 출력**으로 변경(P2 지적). 가지 씬은 limited로 생성(스펙 §2 비용 경계 그대로: diamond 합류 = 선형 증가, 결말만 ×2).
 - 선택 오버레이는 기존 큰 얼굴/그림 UI 재사용, `game_rounds` 기록 계약 불변.
 
@@ -162,7 +163,7 @@
 2. **P1-7** bespoke 가드 한 줄 수정 + **P2** 모리 정본 레퍼런스 주입 + Opus 단가 상수 정정
 3. 동물마을 매트릭스 작성(미리 매트릭스 deprecated) + **P1-5** c6_focus 필드 배선
 4. **P1-8** `LIMIT_COUNT=3` 실배치 완주 → 휴먼 QC → publish 스크립트 → **P0-4** 재고 3편 확보
-5. 씬별 클립 + 매니페스트 출력 (C-3 선행) → InteractiveVideoPlayer 구현
+5. ~~InteractiveVideoPlayer 최소 구현~~ ✅ 2026-07-02 Codex → 다음은 씬별 클립 + 매니페스트 출력으로 fallback timestamp 제거
 6. KlingProvider 추가 → Seedance A/B → 하이브리드 컷 전략(C-1) 적용
 7. bespoke 전달 표면(C-4) → 20가구 콘시어지 개시
 

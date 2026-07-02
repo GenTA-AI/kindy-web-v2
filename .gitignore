@@ -43,8 +43,6 @@ next-env.d.ts
 .gstack/
 tmp/
 
-# generated village TTS audio (run scripts/gen-village-tts.ts to regenerate)
-/public/audio/village/
 
 # tool/agent meta (per-developer config)
 .claude/
