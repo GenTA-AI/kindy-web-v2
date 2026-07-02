@@ -8,7 +8,7 @@ const DEMOS = [
     body: '영상 하나, 단서 질문 하나, 놀이 기록 하나를 빠르게 확인해요.',
   },
   {
-    href: '/demo/ai-diagnosis',
+    href: '/demo/mori',
     label: '모리 영상',
     title: '영상 보고 기록 미리보기',
     body: '모리 이야기 영상을 보고 아이가 고른 단서와 다음에 해볼 놀이를 확인해요.',

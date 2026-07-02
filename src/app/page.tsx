@@ -8,7 +8,7 @@ import MoriCharacter from '@/components/MoriCharacter';
 
 const START_HREF = '/auth/login?next=/onboarding';
 const SAMPLE_REPORT_HREF = '/sample/report';
-const DEMO_HREF = '/demo/ai-diagnosis';
+const DEMO_HREF = '/demo/mori';
 const PRICE_LINE = '무료 영상 3편 체험 후, 계속 이어가려면 멤버십 월 25,000원 · 언제든 해지';
 
 function StartCtaBlock({ className = '' }: { className?: string }) {
