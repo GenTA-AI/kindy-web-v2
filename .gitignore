@@ -60,3 +60,6 @@ build/
 .ai/state/
 .ai/locks/
 .ai/control/
+.dev-team/wt/
+.dev-team/missions/*/runs/
+.dev-team/missions/*/state/
