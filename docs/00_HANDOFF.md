@@ -18,6 +18,12 @@
 > dry-run `DRY_RUN=1 ANIMATION_MODE=limited LIMIT_COUNT=3 ...` 통과(꾸미·방울·나옹, 총 예상 `$3.31`).
 > 갱신 실패 메일은 active 첫 실패 1통 + past_due 5일차 리마인더 1통으로 완화. 검증: `tsc`, `lint`,
 > `build`, `git diff --check` 그린.
+> Claude 4차(2026-07-02, codex-worker): **C6 v1.0 창의 성장지도 파이프라인 완성** — 정본은 `.ai/memory/c6-spec-v1.md`
+> (Mori_C6 명세서 PDF 증류). 8패키지 전부 승인·커밋(`6c67a45`~`7fa42b0`): 6축 정본+migration 0023 ·
+> 증거엔진(updateAxis v0.1) · 진단 에이전트(/api/game/events 확장+child_growth_profiles+/api/agents/growth) ·
+> 추천 v0.1(/play 선별 교체) · 온보딩 '숲 입장 여행' 9단계(/play/first-journey) · SNS 데모 /demo/mori(익명 관찰→
+> 첫 씨앗 카드) · 보호자 성장지도 리포트 7섹션 · 3기준 최종 정비. **사람 게이트: ① 0023 db push(배포 전 필수)
+> ② story_seeds 첫 시드 작성·HITL 승인 ③ iPad 실기기 QA(첫 여행·데모) ④ SNS 광고 URL(/demo/mori, redirect 있음).**
 > ⚠️ 결제용 NEXT_PUBLIC_*(TOSS·BIZ 6종)는 **빌드 타임** 주입이다 — cloudbuild substitution에 실값을 넘겨야 결제가 열린다(런타임 env로는 불가).
 > Repo: `/Users/jongwonlee/dev/kindy-web`
 > Current branch at handoff check: `codex/ai-diagnosis-demo`
