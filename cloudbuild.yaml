@@ -3,27 +3,47 @@
 # 사용:
 #   gcloud builds submit \
 #     --config=cloudbuild.yaml \
-#     --substitutions=_SUPABASE_URL=https://xxx.supabase.co,_SUPABASE_ANON_KEY=eyJ...,_TAG=latest
+#     --substitutions=_SUPABASE_URL=https://xxx.supabase.co,_SUPABASE_ANON_KEY=eyJ...,_TOSS_CLIENT_KEY=live_ck_...,_SITE_URL=https://kindy.kr,_BIZ_REPRESENTATIVE_NAME=홍길동,_BIZ_REGISTRATION_NUMBER=000-00-00000,_BIZ_MAIL_ORDER_NUMBER=제0000-서울강남-0000호,_BIZ_ADDRESS='서울 ...',_BIZ_PHONE=02-0000-0000,_BIZ_EMAIL=support@kindy.kr,_TAG=latest
 #
 # 결과: gcr.io/$PROJECT_ID/kindy:$_TAG 이미지가 Google Container Registry 에 push 됨.
 #
-# 주의: _SUPABASE_ANON_KEY 는 public key 이므로 클라이언트 번들에 박혀도 안전.
-#       service_role / API 키 류는 여기 build-arg 로 절대 넘기지 말 것 (run time Secret Manager).
+# 주의 1: 여기 나열된 값은 전부 클라이언트 번들에 박히는 공개값(NEXT_PUBLIC_*)이다.
+#         service_role / secret 키 류는 build-arg 로 절대 넘기지 말 것 (runtime Secret Manager).
+# 주의 2: NEXT_PUBLIC_* 는 빌드 타임 인라인 — 런타임 env 로는 결제 CTA 가 안 열린다 (docs/07 P0-2).
+#         결제를 켜려면 _TOSS_CLIENT_KEY 와 _BIZ_* 6종을 빌드 시점에 반드시 채워야 한다.
 
 substitutions:
   _TAG: latest
   _SUPABASE_URL: ""
   _SUPABASE_ANON_KEY: ""
+  _TOSS_CLIENT_KEY: ""
+  _SITE_URL: ""
+  _BIZ_REPRESENTATIVE_NAME: ""
+  _BIZ_REGISTRATION_NUMBER: ""
+  _BIZ_MAIL_ORDER_NUMBER: ""
+  _BIZ_ADDRESS: ""
+  _BIZ_PHONE: ""
+  _BIZ_EMAIL: ""
+  _KINDY_START_BASE: ""
   # Inngest signing/event keys are runtime Secret Manager values, not build args.
 
 steps:
-  # 빌드 (Supabase URL/ANON_KEY 를 client bundle 에 박음)
+  # 빌드 (NEXT_PUBLIC_* 공개값을 client bundle 에 박음)
   - name: gcr.io/cloud-builders/docker
     args:
       - build
       - --tag=gcr.io/$PROJECT_ID/kindy:$_TAG
       - --build-arg=NEXT_PUBLIC_SUPABASE_URL=$_SUPABASE_URL
       - --build-arg=NEXT_PUBLIC_SUPABASE_ANON_KEY=$_SUPABASE_ANON_KEY
+      - --build-arg=NEXT_PUBLIC_TOSS_CLIENT_KEY=$_TOSS_CLIENT_KEY
+      - --build-arg=NEXT_PUBLIC_SITE_URL=$_SITE_URL
+      - --build-arg=NEXT_PUBLIC_BIZ_REPRESENTATIVE_NAME=$_BIZ_REPRESENTATIVE_NAME
+      - --build-arg=NEXT_PUBLIC_BIZ_REGISTRATION_NUMBER=$_BIZ_REGISTRATION_NUMBER
+      - --build-arg=NEXT_PUBLIC_BIZ_MAIL_ORDER_NUMBER=$_BIZ_MAIL_ORDER_NUMBER
+      - --build-arg=NEXT_PUBLIC_BIZ_ADDRESS=$_BIZ_ADDRESS
+      - --build-arg=NEXT_PUBLIC_BIZ_PHONE=$_BIZ_PHONE
+      - --build-arg=NEXT_PUBLIC_BIZ_EMAIL=$_BIZ_EMAIL
+      - --build-arg=NEXT_PUBLIC_KINDY_START_BASE=$_KINDY_START_BASE
       - .
 
 images:
