@@ -24,6 +24,15 @@
 > 추천 v0.1(/play 선별 교체) · 온보딩 '숲 입장 여행' 9단계(/play/first-journey) · SNS 데모 /demo/mori(익명 관찰→
 > 첫 씨앗 카드) · 보호자 성장지도 리포트 7섹션 · 3기준 최종 정비. **사람 게이트: ① 0023 db push(배포 전 필수)
 > ② story_seeds 첫 시드 작성·HITL 승인 ③ iPad 실기기 QA(첫 여행·데모) ④ SNS 광고 URL(/demo/mori, redirect 있음).**
+> Claude 5차(2026-07-02, codex-worker): **모리 애니메이터 스튜디오 완성**(`1685415`~`48ff387`) — ocean-edu-imagen
+> 검증 노하우 이식(정수: `.ai/memory/studio-reference.md`). 음성 어색함 해소: 캐릭터별 고정 보이스 캐스팅 +
+> "절대 어른 목소리 아님" 지시문 + 씬별 감정 오버라이드(파이프라인이 구형 무캐스팅 TTS를 쓰던 게 원인).
+> 대사씬 립싱크는 VEED Fabric(이미지+우리 TTS, ~$0.05/씬) 기본 승격(EPISODE_LIPSYNC=veed|sync|off).
+> 편집: 내레이션 0.5s 딜레이·전 씬 페이드·1920x1080. 감독: 바이블 프롬프트 규칙+승인 프레임 축적
+> (src/content/studio/approved-frames/). QC 비전 검수 리포트. **원커맨드 러너: `scripts/animate-episode.ts`**
+> (DRY_RUN 키리스 그린). **사람 게이트: FAL_KEY·GOOGLE_API_KEY·ANTHROPIC_API_KEY 채운 뒤
+> `ONLY_INDEX=0 npx tsx --env-file=.env.local scripts/animate-episode.ts` 1편(~$1.3) 생성 → 음성·영상·qc-report
+> 검수 → 잘 나온 프레임 approved-frames/ 커밋 → INSERT_DB=1 등록 → gen-village-tts로 /play 음성(P1-9)도 함께.**
 > ⚠️ 결제용 NEXT_PUBLIC_*(TOSS·BIZ 6종)는 **빌드 타임** 주입이다 — cloudbuild substitution에 실값을 넘겨야 결제가 열린다(런타임 env로는 불가).
 > Repo: `/Users/jongwonlee/dev/kindy-web`
 > Current branch at handoff check: `codex/ai-diagnosis-demo`
