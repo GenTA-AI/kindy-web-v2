@@ -1,4 +1,6 @@
 // npx tsx --env-file=.env.local scripts/generate-library-episode-90s.ts
+// 신규 배치는 scripts/animate-episode.ts 를 사용한다.
+// 이 스크립트는 기존 리포트/멱등 소비자 호환용 레거시 진입점이다.
 // 옵션:
 //   LIMIT_COUNT=3            // 첫 3편만 처리
 //   ONLY_INDEX=N             // 특정 인덱스만

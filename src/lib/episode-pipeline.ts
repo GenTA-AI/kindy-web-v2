@@ -33,7 +33,9 @@ import {
   EPISODE_VOICE_EMOTIONS,
   resolveVoiceCasting,
   resolveVoiceStyle,
+  wrapWithPromptRules,
 } from '../content/studio/animal-village-bible';
+import { listApprovedFrames } from './studio/approved-frames';
 import {
   getCharacterAppearance,
   type EpisodeVoiceEmotion,
@@ -498,7 +500,7 @@ async function stepCharacterRef(
 
   const nano = new NanoBananaProvider(googleKey);
   const main = mainCharacter(script);
-  const prompt = `Create a character reference model sheet on a clean pure white background for children's animation production.
+  const promptCore = `Create a character reference model sheet on a clean pure white background for children's animation production.
 
 CHARACTER: ${main.displayName}${main.archetype ? ` (${main.archetype})` : ''}
 ${getCharacterAppearance(main)}
@@ -512,13 +514,15 @@ STYLE: ${styleDirective(script)}
 Upper and lower lips MUST be clearly drawn in every view. Mouth >= 5% of face area. This sheet is the definitive design bible for all 90s scenes.
 
 If reference images are attached, treat them as the canonical character design. Preserve the character identity, head shape, ear/horn silhouette, scarf, body proportions, and color palette. Remove any stray text, letters, logos, or floating marks that are not part of the canonical character.`;
+  const prompt = wrapWithPromptRules(promptCore);
+  const referencePaths = referenceImagePaths.slice(0, 4);
 
-  const missingReferencePaths = referenceImagePaths.filter((path) => !existsSync(path));
+  const missingReferencePaths = referencePaths.filter((path) => !existsSync(path));
   if (missingReferencePaths.length > 0) {
     throw new Error(`Character reference image missing: ${missingReferencePaths.join(', ')}`);
   }
 
-  const result = await nano.generateImageFromFiles(prompt, referenceImagePaths, '16:9');
+  const result = await nano.generateImageFromFiles(prompt, referencePaths, '16:9');
   const path = join(refsDir, 'character_ref.png');
   writeFileSync(path, result.bytes);
   return { path, costUsd: result.costUsd };
@@ -529,14 +533,15 @@ async function stepKeyframe(
   scene: EpisodeScene,
   refPath: string,
   keyframesDir: string,
-  sceneIndex: number
+  sceneIndex: number,
+  previousKeyframePath: string | null
 ): Promise<{ path: string; costUsd: number }> {
   const googleKey = process.env.GOOGLE_API_KEY;
   if (!googleKey) throw new Error('GOOGLE_API_KEY missing');
 
   const nano = new NanoBananaProvider(googleKey);
   const main = mainCharacter(script);
-  const prompt = `Create a single 16:9 keyframe for scene ${sceneIndex + 1} of a 90-second Korean children's educational animation.
+  const promptCore = `Create a single 16:9 keyframe for scene ${sceneIndex + 1} of a 90-second Korean children's educational animation.
 
 TOP-LEVEL:
 ${script.topLevelPrompt}
@@ -551,13 +556,20 @@ Location: ${scene.location ?? 'same established world'}
 ${scene.effects ? `Effects: ${scene.effects}` : ''}
 
 The attached reference is the EXACT character design bible. Match ${main.displayName} IDENTICALLY.
+The attached references are the canonical character sheet and previously APPROVED production frames. Match them EXACTLY.
 
 STYLE:
 ${styleDirective(script)}
 
 No text, no UI, no subtitles, no watermarks.`;
+  const prompt = wrapWithPromptRules(promptCore);
+  const referencePaths = [
+    refPath,
+    ...listApprovedFrames(2),
+    ...(previousKeyframePath ? [previousKeyframePath] : []),
+  ].slice(0, 4);
 
-  const result = await nano.generateImageFromFiles(prompt, [refPath], '16:9');
+  const result = await nano.generateImageFromFiles(prompt, referencePaths, '16:9');
   const filename = `s${String(sceneIndex + 1).padStart(2, '0')}_keyframe.png`;
   const path = join(keyframesDir, filename);
   writeFileSync(path, result.bytes);
@@ -1044,7 +1056,8 @@ export async function runEpisodePipeline(input: EpisodeInput): Promise<EpisodeOu
 
   const keyframes: string[] = [];
   for (let i = 0; i < script.scenes.length; i += 1) {
-    const keyframe = await stepKeyframe(script, script.scenes[i], ref.path, keyframesDir, i);
+    const previousKeyframePath = keyframes.length > 0 ? keyframes[keyframes.length - 1] : null;
+    const keyframe = await stepKeyframe(script, script.scenes[i], ref.path, keyframesDir, i, previousKeyframePath);
     keyframes.push(keyframe.path);
     cost.keyframes += keyframe.costUsd;
   }
