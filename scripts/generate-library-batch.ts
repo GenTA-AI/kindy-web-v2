@@ -580,6 +580,10 @@ async function processBrief(index: number, spec: LibraryBriefSpec): Promise<Brie
         video_url: videoSignedUrl,
         thumbnail_url: thumbnailSignedUrl,
         subtitles_url: subtitlesSignedUrl,
+        // P0-3: 서빙 시 요청당 재서명용 storage 경로. 없으면 30일 뒤 재생 불가.
+        video_path: videoStoragePath,
+        thumbnail_path: thumbnailStoragePath,
+        subtitles_path: SKIP_WHISPER ? null : `${storagePrefix}/subtitles.vtt`,
         character_name: mainCharacter(script).displayName ?? '미리',
         script,
         published: false,

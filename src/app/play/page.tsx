@@ -9,6 +9,7 @@ import { buildAnimalVillagePlan } from '@/lib/game/village-session';
 import { getSupabase, isSupabaseServiceConfigured } from '@/lib/supabase';
 import { FREE_TRIAL_SESSION_LIMIT, getMembershipGateState } from '@/lib/subscription';
 import { localPreviewLibraryVideoForAge } from '@/lib/library-preview';
+import { withFreshLibraryMediaUrls } from '@/lib/library-media';
 import { VILLAGE_FIRST_VIDEO_FALLBACK } from '@/lib/art-assets';
 import { buildLearningProfile } from '@/lib/game/learning-profile';
 import { orderLibraryByWeakTool } from '@/lib/game/library-selection';
@@ -179,7 +180,8 @@ async function loadLibraryVideos(input: {
         limit: input.limit,
       });
 
-  return dedupeVideos([...leading, ...topicAge, ...topicOnly, ...fallback], input.limit);
+  // P0-3: *_path 있는 행은 요청당 재서명 — insert 시점 서명 URL(30일) 만료를 무력화.
+  return withFreshLibraryMediaUrls(dedupeVideos([...leading, ...topicAge, ...topicOnly, ...fallback], input.limit));
 }
 
 function EmptyChildrenState() {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { getSupabase, isSupabaseServiceConfigured } from '@/lib/supabase';
 import { LOCAL_PREVIEW_LIBRARY_VIDEO, localPreviewLibraryVideoForAge } from '@/lib/library-preview';
+import { withFreshLibraryMediaUrls } from '@/lib/library-media';
 import { LOCAL_PREVIEW_CHILD_COOKIE, parseLocalPreviewChildCookie } from '@/lib/local-preview-child';
 import { FREE_TRIAL_SESSION_LIMIT, getMembershipGateState } from '@/lib/subscription';
 import type { LibraryVideo } from '@/types/library';
@@ -79,5 +80,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return libraryNotFound();
   }
 
-  return NextResponse.json({ video: data as LibraryVideo });
+  const [video] = await withFreshLibraryMediaUrls([data as LibraryVideo]);
+  return NextResponse.json({ video });
 }

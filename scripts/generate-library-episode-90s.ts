@@ -256,6 +256,10 @@ async function processEpisode(index: number, spec: LibraryEpisodeSpec): Promise<
         video_url: videoSignedUrl,
         thumbnail_url: thumbnailSignedUrl,
         subtitles_url: subtitlesSignedUrl,
+        // P0-3: 서빙 시 요청당 재서명용 storage 경로. 없으면 30일 뒤 재생 불가.
+        video_path: output.finalVideoStoragePath,
+        thumbnail_path: output.thumbnailStoragePath,
+        subtitles_path: output.subtitlesStoragePath,
         character_name: output.script.characters[0]?.displayName ?? '미리',
         script: output.script,
         scenes: buildSceneRows(output.scenes),

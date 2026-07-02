@@ -66,6 +66,25 @@ export async function getSignedUrl(
   return data.signedUrl;
 }
 
+/**
+ * signed URL 일괄 발급 — 서빙 경로의 요청당 재서명용(docs/07 P0-3).
+ * 반환: path → signedUrl. 개별 실패 path는 map에서 빠진다(호출부가 저장 URL 폴백).
+ */
+export async function getSignedUrls(
+  paths: string[],
+  expirySec: number = DEFAULT_SIGNED_URL_EXPIRY_SEC
+): Promise<Map<string, string>> {
+  if (paths.length === 0) return new Map();
+  const client = getClient();
+  const { data, error } = await client.storage.from(BUCKET).createSignedUrls(paths, expirySec);
+  if (error || !data) throw new Error(`signedUrls failed (${paths.length} paths): ${error?.message}`);
+  const byPath = new Map<string, string>();
+  for (const item of data) {
+    if (item.path && item.signedUrl && !item.error) byPath.set(item.path, item.signedUrl);
+  }
+  return byPath;
+}
+
 /** videoId 별 폴더 경로 헬퍼 */
 export function pathFor(videoId: string, filename: string): string {
   return `${videoId}/${filename}`;

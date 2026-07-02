@@ -103,6 +103,10 @@ async function main() {
     video_url: videoUrl,
     thumbnail_url: thumbnailUrl,
     subtitles_url: subtitlesUrl,
+    // P0-3: 서빙 시 요청당 재서명용 storage 경로. 없으면 30일 뒤 재생 불가.
+    video_path: finalPath,
+    thumbnail_path: thumbPath,
+    subtitles_path: vttPath,
     character_name: script.characters[0]?.displayName ?? '미리',
     script,
     published: false,
