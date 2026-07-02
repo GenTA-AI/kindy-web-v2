@@ -12,6 +12,7 @@
 - `src/app/play/first-journey/page.tsx`
 - `src/components/game/FirstJourneyShell.tsx`
 - `src/app/dashboard/report/page.tsx`
+- `src/lib/c6/report-data.ts` (조사 교정 2건만)
 - `src/components/LibraryPlayer.tsx` (읽기 전용 — 법정 라벨 확인만, 수정 금지)
 
 ## Constraints
@@ -22,6 +23,9 @@
 - **설명 문구 다이어트**: 화면의 기능을 다시 설명하는 단락("이 화면은 ~를 보여줘요" 류), 3열 스텝 안내 중 중복분을 삭제. 삭제가 애매하면 유지(과삭제 금지) — 판단 기준: 그 문장이 없어도 5초 안에 행동이 명확한가.
 - 아이 화면 원칙 유지: 글보다 이미지·음성, 터치 ≥48px, 오답·위협·재촉 없음.
 - 시크릿/.env/db push 금지. 새 의존성 금지. `/subscribe`·결제·인증 화면은 범위 밖.
+
+### 추가 교정 (parent-report-v2 리뷰 should_fix — 반드시 처리)
+- `src/lib/c6/report-data.ts`: 조사 하드코딩 2건 교정 — buildThinkingToolLines의 "…이 자주 열렸어요"(라벨이 모음 종결이라 '가'가 맞음; 같은 파일의 withJosa 활용), subjectName의 "이는" 하드코딩(모음 종결 이름에서 '지아이는'처럼 렌더 — withJosa로 교체).
 
 ## Deliverables
 - 스코프 파일들의 고객 노출 문자열에 AI 언급 0(법정 라벨 제외)·금지어 0.

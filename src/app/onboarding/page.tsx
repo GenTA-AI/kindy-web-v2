@@ -145,7 +145,7 @@ function OnboardingContent() {
         throw new Error(child?.error ?? '아이 이름표를 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
       }
 
-      router.push(`/play?childId=${child.id}`);
+      router.push(`/play/first-journey?childId=${child.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : '아이 이름표를 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
     } finally {

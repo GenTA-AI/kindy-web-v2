@@ -1,0 +1,28 @@
+# Review: onboarding-forest-journey
+
+## decision
+request_changes
+
+## critical
+- **아이 표면에 내부 토큰 "first_journey" 문자열 노출 (heart_choice 단계).** `EmotionExpressionGame` 헤더 우측 칩은 `topicLabel(spec.topic)`을 그대로 렌더한다(`EmotionExpressionGame.tsx:157,217`). first-journey는 `spec.topic = 'first_journey'`를 넘기는데(`first-journey.ts:36,118`), `topicLabel`은 이 값에 매핑이 없어 원문을 그대로 반환한다(`src/lib/topic-label.ts:14` → `return value`). 결과적으로 5–7세 화면 감정 단계 상단에 영어 내부 코드 "first_journey"가 계속 보인다. `JourneyChromeStyles`의 감정 숨김 셀렉터(`FirstJourneyShell.tsx:859`)는 라운드 번호 `p.text-xs`만 가리고 이 `<span>` 칩은 가리지 않는다. → 칩을 숨기거나 한국어 라벨(예: '마음 호수')을 넘기도록 수정 필요.
+- **PuzzleGame 완료 화면의 "N/N개 완성했어요" 숫자 카운터가 아이 화면에 노출된다.** 크롬 숨김 CSS는 헤더(눈썹 "퍼즐 N", 진행 칩 "N/N개", `role=progressbar`)만 가린다(`FirstJourneyShell.tsx:857-877`). 그러나 라운드 해결 후 `useRoundCompletion.completeRound`가 `setCompleted(true)` 뒤 `onComplete`를 부르고(`PuzzleGame.tsx:609-627`), 셸 핸들러는 `await emitJourneyEvent`(네트워크) 후에야 `goToStage`로 언마운트한다. 그 fetch 왕복 동안 `CompletedState`의 `<p>{score}/{maxScore}개 완성했어요</p>`(`PuzzleGame.tsx:556-558`)가 어느 숨김 셀렉터에도 걸리지 않고 그대로 렌더된다. 해당하는 퍼즐 단계는 rule_switch(모양 국면), next_pattern, word_image 3곳. 스펙이 명시적으로 금지한 "퍼센트/N 카운터"가 최고 주의 표면에 반복 노출된다. → 완료 상태 `<p>`도 숨기거나(추가 셀렉터), 완료 시 즉시 다음 단계로 넘겨 완료 화면 렌더를 회피해야 한다.
+
+## should_fix
+- **game.ts `GameRoundParams` 확장 결합 — first-journey가 자기 Scope 밖 파일에 의존한다.** `first-journey.ts:104-137`의 `roundSpec()`는 `params`에 `template_id/prompt_ko/items/categories/answer_token`을 넣는데, 이 필드들은 이번 diff에서 `src/types/game.ts:41-45`에 추가된 것이다(HiddenFriendGame/PuzzleGame도 이 params를 소비: `HiddenFriendGame.tsx:41-45,79-89`, `PuzzleGame.tsx:39-44,677-720`). 즉 first-journey는 이 game.ts 변경 없이는 tsc가 깨진다. game.ts는 스펙상 "읽기 전용 재사용"으로 분류돼 out-of-scope.txt에 플래그돼 있다(병렬 recommendation 산출물과 섞여 귀속 모호). 코드가 현재 통합 트리에서 컴파일되는 것은 맞으나, first-journey를 별도 PR로 랜딩하면 이 5개 필드 확장이 반드시 동반돼야 한다. → PR 구성 시 game.ts `GameRoundParams` 확장을 first-journey와 동일 PR에 포함할 것.
+- **타사 컴포넌트 크롬을 후손 CSS 셀렉터 + 전역 `<style>`로 가리는 방식이 취약하다.** `JourneyChromeStyles`(`FirstJourneyShell.tsx:853-880`)는 `section > div:first-child > div:first-child > span` 류의 위치 기반 셀렉터로 PuzzleGame/HiddenFriendGame/EmotionExpressionGame 내부 DOM 구조에 강하게 결합한다. "기존 컴포넌트 수정 금지" 제약 하의 합리적 우회지만, 재사용 컴포넌트의 마크업이 조금만 바뀌어도 숫자/라운드 번호가 다시 새어나온다(위 critical 2건이 이미 그 증거). 회귀 방지 코멘트나 대상 컴포넌트에 `data-*` 훅 요청을 남기는 것을 권장.
+
+## nice_to_have
+- `word_image` 라운드의 `response_payload.selected_answer`가 고정 문자열 `'그림과 말 연결'`이다(`FirstJourneyShell.tsx:481`). MatchPuzzle은 onComplete로 실제 선택 항목을 노출하지 않으므로 계약상 한계지만, 기준선 신호로서 값이 정적이라는 점 인지 필요(cloud_idea의 `idea_choice`/`novelty_tag`, heart_choice의 `emotion_choice`는 실제 선택을 캡처하므로 대비됨).
+- 네트워크가 지속 실패하면 `startGameSession`이 매 라운드마다 `game_started`를 재발행할 수 있다(`FirstJourneyShell.tsx:250-280`: 실패 시 `sessionIdRef` null 유지 → 다음 라운드에서 재시도). 데모 기준선에는 무해하나 서버 측 중복 세션 로그 가능성.
+- 감정 단계의 `emotion_choice`는 `button[aria-pressed]`의 textContent를 onClickCapture로 읽는다(`FirstJourneyShell.tsx:650-655`). 현재 EmotionFace가 텍스트 없는 aria-hidden span이라 라벨만 잡히지만, 버튼 내부에 텍스트 노드가 추가되면 캡처값이 오염될 수 있는 결합.
+
+## validation_notes
+- 게이트 상태: state.sh get가 빈 값 반환 → 팀리드 제공 ground truth 사용(validation_exit=0: lint+tsc+turbopack 통과, scope_ok=0은 병렬 recommendation 산출물+문서 귀속 한계). `.ai/runs/onboarding-forest-journey/validation.log`에서 `/play/first-journey`가 빌드 라우트 목록에 포함됨 확인.
+- 실변경 3개 신규 파일 전체 정독: `src/data/onboarding/first-journey.ts`, `src/components/game/FirstJourneyShell.tsx`, `src/app/play/first-journey/page.tsx`. `onboarding/page.tsx`는 이동 경로 1줄만 변경됨을 `git diff`로 확인(`/play?...` → `/play/first-journey?...`, 148행).
+- **기존 컴포넌트 무수정 확인**: `git status`로 HiddenFriendGame/PuzzleGame/EmotionExpressionGame/InteractiveVideoPlayer/engine.ts/events-client.ts/JuiceBurst/Mascot/MoriCharacter 전부 unmodified. InteractiveVideoPlayer의 `playsInline` 유지됨(`InteractiveVideoPlayer.tsx:367`).
+- **9단계 측정 정합 확인**: `FIRST_JOURNEY_ROUND_META`(`first-journey.ts:39-96`)의 axis_id/thinking_tool이 스펙 §5 표와 일치(2 C2/observation, 3 C3/pattern_recognition, 4 C3/pattern_forming, 5 C6/empathy, 6 C4/visualization, 7 C5/analogy, 8 C1/play). response_payload 변수(found_count, rule_switch_success, emotion_choice, novelty_tag, video_completion 등) 기록 확인. 이벤트 순서 `game_started → game_round_completed×8 → game_completed` 정합; 라운드 총 8·표시 단계 9 일관(`FIRST_JOURNEY_ROUNDS_TOTAL=8`, `VISIBLE_STEPS=9`). game_completed payload에 `recommended_axis_ids`/`reason_codes` 포함.
+- **씨앗 2개 산정 확인**: `chooseSeeds`(`FirstJourneyShell.tsx:162-189`)가 단계 성과(resultSignal) 기반으로 강점 1(최고 평균)·자랄 1(비강점 중 최저) 선정, `axis.child_label`/`parent_label` 사용, 숫자·등급·비교 없음. 6축 모두 라운드에 표현됨(C1×2, C2, C3×2, C4, C5, C6). "보호자에게 보여주기" CTA → `/dashboard/report?childId=` 확인.
+- **검사 어휘 스캔**: 3개 파일에서 검사/진단/평가/점수/등급/또래/틀렸/문항/오답/정답 등 grep 0건. 아이 표시 문자열에 raw C1..C6 축 id 노출 0건. 모리 톤(질문·따뜻, 재촉/위협 없음) 유지. 진행 표시는 숲길 발자국 점(`nav aria-label="숲길 발자국"`, `FirstJourneyShell.tsx:556-569`) — 퍼센트/N 카운터 아님.
+- **8단계 미니 그래프 확인**: `FIRST_JOURNEY_VIDEO_GRAPH`(`first-journey.ts:265-300`)는 1 scene + 1 clue choice. 번들 자산 존재 확인: `public/demo-videos/mori-starlight-seed.mp4`(283KB)·`.vtt`, 참조 이미지 4종(hidden-forest/mori-hero/squirrel-friend/mori-village-hero) 모두 존재. 흐름상 onRoundResult(video round 기록) → completeOnce → onComplete(finishJourney) 순서로 video round가 seeds 계산 전에 roundResultsRef에 적재됨 확인. `endings: []` + 단일 최종 선택 → chooseEnding null → completeOnce 정상 종료.
+- **인증/소유 확인**: `first-journey/page.tsx:62-90`이 `getCurrentParentId`(auth 실패 시 `/auth/login?next=/play/first-journey` redirect), `loadChildren`(`.eq('parent_id', parentId)` 스코프), `children.find(id) ?? children[0]` 패턴을 사용 — `/play/page.tsx:300-306`과 동일. 요청 childId가 부모 소유가 아니면 조용히 children[0]으로 폴백(/play 동일 동작). `/play/page.tsx`는 이 패키지가 수정하지 않음(병렬 패키지 변경).
+- 신규 npm 의존성 없음, 시크릿/.env 없음 확인.
