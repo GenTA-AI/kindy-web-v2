@@ -18,6 +18,10 @@ import {
   type C6ToolProgress,
 } from '@/lib/game/c6-profile';
 import {
+  loadParentReportGrowthData,
+  type ParentReportGrowthData,
+} from '@/lib/c6/report-data';
+import {
   DEFAULT_LOCAL_PREVIEW_CHILD,
   LOCAL_PREVIEW_CHILD_COOKIE,
   parseLocalPreviewChildCookie,
@@ -70,6 +74,15 @@ const VALID_GAME_TYPES = new Set<GameType>([
   'hidden_friend',
   'decorate',
 ]);
+
+type SeedStage = ParentReportGrowthData['seeds'][number]['stage'];
+
+const SEED_STAGE_BADGE_CLASS: Record<SeedStage, string> = {
+  first_look: 'bg-cream text-ink2 ring-line',
+  sprouting: 'bg-mist text-saged ring-line',
+  growing: 'bg-sagebg text-saged ring-sage/20',
+  shining: 'bg-clay/10 text-clay ring-clay/20',
+};
 
 function previewRound(
   gameType: GameType,
@@ -327,6 +340,109 @@ function C6ToolCard({ tool, maxCount }: { tool: C6ToolProgress; maxCount: number
   );
 }
 
+function SeedStateCard({ seed }: { seed: ParentReportGrowthData['seeds'][number] }) {
+  return (
+    <article className="rounded-2xl bg-mist p-4 ring-1 ring-line">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-black text-sage">{seed.worldRegion}</p>
+          <h3 className="mt-1 text-lg font-black text-ink">{seed.childLabel}</h3>
+          <p className="mt-1 text-xs font-black text-ink3">{seed.parentLabel}</p>
+        </div>
+        <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ring-1 ${SEED_STAGE_BADGE_CLASS[seed.stage]}`}>
+          {seed.stageLabel}
+        </span>
+      </div>
+      <p className="mt-3 text-sm font-semibold leading-relaxed text-ink2">{seed.parentLine}</p>
+    </article>
+  );
+}
+
+function GrowthMapSections({ report }: { report: ParentReportGrowthData }) {
+  return (
+    <>
+      <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[.16em] text-sage">성장지도</p>
+            <h2 className="mt-2 text-2xl font-black">여섯 씨앗 상태</h2>
+            <p className="mt-3 max-w-3xl text-sm font-semibold leading-relaxed text-ink2">
+              놀이에서 보인 작은 단서를 씨앗 상태로만 정리합니다. 더 살펴볼 부분은 천천히 선명해집니다.
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {report.seeds.map((seed) => (
+            <SeedStateCard key={seed.childLabel} seed={seed} />
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[.16em] text-sage">잘 들어간 학습 문</p>
+          <h2 className="mt-2 text-2xl font-black">관찰 강점으로 이어가요</h2>
+          <p className="mt-4 text-sm font-semibold leading-relaxed text-ink2">{report.strengthLine}</p>
+        </section>
+
+        <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[.16em] text-clay">더 자랄 씨앗</p>
+          <h2 className="mt-2 text-2xl font-black">다음에 함께 열어볼 문</h2>
+          <p className="mt-4 text-sm font-semibold leading-relaxed text-ink2">{report.growthLine}</p>
+        </section>
+      </section>
+
+      <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[.16em] text-sage">생각도구 기록</p>
+        <h2 className="mt-2 text-2xl font-black">놀이 속 생각 흐름</h2>
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {report.thinkingToolLines.map((line) => (
+            <p key={line} className="rounded-2xl bg-mist p-4 text-sm font-semibold leading-relaxed text-ink2">
+              {line}
+            </p>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function GrowthRecommendationPanel({
+  recommendation,
+  recommendationHref,
+  recommendationLabel,
+}: {
+  recommendation: NonNullable<ParentReportGrowthData['recommendation']>;
+  recommendationHref: string;
+  recommendationLabel: string;
+}) {
+  return (
+    <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[.16em] text-clay">다음 추천</p>
+      <h2 className="mt-2 text-2xl font-black">오늘 이어갈 이야기 문</h2>
+      {recommendation.storyTitles.length > 0 && (
+        <div className="mt-5 grid gap-3">
+          {recommendation.storyTitles.map((title) => (
+            <p key={title} className="rounded-2xl bg-cream p-4 text-sm font-black text-ink ring-1 ring-line">
+              {title}
+            </p>
+          ))}
+        </div>
+      )}
+      <div className="mt-5 rounded-2xl bg-sagebg p-4">
+        <p className="text-xs font-black text-sage">추천 이유</p>
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-ink2">{recommendation.reason}</p>
+      </div>
+      <Link
+        href={recommendationHref}
+        className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-saged px-5 text-sm font-black text-white transition hover:bg-ink"
+      >
+        {recommendationLabel}
+      </Link>
+    </section>
+  );
+}
+
 function EmptyReport({ childName }: { childName: string }) {
   return (
     <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
@@ -414,6 +530,20 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
   }
 
   const childName = displayName(report.child);
+  let growthReport: ParentReportGrowthData | null = null;
+
+  if (!sampleMode && report.child && isSupabaseServiceConfigured()) {
+    try {
+      growthReport = await loadParentReportGrowthData({
+        childId: report.child.id,
+        childName,
+        age: report.child.age,
+      });
+    } catch {
+      growthReport = null;
+    }
+  }
+
   const counts = aggregateSelActivities(report.rounds);
   const c6Profile = aggregateC6Profile(report.rounds);
   const c6Next = c6NextStep(c6Profile);
@@ -522,25 +652,33 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
             </div>
           </section>
 
-          <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-[.16em] text-clay">이번 주 추천</p>
-            <h2 className="mt-2 text-2xl font-black">영상과 단서 놀이 3일 흐름</h2>
-            <div className="mt-5 grid gap-3">
-              {homeAssignments.map(([day, title, body]) => (
-                <div key={day} className="rounded-2xl bg-cream p-4 ring-1 ring-line">
-                  <p className="text-xs font-black text-sage">{day}</p>
-                  <p className="mt-1 font-black text-ink">{title}</p>
-                  <p className="mt-1 text-sm font-semibold leading-relaxed text-ink2">{body}</p>
-                </div>
-              ))}
-            </div>
-            <Link
-              href={recommendationHref}
-              className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-saged px-5 text-sm font-black text-white transition hover:bg-ink"
-            >
-              {recommendationLabel}
-            </Link>
-          </section>
+          {growthReport?.recommendation ? (
+            <GrowthRecommendationPanel
+              recommendation={growthReport.recommendation}
+              recommendationHref={recommendationHref}
+              recommendationLabel={recommendationLabel}
+            />
+          ) : (
+            <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-[.16em] text-clay">이번 주 추천</p>
+              <h2 className="mt-2 text-2xl font-black">영상과 단서 놀이 3일 흐름</h2>
+              <div className="mt-5 grid gap-3">
+                {homeAssignments.map(([day, title, body]) => (
+                  <div key={day} className="rounded-2xl bg-cream p-4 ring-1 ring-line">
+                    <p className="text-xs font-black text-sage">{day}</p>
+                    <p className="mt-1 font-black text-ink">{title}</p>
+                    <p className="mt-1 text-sm font-semibold leading-relaxed text-ink2">{body}</p>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href={recommendationHref}
+                className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-saged px-5 text-sm font-black text-white transition hover:bg-ink"
+              >
+                {recommendationLabel}
+              </Link>
+            </section>
+          )}
         </section>
 
         <section className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -549,6 +687,8 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
           <Metric label="다시 본 순간" value={`${retriedCount}번`} />
           <Metric label="대화 힌트" value={`${starters.length}개`} />
         </section>
+
+        {growthReport && <GrowthMapSections report={growthReport} />}
 
         <HomeUseGuide
           childName={childName}
@@ -567,7 +707,9 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
           <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[.94fr_1.06fr]">
             <div className="space-y-5">
               <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-[.16em] text-sage">성장 하이라이트</p>
+                <p className="text-xs font-black uppercase tracking-[.16em] text-sage">
+                  {growthReport ? '이번 주 이야기' : '성장 하이라이트'}
+                </p>
                 <h2 className="mt-2 text-2xl font-black leading-snug">{highlight}</h2>
                 <p className="mt-3 text-sm font-semibold leading-relaxed text-ink2">
                   관찰 가능한 활동 횟수만 사용합니다. 아이의 성향이나 능력을 단정하지 않아요.
@@ -606,7 +748,9 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
               <p className="text-xs font-black uppercase tracking-[.16em] text-sage">놀이 관찰 지도</p>
               <h2 className="mt-2 text-2xl font-black">해본 놀이와 다음 추천</h2>
               <p className="mt-3 max-w-3xl text-sm font-semibold leading-relaxed text-ink2">
-                아이가 실제로 끝낸 놀이를 여섯 가지 활동 방식으로 정리합니다. 한 놀이가 두 방식에 함께 남을 수 있고, 빈칸은 부족 판정이 아니라 다음에 해볼 놀이 후보예요.
+                {growthReport
+                  ? '아이가 실제로 끝낸 놀이를 여섯 가지 활동 방식으로도 함께 남겨요. 한 놀이가 두 방식에 함께 남을 수 있고, 빈칸은 다음에 해볼 놀이 후보예요.'
+                  : '아이가 실제로 끝낸 놀이를 여섯 가지 활동 방식으로 정리합니다. 한 놀이가 두 방식에 함께 남을 수 있고, 빈칸은 부족 판정이 아니라 다음에 해볼 놀이 후보예요.'}
               </p>
             </div>
             <div className="rounded-2xl bg-sagebg p-4 lg:w-72">
@@ -624,8 +768,12 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
 
         <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1.05fr_.95fr]">
           <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-[.16em] text-sage">오늘 이렇게 물어보세요</p>
-            <h2 className="mt-2 text-2xl font-black">영상 확인 없이 1분 대화</h2>
+            <p className="text-xs font-black uppercase tracking-[.16em] text-sage">
+              {growthReport ? '부모 대화 힌트' : '오늘 이렇게 물어보세요'}
+            </p>
+            <h2 className="mt-2 text-2xl font-black">
+              {growthReport ? '영상 확인 없이 짧은 대화' : '영상 확인 없이 1분 대화'}
+            </h2>
             <ol className="mt-5 space-y-3">
               {starters.map((starter, index) => (
                 <li key={starter} className="flex gap-3 rounded-2xl bg-mist p-4">
