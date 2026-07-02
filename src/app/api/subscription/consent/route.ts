@@ -10,7 +10,8 @@ import { getCurrentParentId, isAuthError } from '@/lib/auth';
  * (parent_consents 재사용 — consent_scope='recurring_billing'.)
  */
 const TERMS_VERSION = '2026-06-30';
-const PRIVACY_VERSION = '2026-06-30';
+// 2026-07-02: §5 국외이전 표 추가(PIPA §28-8) — privacy.md 개정과 함께 bump.
+const PRIVACY_VERSION = '2026-07-02';
 
 export async function POST(request: NextRequest) {
   let parentId: string;

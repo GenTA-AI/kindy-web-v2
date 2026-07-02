@@ -10,7 +10,8 @@ import {
 } from '@/lib/local-preview-child';
 
 const TERMS_VERSION = '2026-06-30';
-const PRIVACY_VERSION = '2026-06-30';
+// 2026-07-02: §5 국외이전 표 추가(PIPA §28-8) — privacy.md 개정과 함께 bump.
+const PRIVACY_VERSION = '2026-07-02';
 const CHILD_CONSENT_VERSION = '2026-06-30';
 
 function unauthorized() {
