@@ -28,6 +28,7 @@ const DRY_RUN = process.env.DRY_RUN === '1';
 const SKIP_LIPSYNC = process.env.SKIP_LIPSYNC === '1';
 const SEEDANCE_TIER = (process.env.SEEDANCE_TIER ?? 'standard') as SeedanceTier;
 const ANIMATION_MODE = resolveAnimationMode(process.env.EPISODE_ANIMATION_MODE ?? process.env.ANIMATION_MODE);
+const EPISODE_LIPSYNC = resolveEpisodeLipsyncMode(SKIP_LIPSYNC, process.env.EPISODE_LIPSYNC);
 
 type EpisodeStatus = 'success' | 'failed' | 'skipped' | 'dry_run';
 
@@ -37,6 +38,7 @@ interface CostBreakdown {
   keyframes: number;
   videoSilent: number;
   tts: number;
+  veed: number;
   lipsync: number;
   concat: number;
   upload: number;
@@ -98,6 +100,13 @@ function resolveAnimationMode(raw: string | undefined): EpisodeAnimationMode {
   throw new Error(`ANIMATION_MODE must be "premium" or "limited" (got ${raw})`);
 }
 
+function resolveEpisodeLipsyncMode(skipLipsync: boolean, raw: string | undefined): 'veed' | 'sync' | 'off' {
+  if (skipLipsync) return 'off';
+  if (!raw) return 'veed';
+  if (raw === 'veed' || raw === 'sync' || raw === 'off') return raw;
+  throw new Error(`EPISODE_LIPSYNC must be "veed", "sync", or "off" (got ${raw})`);
+}
+
 function styleReferenceFrom(styleTags: string[]): string {
   const labels: Record<string, string> = {
     princess: 'soft fairy-tale princess world, small tiara, gentle sparkles, storybook castle garden warmth',
@@ -138,24 +147,28 @@ function estimatedDryRunCost(): CostBreakdown {
     const keyframes = 6 * 0.039;
     const videoSilent = 0;
     const tts = 0.03;
+    // DRY_RUN reference estimate from 2026 studio ledger: VEED ≈ $0.05/dialogue scene.
+    const veed = EPISODE_LIPSYNC === 'veed' ? 3 * 0.05 : 0;
     const lipsync = 0;
     const concat = 0;
     const upload = 0;
-    const total = director + refs + keyframes + videoSilent + tts + lipsync + concat + upload;
-    return { director, refs, keyframes, videoSilent, tts, lipsync, concat, upload, total };
+    const total = director + refs + keyframes + videoSilent + tts + veed + lipsync + concat + upload;
+    return { director, refs, keyframes, videoSilent, tts, veed, lipsync, concat, upload, total };
   }
 
   const seedanceRate = SEEDANCE_TIER === 'fast' ? 0.2419 : 0.3024;
   const director = 0.8;
   const refs = 0.039;
   const keyframes = 6 * 0.039;
-  const videoSilent = EPISODE_UNIT_SEC * seedanceRate;
+  const videoSilent = (EPISODE_LIPSYNC === 'veed' ? 60 : EPISODE_UNIT_SEC) * seedanceRate;
   const tts = 0.03;
-  const lipsync = SKIP_LIPSYNC ? 0 : 30 * 0.05;
+  // DRY_RUN reference estimate from 2026 studio ledger: VEED ≈ $0.05/dialogue scene.
+  const veed = EPISODE_LIPSYNC === 'veed' ? 3 * 0.05 : 0;
+  const lipsync = EPISODE_LIPSYNC === 'sync' ? 30 * 0.05 : 0;
   const concat = 0;
   const upload = 0;
-  const total = director + refs + keyframes + videoSilent + tts + lipsync + concat + upload;
-  return { director, refs, keyframes, videoSilent, tts, lipsync, concat, upload, total };
+  const total = director + refs + keyframes + videoSilent + tts + veed + lipsync + concat + upload;
+  return { director, refs, keyframes, videoSilent, tts, veed, lipsync, concat, upload, total };
 }
 
 function buildSceneRows(scenes: EpisodeScene[]): Array<Record<string, unknown>> {

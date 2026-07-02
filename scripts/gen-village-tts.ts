@@ -16,6 +16,8 @@ import { join } from 'node:path';
 
 import { collectVoiceLines } from '@/data/worlds/animal-village';
 import { GeminiTtsProvider } from '@/lib/video-providers/gemini-tts';
+import { resolveVoiceCasting, resolveVoiceStyle } from '@/content/studio/animal-village-bible';
+import type { EpisodeVoiceEmotion } from '@/lib/video-providers/director.types';
 
 const OUT_DIR = join(process.cwd(), 'public', 'audio', 'village');
 const MANIFEST_PATH = join(process.cwd(), 'src', 'data', 'worlds', 'animal-village-voice.json');
@@ -45,7 +47,7 @@ function convertToMp3(wavPath: string, mp3Path: string): boolean {
 async function main() {
   const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error('GOOGLE_API_KEY (또는 GEMINI_API_KEY) 가 .env.local 에 필요합니다.');
+    throw new Error('GOOGLE_API_KEY 또는 GEMINI_API_KEY가 .env.local에 필요합니다.');
   }
 
   const force = process.env.FORCE === '1';
@@ -79,7 +81,10 @@ async function main() {
     }
 
     try {
-      const { wavBytes, durationSec } = await provider.generateTtsToBuffer(line.text, line.voice);
+      const emotion = voiceEmotionForLineId(line.id);
+      const casting = resolveVoiceCasting(line.characterId);
+      const style = resolveVoiceStyle(line.characterId, emotion);
+      const { wavBytes, durationSec } = await provider.generateTtsToBuffer(line.text, casting.voice, style);
       writeFileSync(wavPath, wavBytes);
 
       let outFile = finalRel;
@@ -95,7 +100,7 @@ async function main() {
 
       manifest[line.id] = { file: outFile, durationSec: Number(durationSec.toFixed(2)) };
       generated += 1;
-      console.log(`  ✓ ${line.id} [${line.voice}] ${durationSec.toFixed(1)}s — ${line.text.slice(0, 24)}…`);
+      console.log(`  ✓ ${line.id} [${casting.voice}/${emotion}] ${durationSec.toFixed(1)}s — ${line.text.slice(0, 24)}…`);
     } catch (err) {
       failed += 1;
       console.error(`  ✗ ${line.id} 실패:`, err instanceof Error ? err.message : err);
@@ -110,6 +115,13 @@ async function main() {
     `[gen-village-tts] 완료 · 생성 ${generated} · 스킵 ${skipped} · 실패 ${failed} · 매니페스트 라인 ${Object.keys(manifest).length}`,
   );
   if (failed > 0) process.exitCode = 1;
+}
+
+function voiceEmotionForLineId(id: string): EpisodeVoiceEmotion {
+  if (id.startsWith('act.') && id.endsWith('.praise')) return 'excited';
+  if (id.startsWith('act.') && id.endsWith('.intro')) return 'bright';
+  if (id.startsWith('sess.')) return 'storytelling';
+  return 'bright';
 }
 
 main().catch((err) => {

@@ -26,10 +26,13 @@ import {
 import { NanoBananaProvider } from './video-providers/nano-banana';
 import { Seedance2Provider, type SeedanceTier } from './video-providers/seedance2';
 import { syncLipSync } from './video-providers/fal-lipsync';
+import { VeedFabricProvider } from './video-providers/veed-fabric';
 import { uploadBytes } from './supabase-storage';
 import {
   ANIMAL_VILLAGE_BIBLE,
   EPISODE_VOICE_EMOTIONS,
+  resolveVoiceCasting,
+  resolveVoiceStyle,
 } from '../content/studio/animal-village-bible';
 import {
   getCharacterAppearance,
@@ -66,6 +69,7 @@ export interface EpisodeOutput {
     keyframes: number;
     videoSilent: number;
     tts: number;
+    veed: number;
     lipsync: number;
     concat: number;
     upload: number;
@@ -82,9 +86,12 @@ type EpisodeDirectorResult = {
 
 type SceneAudio = {
   path: string;
+  rawTtsPath: string;
   costUsd: number;
   ttsDurationSec: number;
 };
+
+type EpisodeLipsyncMode = 'veed' | 'sync' | 'off';
 
 const OPUS_PRICING = {
   input: 5.0,
@@ -102,6 +109,12 @@ const SONNET_PRICING = {
 
 const ANIMAL_VILLAGE_CAST_IDS = new Set(ANIMAL_VILLAGE_BIBLE.cast.map((member) => member.id));
 const EPISODE_VOICE_EMOTION_SET = new Set<string>(EPISODE_VOICE_EMOTIONS);
+const OUTPUT_VIDEO_WIDTH = 1920;
+const OUTPUT_VIDEO_HEIGHT = 1080;
+const DEFAULT_SCENE_FADE_SEC = 0.3;
+const NARRATION_FADE_IN_SEC = 0.4;
+const NARRATION_FADE_OUT_SEC = 0.5;
+const NARRATION_AUDIO_DELAY_MS = 500;
 const ANIMAL_VILLAGE_CASTING_TABLE = ANIMAL_VILLAGE_BIBLE.cast
   .map((member) => `- ${member.id} / ${member.nameKo} / ${member.description} / fixed voice: ${member.voice}`)
   .join('\n');
@@ -211,6 +224,7 @@ function emptyCost(): EpisodeOutput['perStageCostUsd'] {
     keyframes: 0,
     videoSilent: 0,
     tts: 0,
+    veed: 0,
     lipsync: 0,
     concat: 0,
     upload: 0,
@@ -219,13 +233,20 @@ function emptyCost(): EpisodeOutput['perStageCostUsd'] {
 
 function totalCost(cost: EpisodeOutput['perStageCostUsd']): number {
   return cost.director + cost.refs + cost.keyframes + cost.videoSilent +
-    cost.tts + cost.lipsync + cost.concat + cost.upload;
+    cost.tts + cost.veed + cost.lipsync + cost.concat + cost.upload;
 }
 
 function resolveAnimationMode(inputMode: EpisodeAnimationMode | undefined): EpisodeAnimationMode {
   const raw = inputMode ?? process.env.EPISODE_ANIMATION_MODE ?? process.env.ANIMATION_MODE ?? 'premium';
   if (raw === 'premium' || raw === 'limited') return raw;
   throw new Error(`Episode animation mode must be "premium" or "limited" (got ${raw})`);
+}
+
+function resolveLipsyncMode(skipLipsync: boolean | undefined): EpisodeLipsyncMode {
+  if (skipLipsync === true || process.env.SKIP_LIPSYNC === '1') return 'off';
+  const raw = process.env.EPISODE_LIPSYNC ?? 'veed';
+  if (raw === 'veed' || raw === 'sync' || raw === 'off') return raw;
+  throw new Error(`EPISODE_LIPSYNC must be "veed", "sync", or "off" (got ${raw})`);
 }
 
 function styleDirective(script: EpisodeScript): string {
@@ -624,9 +645,16 @@ async function stepSceneAudio(scene: EpisodeScene, audioDir: string, sceneIndex:
   const text = scene.type === 'narration' ? scene.narrationText : scene.dialogueText;
   if (!text) throw new Error(`Scene ${sceneIndex + 1}: missing TTS text`);
 
+  const casting = scene.type === 'narration'
+    ? { voice: ANIMAL_VILLAGE_BIBLE.narrator.voice, style: ANIMAL_VILLAGE_BIBLE.narrator.style }
+    : resolveVoiceCasting(scene.speakerId);
+  const styleOverride = scene.type === 'narration'
+    ? ANIMAL_VILLAGE_BIBLE.narrator.style
+    : resolveVoiceStyle(scene.speakerId, scene.voiceEmotion);
   const tts = await synthesizeKorean({
     text,
-    voice: scene.type === 'narration' ? 'narrator-warm' : 'character-bright',
+    voiceName: casting.voice,
+    styleOverride,
     ...(scene.type === 'narration' ? { speedWpm: 130 } : {}),
   });
 
@@ -639,10 +667,13 @@ async function stepSceneAudio(scene: EpisodeScene, audioDir: string, sceneIndex:
     : basePath;
 
   const normalizedPath = join(audioDir, `s${String(sceneIndex + 1).padStart(2, '0')}_audio.wav`);
-  normalizeAudioToDuration(sourceForNormalize, normalizedPath, scene.durationSec);
+  normalizeAudioToDuration(sourceForNormalize, normalizedPath, scene.durationSec, {
+    delayMs: scene.type === 'narration' ? NARRATION_AUDIO_DELAY_MS : 0,
+  });
 
   return {
     path: normalizedPath,
+    rawTtsPath: basePath,
     costUsd: tts.costUsd,
     ttsDurationSec: tts.durationSec,
   };
@@ -668,12 +699,50 @@ async function stepCompositeScene(
     );
     const lipPath = join(scenesDir, `s${String(sceneIndex + 1).padStart(2, '0')}_lipsync_raw.mp4`);
     writeFileSync(lipPath, result.resultMp4Bytes);
-    normalizeVideo(lipPath, outputPath, scene.durationSec);
+    normalizeVideo(lipPath, outputPath, scene.durationSec, {
+      fadeInSec: DEFAULT_SCENE_FADE_SEC,
+      fadeOutSec: DEFAULT_SCENE_FADE_SEC,
+    });
     return { path: outputPath, lipsyncCostUsd: result.costUsd };
   }
 
-  overlayAudio(silentVideoPath, audioPath, outputPath, scene.durationSec);
+  overlayAudio(silentVideoPath, audioPath, outputPath, scene.durationSec, {
+    fadeInSec: scene.type === 'narration' ? NARRATION_FADE_IN_SEC : DEFAULT_SCENE_FADE_SEC,
+    fadeOutSec: scene.type === 'narration' ? NARRATION_FADE_OUT_SEC : DEFAULT_SCENE_FADE_SEC,
+  });
   return { path: outputPath, lipsyncCostUsd: 0 };
+}
+
+async function stepVeedSpeakingScene(
+  keyframePath: string,
+  audio: SceneAudio,
+  scenesDir: string,
+  sceneIndex: number,
+  durationSec: number
+): Promise<{ path: string; lastFramePath: string; costUsd: number }> {
+  const falKey = process.env.FAL_KEY;
+  if (!falKey) throw new Error('FAL_KEY missing');
+
+  const veed = new VeedFabricProvider(falKey);
+  const result = await withRetry(`VEED scene ${sceneIndex + 1}`, 2, () =>
+    veed.generateSceneFromFiles({
+      imageFilePath: keyframePath,
+      audioFilePath: audio.rawTtsPath,
+      resolution: '480p',
+    })
+  );
+
+  const rawPath = join(scenesDir, `s${String(sceneIndex + 1).padStart(2, '0')}_veed_raw.mp4`);
+  await downloadToFile(result.videoUrl, rawPath);
+  const outputPath = join(scenesDir, `s${String(sceneIndex + 1).padStart(2, '0')}_veed.mp4`);
+  normalizeVideo(rawPath, outputPath, durationSec, {
+    fadeInSec: DEFAULT_SCENE_FADE_SEC,
+    fadeOutSec: DEFAULT_SCENE_FADE_SEC,
+  });
+  const lastFramePath = join(scenesDir, `s${String(sceneIndex + 1).padStart(2, '0')}_veed_last_frame.jpg`);
+  extractLastFrame(outputPath, lastFramePath);
+
+  return { path: outputPath, lastFramePath, costUsd: result.costUsd };
 }
 
 function stepLimitedAnimationScene(
@@ -694,6 +763,8 @@ function stepLimitedAnimationScene(
     speechDurationSec: isSpeakingScene ? Math.min(scene.durationSec, audio.ttsDurationSec) : undefined,
     mouthBox: parseNormalizedBox(process.env.LIMITED_MOUTH_BOX),
     cameraPreset: cameraPresetFromDirective(scene.cameraDirective, sceneIndex, isSpeakingScene),
+    fadeInSec: scene.type === 'narration' ? NARRATION_FADE_IN_SEC : undefined,
+    fadeOutSec: scene.type === 'narration' ? NARRATION_FADE_OUT_SEC : undefined,
   });
   return { path: outputPath };
 }
@@ -721,57 +792,108 @@ function appendSilence(audioPath: string, silenceSec: number, outPath: string): 
   return outPath;
 }
 
-function normalizeAudioToDuration(inputPath: string, outPath: string, durationSec: number): void {
+function normalizeAudioToDuration(
+  inputPath: string,
+  outPath: string,
+  durationSec: number,
+  options: { delayMs?: number } = {}
+): void {
+  const delayMs = Math.max(0, options.delayMs ?? 0);
+  const filters = [
+    ...(delayMs > 0 ? [`adelay=${delayMs}:all=1`] : []),
+    'apad',
+    `atrim=0:${durationSec.toFixed(3)}`,
+    'asetpts=PTS-STARTPTS',
+  ].join(',');
   runFfmpeg([
     '-y', '-v', 'error',
     '-i', inputPath,
-    '-af', 'apad',
-    '-t', String(durationSec),
+    '-af', filters,
     '-ar', '22050',
     '-ac', '1',
     '-c:a', 'pcm_s16le',
+    '-t', durationSec.toFixed(3),
     outPath,
   ], 'audio normalize');
 }
 
-function overlayAudio(videoPath: string, audioPath: string, outPath: string, durationSec: number): void {
+function overlayAudio(
+  videoPath: string,
+  audioPath: string,
+  outPath: string,
+  durationSec: number,
+  options: { fadeInSec?: number; fadeOutSec?: number } = {}
+): void {
+  const videoFilter = buildNormalizedVideoFilter(durationSec, options);
   runFfmpeg([
     '-y', '-v', 'error',
     '-i', videoPath,
     '-i', audioPath,
-    '-map', '0:v:0',
-    '-map', '1:a:0',
-    '-t', String(durationSec),
+    '-filter_complex',
+    `[0:v]${videoFilter}[v];[1:a]apad,atrim=0:${durationSec.toFixed(3)},asetpts=PTS-STARTPTS[a]`,
+    '-map', '[v]',
+    '-map', '[a]',
+    '-t', durationSec.toFixed(3),
     '-c:v', 'libx264',
     '-crf', '18',
     '-pix_fmt', 'yuv420p',
     '-r', '24',
-    '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black',
     '-c:a', 'aac',
     '-b:a', '192k',
     '-ar', '44100',
     '-ac', '2',
-    '-shortest',
     outPath,
   ], 'audio overlay');
 }
 
-function normalizeVideo(inputPath: string, outPath: string, durationSec: number): void {
+function normalizeVideo(
+  inputPath: string,
+  outPath: string,
+  durationSec: number,
+  options: { fadeInSec?: number; fadeOutSec?: number } = {}
+): void {
+  const videoFilter = buildNormalizedVideoFilter(durationSec, options);
   runFfmpeg([
     '-y', '-v', 'error',
     '-i', inputPath,
-    '-t', String(durationSec),
+    '-filter_complex',
+    `[0:v]${videoFilter}[v];[0:a]apad,atrim=0:${durationSec.toFixed(3)},asetpts=PTS-STARTPTS[a]`,
+    '-map', '[v]',
+    '-map', '[a]',
+    '-t', durationSec.toFixed(3),
     '-c:v', 'libx264',
     '-crf', '18',
     '-pix_fmt', 'yuv420p',
     '-r', '24',
-    '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black',
     '-c:a', 'aac',
     '-b:a', '192k',
     '-ar', '44100',
     '-ac', '2',
     outPath,
   ], 'video normalize');
+}
+
+function buildNormalizedVideoFilter(
+  durationSec: number,
+  options: { fadeInSec?: number; fadeOutSec?: number }
+): string {
+  const fadeInSec = Math.max(0, options.fadeInSec ?? 0);
+  const fadeOutSec = Math.max(0, options.fadeOutSec ?? 0);
+  const filters = [
+    `scale=${OUTPUT_VIDEO_WIDTH}:${OUTPUT_VIDEO_HEIGHT}:force_original_aspect_ratio=decrease`,
+    `pad=${OUTPUT_VIDEO_WIDTH}:${OUTPUT_VIDEO_HEIGHT}:(ow-iw)/2:(oh-ih)/2:black`,
+    `tpad=stop_mode=clone:stop_duration=${durationSec.toFixed(3)}`,
+    `trim=duration=${durationSec.toFixed(3)}`,
+    'setpts=PTS-STARTPTS',
+  ];
+  if (fadeInSec > 0) {
+    filters.push(`fade=in:st=0:d=${fadeInSec.toFixed(3)}`);
+  }
+  if (fadeOutSec > 0) {
+    filters.push(`fade=out:st=${Math.max(0, durationSec - fadeOutSec).toFixed(3)}:d=${fadeOutSec.toFixed(3)}`);
+  }
+  filters.push('format=yuv420p');
+  return filters.join(',');
 }
 
 function ffmpegConcat(inputs: string[], outPath: string): void {
@@ -911,6 +1033,7 @@ export async function runEpisodePipeline(input: EpisodeInput): Promise<EpisodeOu
   const cost = emptyCost();
   const tier = input.seedanceTier ?? (process.env.SEEDANCE_TIER as SeedanceTier | undefined) ?? 'standard';
   const animationMode = resolveAnimationMode(input.animationMode);
+  const lipsyncMode = resolveLipsyncMode(input.skipLipsync);
 
   const director = await directEpisodeScript(input.brief, workDir);
   cost.director += director.costUsd;
@@ -937,8 +1060,49 @@ export async function runEpisodePipeline(input: EpisodeInput): Promise<EpisodeOu
 
   if (animationMode === 'limited') {
     for (let i = 0; i < script.scenes.length; i += 1) {
-      const limited = stepLimitedAnimationScene(script.scenes[i], keyframes[i], sceneAudio[i], scenesDir, i);
-      sceneVideos.push(limited.path);
+      const scene = script.scenes[i];
+      if (scene.type === 'character_speaking' && lipsyncMode === 'veed') {
+        const veed = await stepVeedSpeakingScene(keyframes[i], sceneAudio[i], scenesDir, i, scene.durationSec);
+        sceneVideos.push(veed.path);
+        cost.veed += veed.costUsd;
+      } else {
+        const limited = stepLimitedAnimationScene(scene, keyframes[i], sceneAudio[i], scenesDir, i);
+        sceneVideos.push(limited.path);
+      }
+    }
+  } else if (lipsyncMode === 'veed') {
+    let previousLastFramePath: string | null = null;
+    for (let i = 0; i < script.scenes.length; i += 1) {
+      const scene = script.scenes[i];
+      if (scene.type === 'character_speaking') {
+        const veed = await stepVeedSpeakingScene(keyframes[i], sceneAudio[i], scenesDir, i, scene.durationSec);
+        sceneVideos.push(veed.path);
+        previousLastFramePath = veed.lastFramePath;
+        cost.veed += veed.costUsd;
+        continue;
+      }
+
+      const silent = await stepSilentVideo(
+        script,
+        scene,
+        ref.path,
+        keyframes[i],
+        previousLastFramePath,
+        clipsDir,
+        i,
+        tier
+      );
+      cost.videoSilent += silent.costUsd;
+      const composite = await stepCompositeScene(
+        scene,
+        silent.path,
+        sceneAudio[i].path,
+        scenesDir,
+        i,
+        true
+      );
+      sceneVideos.push(composite.path);
+      previousLastFramePath = silent.lastFramePath;
     }
   } else {
     const silentVideos: string[] = [];
@@ -966,7 +1130,7 @@ export async function runEpisodePipeline(input: EpisodeInput): Promise<EpisodeOu
         sceneAudio[i].path,
         scenesDir,
         i,
-        input.skipLipsync === true
+        lipsyncMode !== 'sync'
       );
       sceneVideos.push(composite.path);
       cost.lipsync += composite.lipsyncCostUsd;

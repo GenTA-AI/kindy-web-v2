@@ -31,6 +31,9 @@ export interface LimitedAnimationInput {
   width?: number;
   height?: number;
   fps?: number;
+  audioDelaySec?: number;
+  fadeInSec?: number;
+  fadeOutSec?: number;
   /** 입 움직임을 실제 음성(WAV) 진폭에 맞춘다. 기본 true. WAV 분석 실패 시 고정 뻐끔으로 폴백. */
   syncMouthToAudio?: boolean;
 }
@@ -56,14 +59,17 @@ export function renderLimitedAnimationScene(input: LimitedAnimationInput): void 
   const fps = input.fps ?? DEFAULT_FPS;
   const frames = Math.max(1, Math.round(input.durationSec * fps));
   const camera = input.cameraPreset ?? 'push_in';
+  const audioFilter = buildAudioFilter(input.durationSec, input.audioDelaySec);
+  const fadeInSec = input.fadeInSec ?? 0.15;
+  const fadeOutSec = input.fadeOutSec ?? 0.25;
   const videoFilter = [
     `scale=${width}:${height}:force_original_aspect_ratio=increase`,
     `crop=${width}:${height}`,
     kenBurnsFilter(camera, frames, width, height, fps),
     `trim=duration=${input.durationSec.toFixed(3)}`,
     'setpts=PTS-STARTPTS',
-    'fade=in:st=0:d=0.15',
-    `fade=out:st=${Math.max(0, input.durationSec - 0.25).toFixed(3)}:d=0.25`,
+    `fade=in:st=0:d=${fadeInSec.toFixed(3)}`,
+    `fade=out:st=${Math.max(0, input.durationSec - fadeOutSec).toFixed(3)}:d=${fadeOutSec.toFixed(3)}`,
   ].join(',');
 
   mkdirSync(dirname(input.outputPath), { recursive: true });
@@ -74,7 +80,7 @@ export function renderLimitedAnimationScene(input: LimitedAnimationInput): void 
       '-i', input.keyframePath,
       '-i', input.audioPath,
       '-filter_complex',
-      `[0:v]${videoFilter},format=yuv420p[v];[1:a]apad,atrim=0:${input.durationSec.toFixed(3)},asetpts=PTS-STARTPTS[a]`,
+      `[0:v]${videoFilter},format=yuv420p[v];[1:a]${audioFilter}[a]`,
       '-map', '[v]',
       '-map', '[a]',
       '-c:v', 'libx264',
@@ -116,10 +122,10 @@ export function renderLimitedAnimationScene(input: LimitedAnimationInput): void 
     '-loop', '1', '-framerate', String(fps), '-t', input.durationSec.toFixed(3), '-i', assets.closedPath,
     '-loop', '1', '-framerate', String(fps), '-t', input.durationSec.toFixed(3), '-i', assets.openPath,
     '-filter_complex',
-    `[0:v]${videoFilter}[base];` +
+      `[0:v]${videoFilter}[base];` +
       `[base][2:v]overlay=${mouthX}:${mouthY}:enable='${speakWindow}'[closed];` +
       `[closed][3:v]overlay=${mouthX}:${mouthY}:enable='${flapWindow}',format=yuv420p[v];` +
-      `[1:a]apad,atrim=0:${input.durationSec.toFixed(3)},asetpts=PTS-STARTPTS[a]`,
+      `[1:a]${audioFilter}[a]`,
     '-map', '[v]',
     '-map', '[a]',
     '-c:v', 'libx264',
@@ -133,6 +139,16 @@ export function renderLimitedAnimationScene(input: LimitedAnimationInput): void 
     '-t', input.durationSec.toFixed(3),
     input.outputPath,
   ], 'limited speaking render');
+}
+
+function buildAudioFilter(durationSec: number, audioDelaySec: number | undefined): string {
+  const delayMs = Math.max(0, Math.round((audioDelaySec ?? 0) * 1000));
+  return [
+    ...(delayMs > 0 ? [`adelay=${delayMs}:all=1`] : []),
+    'apad',
+    `atrim=0:${durationSec.toFixed(3)}`,
+    'asetpts=PTS-STARTPTS',
+  ].join(',');
 }
 
 /**

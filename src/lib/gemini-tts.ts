@@ -7,7 +7,9 @@ export type GeminiVoiceTone = 'narrator-warm' | 'character-bright' | 'character-
 
 export interface GeminiTtsInput {
   text: string;                  // 한국어 단순 텍스트 (한 문단 추천)
-  voice: GeminiVoiceTone;        // narrator vs character 분리
+  voice?: GeminiVoiceTone;       // narrator vs character 분리
+  voiceName?: string;            // Gemini prebuilt voice id override
+  styleOverride?: string;        // studio-bible voice style override
   speedWpm?: number;             // 기본 130 (Korean kids 적정)
 }
 
@@ -89,7 +91,14 @@ export async function synthesizeKorean(input: GeminiTtsInput): Promise<GeminiTts
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY or GOOGLE_API_KEY is required for Gemini TTS');
 
-  const voiceSpec = VOICE_MAP[input.voice];
+  const baseVoiceSpec = input.voice ? VOICE_MAP[input.voice] : undefined;
+  const voiceSpec = {
+    voiceName: input.voiceName ?? baseVoiceSpec?.voiceName,
+    style: input.styleOverride ?? baseVoiceSpec?.style,
+  };
+  if (!voiceSpec.voiceName || !voiceSpec.style) {
+    throw new Error('Gemini TTS requires either voice or both voiceName/styleOverride');
+  }
   const speedWpm = input.speedWpm ?? DEFAULT_SPEED_WPM;
   if (!Number.isFinite(speedWpm) || speedWpm <= 0) {
     throw new Error('Gemini TTS speedWpm must be a positive number');
