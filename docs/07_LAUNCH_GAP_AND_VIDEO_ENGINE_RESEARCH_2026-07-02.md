@@ -14,17 +14,22 @@
 
 ### A-1. 런칭 차단 (P0) — 6건
 
-#### P0-1. `supabase db push`가 긴급 RLS 해제 스크립트(0099)를 마지막에 자동 적용 → 프로덕션 아동 데이터 전면 노출
+#### P0-1. ✅ 해소(`70a859e`) — `supabase db push`가 긴급 RLS 해제 스크립트(0099)를 마지막에 자동 적용 → 프로덕션 아동 데이터 전면 노출
+> 0099·0008을 `supabase/manual/`로 이동(+README), `apply-migrations.sh` deprecated. 이제 `supabase db push`가 안전.
 - **증거**: `supabase/migrations/0099_rls_disable_rollback.sql:1-16` ('평상시 적용 금지' 주석이지만 CLI는 무시. children·videos·credits·purchases·view_events·emoji_reactions·quiz_results·word_profiles·waitlist·invite_codes·invite_redemptions RLS 해제); `supabase/config.toml:53-58` `[db.migrations] enabled=true` — 0099가 버전 순 최후 적용; 동류 함정 `supabase/migrations/0008_demo_parent_cleanup.sql:1-2`. REVOKE가 어떤 마이그레이션에도 없어 RLS off 시 anon 키로 전 테이블 읽기/쓰기 가능.
 - **검증 노트**: 0099는 billing_keys는 건드리지 않음(빌링키는 보호 유지) — 나머지 전부 노출, 앱은 정상 동작해 QA로 발견 불가. `scripts/apply-migrations.sh`가 0008/0099를 제외하긴 하나 0010-0020이 빠진 stale 스크립트라 프로비저닝 경로가 아님.
 - **수정**: 0099·0008을 `supabase/manual/`로 `git mv`(또는 `.sql.disabled`) + 핸드오프 1줄. **프로드 DB 프로비저닝 전에 반드시 선행.**
 
-#### P0-2. 현 빌드 파이프라인·코드로는 어떤 배포 구성으로도 결제 활성화 불가 (이중 결함, 매출 0)
+#### P0-2. ✅ 해소(`8ee83cd`) — 현 빌드 파이프라인·코드로는 어떤 배포 구성으로도 결제 활성화 불가 (이중 결함, 매출 0)
+> business-info.ts 리터럴 env 접근으로 재작성 + Dockerfile/cloudbuild에 TOSS·BIZ 6종·SITE_URL·START_BASE ARG.
+> 테스트 값 빌드로 클라이언트 청크 인라인 실증. **남은 조건**: 실배포 빌드 시 substitution에 실값 전달(코드 밖 게이트 ①②).
 - **증거 ① (파이프라인)**: `Dockerfile:40-44`·`cloudbuild.yaml:13-27`은 Supabase 2종만 빌드타임 주입 — `NEXT_PUBLIC_TOSS_CLIENT_KEY`(`SubscribeClient.tsx:59,77` 클라이언트 인라인 참조)의 ARG 부재로 실이미지에서 빈 값 인라인. `checkoutReady = hasTossClientKey && businessComplete`(`SubscribeClient.tsx:65-66`)가 결제 CTA를 '결제 준비 중'으로 영구 비활성.
 - **증거 ② (코드 — 더 치명적)**: `src/lib/business-info.ts:11-14`가 `process.env[key]` **동적 조회** — Next 16은 동적 조회를 클라이언트 번들에 절대 인라인하지 않음(실빌드 실증: 서버 HTML엔 값이 있으나 클라이언트 청크 0개). 즉 빌드타임 env를 넣어도 브라우저에서 `isBusinessInfoComplete()`는 항상 false → **env 설정만으로는 결제 버튼이 안 열림**. `SiteFooter.tsx:24-32`의 전자상거래법 §13 사업자 표시도 브라우저 렌더 불가. `docs/00_HANDOFF.md` §3.7의 'env만 채우면 됨' 안내는 이 지점에서 틀림.
 - **수정**: business-info.ts를 리터럴 `process.env.NEXT_PUBLIC_BIZ_*` 접근으로 재작성(또는 subscribe 서버 컴포넌트에서 읽어 props 전달 — 더 안전) + Dockerfile/cloudbuild에 TOSS 클라이언트 키·BIZ 6종·SITE_URL ARG 추가.
 
-#### P0-3. 생성 콘텐츠 전부가 30일 서명 URL로 DB에 박제 — 생성 후 ~30일에 전 구독자 동시 암전
+#### P0-3. ✅ 해소(`47d31d4`) — 생성 콘텐츠 전부가 30일 서명 URL로 DB에 박제 — 생성 후 ~30일에 전 구독자 동시 암전
+> migration 0021(`*_path` 3컬럼 + 기존 signed URL 백필) + `getSignedUrls` 일괄 헬퍼 + `withFreshLibraryMediaUrls`(6h, 폴백 유지)를
+> `/api/library`·`/api/library/[id]`·`/play`에 배선. 생성 스크립트 3종이 path 저장. 이제 배치 생성 가능.
 - **증거**: `src/lib/supabase-storage.ts:21,59-67`(30일 만료 기본값, 비공개 버킷, 만료 시 폴백 없음); `scripts/generate-library-episode-90s.ts:242-258`·`scripts/generate-library-batch.ts:543-582`가 서명 URL을 `library_videos.video_url/thumbnail_url/subtitles_url`에 insert 시점 고정 저장(0010엔 storage path 컬럼 자체가 없음); 서빙 경로 전부 원문 반환(`/api/library`, `/api/library/[id]`, `/play`, `SessionShell.tsx:777` 등); 재서명 cron·serve-time 재서명 코드 없음(전수 grep). bespoke는 `video_path`가 저장돼 있어 수정 용이.
 - **수정**: DB엔 storage path 저장 + 로더에서 요청당 재서명(또는 published 콘텐츠용 공개 버킷). **라이브러리 배치 생성 전에 선행해야** 전 행 수동 마이그레이션을 피함.
 
@@ -37,7 +42,9 @@
 - **증거**: `STATUS.md:18`('INNGEST_DEV=1 미연결'); Secret Manager 목록에 Inngest 키 없음 vs `scripts/deploy-cloud-run.sh:10-13`은 전제; `src/inngest/client.ts:11-18`(dev 모드 → Cloud 미등록). 첫 결제는 동기 처리라 D1은 정상 — 그러나 `hasPremiumEntitlement`가 `premium_until` 기준이므로 **~30일 후 전 구독자가 청구 없음·고지 없음·알림 없음으로 잠김, 반복 매출 0**.
 - **수정**: Inngest Cloud 가입 → Secret Manager 2종 → deploy 스크립트(INNGest_DEV 제거) → 앱 sync → cron 1회 발화 검증. ~1시간 ops 작업. (코드 밖 게이트 ③)
 
-#### P0-6. PIPA §28-8 국외이전 고지 누락 — 아동 이름·나이가 미국(Anthropic·fal.ai)·ByteDance 계열(Seedance) 처리자로 전송
+#### P0-6. ✅ 해소(`980a7c6`) — PIPA §28-8 국외이전 고지 누락 — 아동 이름·나이가 미국(Anthropic·fal.ai)·ByteDance 계열(Seedance) 처리자로 전송
+> privacy.md §5를 국내 위탁 + 국외이전(사업자별 이전 항목·방법시기·목적·보유기간·거부권)으로 개정, PRIVACY_VERSION 2026-07-02 bump.
+> **남은 것**: 변호사 최종 검토(코드 밖 게이트 ⑦), 벤더 no-training 실계약 확인(게이트 ⑧), C-4 실명 마스킹은 별도 작업.
 - **증거**: `src/content/legal/privacy.md:48-58` §5 위탁 목록에 국외 사실·국가·이전 항목·방법·시기·보유기간 전부 미기재; privacy.md:19가 'AI 콘텐츠 제작 시 자녀 이름·나이 사용' 자인; 실데이터 흐름 `src/lib/brief-builder.ts:87,93-114`(childName·age → VideoBrief) → `claude-director.ts`(Anthropic)·`episode-pipeline.ts`(fal.ai/Seedance); 온보딩 동의에 국외이전 별도 동의 없음 → §28-8(1)3 위탁 예외 요건도 불충족.
 - **수정**: privacy.md §5를 국외이전 표(이전받는 자·국가/항목/방법·시기/목적/보유기간)로 개정 — 텍스트 수정만으로 해결 가능. Part C-4의 실명 마스킹과 병행 권장.
 
@@ -174,7 +181,7 @@
 7. **법무** — 청약철회·환불 문구 변호사 검토, privacy.md 국외이전 표(P0-6), CPO 자연인 지정, 이철재 교수 서면 실존 확인(docs/05_LEGAL_RISK.md §3).
 8. **(신규) AI 벤더 no-training 확인** — fal.ai·Anthropic·Google 약관/DPA에서 입력 데이터 학습 사용 여부 확인, 필요 시 opt-out (C-4-②).
 
-**최단 경로 한 줄**: 코드 P0 4건(0099 이동 · 결제 인라인/빌드 · 서명 URL · 국외이전 표)은 전부 작고 국소적 — 먼저 랜딩 → 코드 밖 게이트(Inngest·Toss live·Supabase prod·콘텐츠 3편) → P1 갱신 3종(P1-1·2·3)과 시드 스텁(P1-4)·음성 mp3(P1-9)를 첫 결제 주기(D+30) 전에.
+**최단 경로 한 줄**: ~~코드 P0 4건(0099 이동 · 결제 인라인/빌드 · 서명 URL · 국외이전 표)~~ ✅ 2026-07-02 랜딩 완료(`70a859e`·`8ee83cd`·`47d31d4`·`980a7c6`) → 이제 코드 밖 게이트(Inngest·Toss live·Supabase prod·콘텐츠 3편) → P1 갱신 3종(P1-1·2·3)과 시드 스텁(P1-4)·음성 mp3(P1-9)를 첫 결제 주기(D+30) 전에.
 
 ---
 

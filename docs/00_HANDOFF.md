@@ -6,8 +6,9 @@
 > 따라서 §8-1 "현재 HEAD build 재실행"은 이미 충족(그린). 이후 dc78042/3e98ec1은 docs-only.
 > Claude 2차(2026-07-02): HEAD `9b85771`에서 lint·tsc·build 그린 재확인. 런칭 갭 전수 감사(P0 6·P1 18) +
 > AI 영상 엔진 경쟁 조사 완료 — **`docs/07_LAUNCH_GAP_AND_VIDEO_ENGINE_RESEARCH_2026-07-02.md`가 §8의 상세 확장판.**
-> ⚠️ 주의: §3.7의 "env만 채우면 됨"은 결제 버튼에 한해 틀림(07 문서 P0-2 — business-info.ts 동적 env 조회 + Docker ARG 누락).
-> ⚠️ 주의: 프로드 `supabase db push` 전에 0099/0008 마이그레이션 이동 필수(07 문서 P0-1 — RLS 전면 해제 자동 적용됨).
+> 코드 P0 4건 해소 완료(2026-07-02): P0-1 0099/0008→supabase/manual(`70a859e`) · P0-2 결제 인라인+빌드 ARG(`8ee83cd`)
+> · P0-3 서명 URL→path 재서명, migration 0021(`47d31d4`) · P0-6 privacy §5 국외이전 고지(`980a7c6`).
+> ⚠️ 결제용 NEXT_PUBLIC_*(TOSS·BIZ 6종)는 **빌드 타임** 주입이다 — cloudbuild substitution에 실값을 넘겨야 결제가 열린다(런타임 env로는 불가).
 > Repo: `/Users/jongwonlee/dev/kindy-web`
 > Current branch at handoff check: `codex/ai-diagnosis-demo`
 > Current HEAD at handoff check: `dc78042 docs(session): 인터랙티브 영상 세션 설계 스펙 (승인됨)`
@@ -514,9 +515,9 @@ rg -n "87a1281a|33d09aac18c30e577d1ecc2fa52f3a35|FAL|fal\\.ai|fal-ai|FAL_KEY|FAL
 ## 8. 아직 부족하거나 다음에 봐야 할 것
 
 > **2026-07-02 갱신**: 아래 목록의 전수 감사 결과가 `docs/07_LAUNCH_GAP_AND_VIDEO_ENGINE_RESEARCH_2026-07-02.md`에
-> 있다(P0 6건·P1 18건·P2 34건, 전 건 file:line 증거 + 적대적 검증). 새로 발견된 P0: 0099 RLS 함정,
-> 결제 버튼 이중 결함(business-info 인라인 + Docker ARG), 서명 URL 30일 박제, 콘텐츠 재고 1편,
-> PIPA 국외이전 고지 누락. 아래 1번(build)은 해소 완료.
+> 있다(P0 6건·P1 18건·P2 34건, 전 건 file:line 증거 + 적대적 검증). 코드로 풀 수 있는 P0 4건(0099 RLS 함정 ·
+> 결제 버튼 이중 결함 · 서명 URL 30일 박제 · PIPA 국외이전 고지)은 같은 날 해소 완료 — 07 문서 각 항목의 ✅ 참조.
+> 남은 P0는 코드 밖: 콘텐츠 재고 3편(P0-4)과 Inngest Cloud 연결(P0-5). 아래 1번(build)도 해소 완료.
 
 출시 전 P0/P1:
 
