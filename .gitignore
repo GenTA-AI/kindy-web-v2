@@ -55,3 +55,9 @@ build/
 .next/
 .expo/
 .understand-anything/
+
+# codex-worker volatile state
+.ai/runs/
+.ai/state/
+.ai/locks/
+.ai/control/
