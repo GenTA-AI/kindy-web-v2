@@ -86,6 +86,19 @@ type EpisodeDirectorResult = {
   elapsedMs: number;
 };
 
+type EpisodeDirectorAttempt = {
+  parsed: unknown;
+  jsonText: string;
+  costUsd: number;
+};
+
+type AnthropicUsage = {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_input_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+};
+
 type SceneAudio = {
   path: string;
   rawTtsPath: string;
@@ -219,6 +232,33 @@ ${brief.referenceImagePaths?.length ? '- 이미지 생성 단계에는 정본 �
 EpisodeScript JSON 만 출력해라.`;
 }
 
+function buildEpisodeRepairPrompt(brief: VideoBrief, reason: string, scriptJson: string): string {
+  return `아래 EpisodeScript JSON 이 구조 검증에 실패했다.
+검증 오류만 고쳐서 같은 JSON 스키마로 전체 대본을 다시 출력하라.
+씬 추가, waitBeatSec 보정, 씬 길이 미세 조정으로 총길이를 85-95초에 맞춰라.
+검증 룰을 완화하거나 스키마를 바꾸지 말고, 교육 브리프의 주제/목표/동물마을 정본 스타일은 유지하라.
+
+## 교육 브리프
+- 주제: ${brief.topic}
+- 청중: ${brief.audience}
+- 목표 길이: ${brief.targetDurationSec}초
+- 학습 목표:
+${brief.learningGoals.map((goal) => `  - ${goal}`).join('\n')}
+- 시각 스타일: ${brief.styleReference}
+- 톤: ${brief.tone}
+${brief.roughSynopsis ? `- 러프 시놉시스: ${brief.roughSynopsis}` : ''}
+${brief.protagonistHint ? `- 주인공 힌트: ${brief.protagonistHint}` : ''}
+${brief.adjectives?.length ? `- GACS-3 형용사: ${brief.adjectives.join(', ')}` : ''}
+
+## 검증 오류
+${reason}
+
+## 현재 실패한 EpisodeScript JSON
+${scriptJson}
+
+수정된 EpisodeScript JSON 만 출력해라.`;
+}
+
 function emptyCost(): EpisodeOutput['perStageCostUsd'] {
   return {
     director: 0,
@@ -270,6 +310,50 @@ async function directEpisodeScript(brief: VideoBrief, workDir: string): Promise<
   const startedAt = Date.now();
   const model = process.env.CLAUDE_MODEL ?? 'claude-opus-4-7';
   const client = new Anthropic({ apiKey });
+  const firstAttempt = await requestEpisodeDirectorAttempt(client, model, buildEpisodeUserPrompt(brief));
+  let costUsd = firstAttempt.costUsd;
+  let script: EpisodeScript;
+
+  try {
+    script = validateEpisodeScript(firstAttempt.parsed);
+  } catch (error) {
+    const reason = errorMessage(error);
+    console.warn(`[director-repair] reason=${reason}`);
+
+    const repairAttempt = await requestEpisodeDirectorAttempt(
+      client,
+      model,
+      buildEpisodeRepairPrompt(brief, reason, firstAttempt.jsonText)
+    );
+    costUsd += repairAttempt.costUsd;
+
+    try {
+      script = validateEpisodeScript(repairAttempt.parsed);
+    } catch (repairError) {
+      throw new Error(
+        `EpisodeScript repair failed after 1 retry. ` +
+        `Initial validation error: ${reason}. ` +
+        `Repair validation error: ${errorMessage(repairError)}. ` +
+        `Director cost before failure: $${costUsd.toFixed(4)}.`
+      );
+    }
+  }
+
+  writeFileSync(join(workDir, 'episode-script.json'), JSON.stringify(script, null, 2), 'utf-8');
+
+  return {
+    script,
+    costUsd,
+    model,
+    elapsedMs: Date.now() - startedAt,
+  };
+}
+
+async function requestEpisodeDirectorAttempt(
+  client: Anthropic,
+  model: string,
+  userPrompt: string
+): Promise<EpisodeDirectorAttempt> {
   const response = await client.messages.create({
     model,
     max_tokens: 9000,
@@ -280,7 +364,7 @@ async function directEpisodeScript(brief: VideoBrief, workDir: string): Promise<
         cache_control: { type: 'ephemeral' },
       },
     ],
-    messages: [{ role: 'user', content: buildEpisodeUserPrompt(brief) }],
+    messages: [{ role: 'user', content: userPrompt }],
   });
 
   const textBlock = response.content.find((block) => block.type === 'text');
@@ -295,27 +379,30 @@ async function directEpisodeScript(brief: VideoBrief, workDir: string): Promise<
     throw new Error(`Claude episode response is not JSON: ${raw.slice(0, 500)}`);
   }
 
-  const script = validateEpisodeScript(JSON.parse(raw.slice(jsonStart, jsonEnd + 1)));
-  writeFileSync(join(workDir, 'episode-script.json'), JSON.stringify(script, null, 2), 'utf-8');
+  const jsonText = raw.slice(jsonStart, jsonEnd + 1);
+  return {
+    parsed: JSON.parse(jsonText),
+    jsonText,
+    costUsd: anthropicCostUsd(response.usage, model),
+  };
+}
 
-  const usage = response.usage;
+function anthropicCostUsd(usage: AnthropicUsage, model: string): number {
   const inputTokens = usage.input_tokens;
   const outputTokens = usage.output_tokens;
   const cacheRead = usage.cache_read_input_tokens ?? 0;
   const cacheCreation = usage.cache_creation_input_tokens ?? 0;
   const pricing = model.includes('opus') ? OPUS_PRICING : SONNET_PRICING;
-  const costUsd =
+  return (
     (inputTokens / 1_000_000) * pricing.input +
     (outputTokens / 1_000_000) * pricing.output +
     (cacheCreation / 1_000_000) * pricing.cacheWrite +
-    (cacheRead / 1_000_000) * pricing.cacheRead;
+    (cacheRead / 1_000_000) * pricing.cacheRead
+  );
+}
 
-  return {
-    script,
-    costUsd,
-    model,
-    elapsedMs: Date.now() - startedAt,
-  };
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function validateEpisodeScript(value: unknown): EpisodeScript {
