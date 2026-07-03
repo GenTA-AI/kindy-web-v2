@@ -1,67 +1,67 @@
 {
   "act.read_face.intro": {
     "file": "/audio/village/act.read_face.intro.mp3",
-    "durationSec": 7.01
+    "durationSec": 7.73
   },
   "act.read_face.praise": {
     "file": "/audio/village/act.read_face.praise.mp3",
-    "durationSec": 4.85
+    "durationSec": 4.53
   },
   "act.guess_feeling.intro": {
     "file": "/audio/village/act.guess_feeling.intro.mp3",
-    "durationSec": 7.57
+    "durationSec": 4.81
   },
   "act.guess_feeling.praise": {
     "file": "/audio/village/act.guess_feeling.praise.mp3",
-    "durationSec": 7.81
+    "durationSec": 6.37
   },
   "act.find_hidden.intro": {
     "file": "/audio/village/act.find_hidden.intro.mp3",
-    "durationSec": 6.57
+    "durationSec": 5.85
   },
   "act.find_hidden.praise": {
     "file": "/audio/village/act.find_hidden.praise.mp3",
-    "durationSec": 4.69
+    "durationSec": 4.25
   },
   "act.match_treat.intro": {
     "file": "/audio/village/act.match_treat.intro.mp3",
-    "durationSec": 5.41
+    "durationSec": 6.13
   },
   "act.match_treat.praise": {
     "file": "/audio/village/act.match_treat.praise.mp3",
-    "durationSec": 3.61
+    "durationSec": 4.09
   },
   "act.finish_pattern.intro": {
     "file": "/audio/village/act.finish_pattern.intro.mp3",
-    "durationSec": 6.89
+    "durationSec": 6.81
   },
   "act.finish_pattern.praise": {
     "file": "/audio/village/act.finish_pattern.praise.mp3",
-    "durationSec": 6.01
+    "durationSec": 5.13
   },
   "act.sort_habitat.intro": {
     "file": "/audio/village/act.sort_habitat.intro.mp3",
-    "durationSec": 4.89
+    "durationSec": 6.49
   },
   "act.sort_habitat.praise": {
     "file": "/audio/village/act.sort_habitat.praise.mp3",
-    "durationSec": 4.01
+    "durationSec": 4.17
   },
   "act.match_home.intro": {
     "file": "/audio/village/act.match_home.intro.mp3",
-    "durationSec": 4.57
+    "durationSec": 4.93
   },
   "act.match_home.praise": {
     "file": "/audio/village/act.match_home.praise.mp3",
-    "durationSec": 3.69
+    "durationSec": 4.41
   },
   "act.decorate_gift.intro": {
     "file": "/audio/village/act.decorate_gift.intro.mp3",
-    "durationSec": 6.13
+    "durationSec": 4.53
   },
   "act.decorate_gift.praise": {
     "file": "/audio/village/act.decorate_gift.praise.mp3",
-    "durationSec": 4.33
+    "durationSec": 3.81
   },
   "sess.kkumi-day.intro.0": {
     "file": "/audio/village/sess.kkumi-day.intro.0.mp3",
@@ -78,5 +78,29 @@
   "sess.kkumi-day.closing": {
     "file": "/audio/village/sess.kkumi-day.closing.mp3",
     "durationSec": 6.45
+  },
+  "act.video_recall_seed.intro": {
+    "file": "/audio/village/act.video_recall_seed.intro.mp3",
+    "durationSec": 5.97
+  },
+  "act.video_recall_seed.praise": {
+    "file": "/audio/village/act.video_recall_seed.praise.mp3",
+    "durationSec": 3.89
+  },
+  "sess.kkumi-starlight-seed.intro.0": {
+    "file": "/audio/village/sess.kkumi-starlight-seed.intro.0.mp3",
+    "durationSec": 7.09
+  },
+  "sess.kkumi-starlight-seed.intro.1": {
+    "file": "/audio/village/sess.kkumi-starlight-seed.intro.1.mp3",
+    "durationSec": 3.33
+  },
+  "sess.kkumi-starlight-seed.transition": {
+    "file": "/audio/village/sess.kkumi-starlight-seed.transition.mp3",
+    "durationSec": 5.57
+  },
+  "sess.kkumi-starlight-seed.closing": {
+    "file": "/audio/village/sess.kkumi-starlight-seed.closing.mp3",
+    "durationSec": 7.65
   }
 }
