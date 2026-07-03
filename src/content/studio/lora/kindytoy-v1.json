@@ -1,0 +1,17 @@
+{
+  "data": {
+    "diffusers_lora_file": {
+      "url": "https://v3b.fal.media/files/b/0aa0be1c/xncdjutxbiZTVdwW0IC89_pytorch_lora_weights.safetensors",
+      "content_type": "application/octet-stream",
+      "file_name": "pytorch_lora_weights.safetensors",
+      "file_size": 332548896
+    },
+    "config_file": {
+      "url": "https://v3b.fal.media/files/b/0aa0be1d/MyhUv5YmljE6Sl2uEGxay_config_9f244b65-a29f-4d6e-9a8a-4fe8e2412c0d.json",
+      "content_type": "application/octet-stream",
+      "file_name": "config_9f244b65-a29f-4d6e-9a8a-4fe8e2412c0d.json",
+      "file_size": 348
+    }
+  },
+  "requestId": "019f26df-ff80-7493-b370-0c88a70137d5"
+}
