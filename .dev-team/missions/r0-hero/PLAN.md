@@ -4,8 +4,8 @@
 
 | id | 내용 (04 매핑) | effort | deps | 상태 |
 |---|---|---|---|---|
-| t1-bootstrap | Task 1: 이어받기·CI·원격(GenTA-AI/kindy-web-v2 private)·원본 보관 | high | — | dispatched 2026-07-05 |
-| t2-migrations | Task 2.1: 0024–0029 SQL(02에서 그대로)+verify 확장 | medium | t1 | pending(파일 작성 예정) |
+| t1-bootstrap | Task 1: 이어받기·CI·원격(GenTA-AI/kindy-web-v2 private)·원본 보관 | high | — | **done** — approve(리뷰 파일). 샌드박스 제약 2건은 리드 ops로 마무리. main 보호는 무료플랜 403 → 프로세스 대체 |
+| t2-migrations | Task 2.1: 0024–0029 SQL(02에서 그대로)+verify 확장 | medium | t1 | **dispatched** (preflight high_risk=1 → 단독 실행) |
 | t3-worldstate-reducer | Task 2.2: E13-2 리듀서+session-config+골든테스트 12+CI 확장 | xhigh | t2 | pending |
 | t4-avatar-spec | Task 2.3: E13-1 아바타 144 스틸 스펙+샘플 3조합 | medium | t1 | pending |
 | t5-no-camera-test | Task 2.4: E13-10 사진·카메라 코드 부재 정적 스캔 테스트 | medium | t1 | pending |
