@@ -12,6 +12,8 @@
 | t6-landing | Task 2.5: E12-1' 랜딩 카피(기획서 W1 실문구) | medium | t1 | pending |
 | t7-sim-scripts | Task 2.6: 시뮬 3종 scripts/sim/ 이식+재현 검증 | medium | t1 | pending |
 
-[사람] 게이트(워커 태스크 아님 — 04 Task 4.x): Inngest Cloud 연결 · LoRA 생존 확인 · Phase B 공문 · DNS · Supertone · 연구소 신고(4.8) · 키오스크 발주(4.7) · **supabase db push(t2 머지 후)**
+[사람] 게이트(워커 태스크 아님 — 04 Task 4.x): Inngest Cloud 연결 · LoRA 생존 확인 · Phase B 공문 · DNS · Supertone · 연구소 신고(4.8) · 키오스크 발주(4.7) · ~~supabase db push~~ **완료 2026-07-05**(0015 extensions 픽스 후 0015–0029 적용, verify-migrations 전항 ✓ — product_defaults 3행·model_registry 16행 확인. 부수: .env.local이 placeholder였음 → URL 교정+키 2개 대표 직접 주입. verify-rls는 실행 대기)
+
+E13-1 종결(2026-07-05): 스펙 프리즈 + 샘플 3장($0.117) 대표 승인 — Studio W3 키프레임 프리즈 입력 확보.
 
 메모: t1은 non-git 시작이라 main-tree 실행(DEVTEAM_NO_WORKTREE=1, 리뷰 diff-blind — git log로 대체 검증). t1 머지 개념 없음(main 직작업, 문서화된 예외). t1 후 .dev-team/memory/invariants.md가 kindy-web 상속본으로 대체됨 → 리드가 미션 룰 병합 예정.
