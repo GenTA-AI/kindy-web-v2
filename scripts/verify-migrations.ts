@@ -1,8 +1,9 @@
 /**
- * Verify migrations 0006/0007/0010/0011 actually applied to Supabase.
+ * Verify migrations 0006/0007/0010/0011 and 0024-0029 actually applied to Supabase.
  * Run: npx tsx --env-file=.env.local scripts/verify-migrations.ts
+ * Run only after the human-gated `supabase db push` has been applied.
  *
- * Uses service_role to query system catalogs.
+ * Uses service_role to query tables, views, and required columns.
  */
 
 import { getSupabase } from '../src/lib/supabase';
@@ -59,6 +60,67 @@ async function main() {
       .select('*', { count: 'exact', head: true })
       .not('library_video_id', 'is', null);
     console.log(`    library view events: ${libViewCount ?? 0}`);
+  }
+
+  console.log('\n0024-0029: hero + studio schema');
+  const heroStudioTables = [
+    'world_states',
+    'bookshelf',
+    'avatars',
+    'personal_renders',
+    'name_pool',
+    'product_defaults',
+    'episodes',
+    'episode_nodes',
+    'shots',
+    'renders',
+    'model_registry',
+    'eval_runs',
+    'pipeline_runs',
+    'holdout_assignments',
+  ];
+  for (const t of heroStudioTables) {
+    const exists = await checkTableExists(t);
+    const cnt = exists ? await rowCount(t) : 'N/A';
+    console.log(`  ${t}: ${exists ? '✓ exists' : '✗ MISSING'}  (rows: ${cnt})`);
+  }
+
+  console.log('\n0024-0029: metric views');
+  for (const v of ['hero_metric_events', 'hero_metric_daily', 'hero_fallback_daily']) {
+    const exists = await checkTableExists(v);
+    console.log(`  ${v}: ${exists ? '✓ exists' : '✗ MISSING'}`);
+  }
+
+  console.log('\n0024-0029: key columns');
+  const requiredColumns: Array<[string, string]> = [
+    ['game_rounds', 'event_type'],
+    ['game_rounds', 'world_processed_at'],
+    ['world_states', 'digest'],
+    ['world_states', 'state'],
+    ['bookshelf', 'cover_url'],
+    ['bookshelf', 'personal_assets'],
+    ['avatars', 'photoreal_check'],
+    ['avatars', 'version'],
+    ['personal_renders', 'kind'],
+    ['personal_renders', 'model_registry_id'],
+    ['product_defaults', 'age_band'],
+    ['episodes', 'cp_options_variants'],
+    ['episodes', 'format'],
+    ['episodes', 'avatar_slots'],
+    ['shots', 'personalizable'],
+    ['renders', 'model_registry_id'],
+    ['model_registry', 'capability'],
+    ['pipeline_runs', 'output_ref'],
+    ['library_videos', 'episode_id'],
+    ['kiosk_sessions', 'demo_version'],
+    ['kiosk_sessions', 'venue_arm'],
+    ['kiosk_sessions', 'companion'],
+    ['kiosk_sessions', 'palette'],
+    ['holdout_assignments', 'experiment'],
+  ];
+  for (const [table, column] of requiredColumns) {
+    const exists = await checkColumnExists(table, column);
+    console.log(`  ${table}.${column}: ${exists ? '✓ exists' : '✗ MISSING'}`);
   }
 
   console.log('\n=== Summary ===');
