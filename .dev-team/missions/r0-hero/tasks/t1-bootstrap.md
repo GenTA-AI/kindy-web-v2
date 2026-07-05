@@ -36,7 +36,7 @@ test -f .github/workflows/ci.yml && echo ci-ok
 test -f .env.local && echo env-ok
 ls docs/research/original/ | grep -qi pdf && echo research-ok
 test -f 키오스크_하드웨어_제작계획.md && test -f 키오스크_앱_개발플랜.md && echo kiosk-docs-ok
-git status --porcelain | grep -v '^??' | wc -l | grep -qx '0' && echo tree-clean
+[ "$(git status --porcelain | grep -v '^??' | wc -l | tr -d ' ')" = "0" ] && echo tree-clean
 npm run lint
 npx tsc --noEmit
 ```
