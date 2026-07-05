@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test src/lib/c6/evidence.test.ts src/lib/c6/recommendation.test.ts src/lib/hero/no-camera.test.ts",
     "smoke:director": "tsx --env-file=.env.local scripts/smoke-director.ts",
     "smoke:refs": "tsx --env-file=.env.local scripts/smoke-refs.ts",
     "smoke:s01": "tsx --env-file=.env.local scripts/smoke-s01.ts",
