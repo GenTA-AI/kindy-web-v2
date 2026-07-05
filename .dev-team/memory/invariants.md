@@ -10,3 +10,7 @@
 8. **기존 계약 확장만**: /api/game/events 저장 계약, game_rounds 스키마, published=false HITL 게이트 파괴 금지.
 9. **검증 표준**: lint+tsc 전 태스크, UI는 build, 순수 로직은 node:test(`npx tsx --test`, 상대 import). Validation에 키/.env/db push 금지 — 실생성·실DB는 사람 게이트.
 10. Next.js 16 — 코드 전 node_modules/next/dist/docs/ 확인 (error.tsx=unstable_retry 등).
+11. **플랜 정본 읽기 전용**: `docs/plan/00~05`는 SSOT — 워커 수정 금지, 개정은 리드만. 스키마·SQL은 02 문서에서 **그대로 전사**(재발명 = 반려).
+12. **D-14(2026-07-05)**: 아이 표면 = 웹 선행(R1–R2), iOS(kindy-app)는 R3~R4 이식. 아이 표면 신규 화면 터치 타깃 ≥120pt(기획서 v2.2 §5 — 구 48px 기준을 아이 표면에서 대체), 부모 웹 ≥44pt.
+13. **prod 조작 [사람] 전용**: supabase db push·link, Secret Manager, Inngest Cloud, Toss, gcloud, gh 원격 설정 변경 — 워커 실행 금지(04 §0).
+14. **원본 문서 보관**: `docs/research/original/`은 수령 원본 사본 — 수정·삭제 금지.
