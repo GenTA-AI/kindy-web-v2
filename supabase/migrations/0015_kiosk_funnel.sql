@@ -10,7 +10,7 @@ create extension if not exists pgcrypto;
 -- 키오스크 1회 사용 = 세션 1개. qr_token 이 익명→실명 다리(QR 에 심김).
 create table if not exists public.kiosk_sessions (
   id                  uuid primary key default gen_random_uuid(),
-  qr_token            text unique not null default encode(gen_random_bytes(16), 'hex'),
+  qr_token            text unique not null default encode(extensions.gen_random_bytes(16), 'hex'),
   location_code       text not null,                       -- 'asan-kkumsaem' 등 설치처
   character           text,                                -- 선택값 princess/space/dino/forest
   topic               text,                                -- science/english/hangul/music
