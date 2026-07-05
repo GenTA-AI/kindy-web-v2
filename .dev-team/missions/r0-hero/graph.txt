@@ -1,0 +1,8 @@
+# task deps: "<id>: <dep1> <dep2>"
+t1-bootstrap:
+t2-migrations: t1-bootstrap
+t3-worldstate-reducer: t2-migrations
+t4-avatar-spec: t1-bootstrap
+t5-no-camera-test: t1-bootstrap
+t6-landing: t1-bootstrap
+t7-sim-scripts: t1-bootstrap
