@@ -42,6 +42,8 @@ yarn-error.log*
 next-env.d.ts
 .gstack/
 tmp/
+scripts/sim/.venv/
+scripts/sim/out/
 
 
 # tool/agent meta (per-developer config)
