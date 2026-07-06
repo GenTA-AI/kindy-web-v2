@@ -12,7 +12,9 @@
 | t6-landing | Task 2.5: E12-1' 랜딩 카피(기획서 W1 실문구) | medium | t1 | pending |
 | t7-sim-scripts | Task 2.6: 시뮬 3종 scripts/sim/ 이식+재현 검증 | medium | t1 | pending |
 
-[사람] 게이트(워커 태스크 아님 — 04 Task 4.x): Inngest Cloud 연결 · LoRA 생존 확인 · Phase B 공문 · DNS · Supertone · 연구소 신고(4.8) · 키오스크 발주(4.7) · ~~supabase db push~~ **완료 2026-07-05**(0015 extensions 픽스 후 0015–0029 적용, verify-migrations 전항 ✓ — product_defaults 3행·model_registry 16행 확인. 부수: .env.local이 placeholder였음 → URL 교정+키 2개 대표 직접 주입. verify-rls는 실행 대기)
+[사람] 게이트(워커 태스크 아님 — 04 Task 4.x): ~~Inngest Cloud 연결~~ **완료 2026-07-06**(sync 등록·cloud 모드 확인. function_count=1 — 구 이미지: v2 첫 배포 시 결제 갱신 cron 자동 등록, 이번 주 내 배포 권장[사람]) · ~~LoRA 생존 확인~~ **완료 2026-07-06**(로컬+Storage 이중 백업) · ~~Phase B 공문~~ **승인 2026-07-06** · DNS **진행중 2026-07-06**(Cloudflare NS 이전 신청, 24~48h 전파 대기) · Supertone(미착수) · ~~연구소 신고(4.8)~~ **R0 제외 2026-07-06**(시드투자 이후로 연기, 대표 결정) · 키오스크 발주(4.7, 미착수) · ~~supabase db push~~ **완료 2026-07-05**(0015 extensions 픽스 후 0015–0029 적용, verify-migrations 전항 ✓ — product_defaults 3행·model_registry 16행 확인. 부수: .env.local이 placeholder였음 → URL 교정+키 2개 대표 직접 주입. verify-rls는 실행 대기)
+
+상세 기록: docs/plan/04_R0_EXECUTION_PLAN.md Task 4.1/4.2/4.4/4.6/4.8 + Exit 표 #1f·#12–#15 (2026-07-06 갱신)
 
 E13-1 종결(2026-07-05): 스펙 프리즈 + 샘플 3장($0.117) 대표 승인 — Studio W3 키프레임 프리즈 입력 확보.
 
