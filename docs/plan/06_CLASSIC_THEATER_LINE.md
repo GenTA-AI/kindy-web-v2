@@ -1,6 +1,7 @@
 # 06. 모리와 친구들의 고전 극장 라인 개정 초안
 
-작성: 2026-07-07 | 상태: **대표 결정 반영 초안 — 리드 리뷰 후 정본 확정**  
+작성: 2026-07-07 | 상태: **정본 확정 — 대표 승인 2026-07-07** (리드 리뷰 통과)  
+비주얼: 소프트매트 3D 토이(KINDYTOY 룩) — 캐릭터 컷은 학습된 LoRA v2, 비캐릭터 컷은 nano-banana. 실사·평면 2D 아님. 아기돼지 삼형제 등 고전은 이 학습된 6인 캐스트가 그대로 연기하므로 학습 자산이 전량 재사용된다.  
 근거: `docs/research/pd-classics/00-synthesis.md` 전체, `docs/research/pd-classics/01-plan-fit.md` §1·§2·§4~§7, `docs/research/pd-classics/03-copyright.md` §1~§5, `docs/BRAND_DNA.md` §3·§7, `docs/plan/03_MORI_STUDIO_PLAN.md` §6-1·§9-2.
 
 ## 0. 대표 결정 요약
