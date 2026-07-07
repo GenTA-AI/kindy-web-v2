@@ -19,3 +19,5 @@
 E13-1 종결(2026-07-05): 스펙 프리즈 + 샘플 3장($0.117) 대표 승인 — Studio W3 키프레임 프리즈 입력 확보.
 
 메모: t1은 non-git 시작이라 main-tree 실행(DEVTEAM_NO_WORKTREE=1, 리뷰 diff-blind — git log로 대체 검증). t1 머지 개념 없음(main 직작업, 문서화된 예외). t1 후 .dev-team/memory/invariants.md가 kindy-web 상속본으로 대체됨 → 리드가 미션 룰 병합 예정.
+
+**t9-classic-canon 완료(2026-07-07)**: 고전 극장 라인 정본 개정 초안 06_CLASSIC_THEATER_LINE.md 신규(19KB) + BRAND_DNA·00·03 최소 델타 머지(6b39e43). 아기돼지 삼형제 파일럿 재매핑(배역: 꾸미·방울·도토=삼형제, 늑대=센바람 역할 순화, 모리=호스트 / CP1 재료선택·CP2 위기대응·CP3 결말분기 / C6 태깅) + 저작권 실무 6단계. **대표 최종 정본 승인 대기**.
