@@ -119,13 +119,13 @@ export default async function Home({
           따로 배워야 합니다.
         </p>
 
-        <div className="mt-12 overflow-x-auto">
-          <table className="w-full min-w-[560px] border-collapse text-left text-sm sm:text-base">
+        <div className="mt-12">
+          <table className="w-full border-collapse text-left text-sm sm:text-base">
             <thead>
               <tr className="border-b border-line text-ink3">
                 <th className="py-3 pr-4 font-bold">배우는 곳</th>
                 <th className="py-3 pr-4 font-bold">가격</th>
-                <th className="py-3 font-bold">한계</th>
+                <th className="hidden py-3 font-bold sm:table-cell">한계</th>
               </tr>
             </thead>
             <tbody>
@@ -136,7 +136,7 @@ export default async function Home({
                 >
                   <td className="py-4 pr-4">{row.name}</td>
                   <td className="py-4 pr-4">{row.price}</td>
-                  <td className="py-4">{row.limit}</td>
+                  <td className="hidden py-4 sm:table-cell">{row.limit}</td>
                 </tr>
               ))}
             </tbody>
