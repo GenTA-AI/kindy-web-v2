@@ -7,8 +7,35 @@ const START_HREF = '/auth/login?next=/onboarding';
 export const metadata: Metadata = {
   title: 'Kindy — 그림과 클래식이 익숙한 아이로',
   description:
-    '런던에서 수학한 미디어아티스트가 한 편 한 편 직접 만드는 어린이 인문·예술 수업. 매주 화·금, 카톡으로 도착합니다.',
+    '부모님과의 대화로 시작하는 우리 아이 맞춤 인문·예술 커리큘럼. 명화와 클래식, 이야기와 질문으로 인문·정서·창의·독서를 아우릅니다. 매주 화·금, 카톡으로 도착합니다.',
 };
+
+// 한 작품에서 넓혀 가는 네 갈래 — 미술 단독 교육이 아니다 (대표 교정 2026-07-12).
+const PILLARS = [
+  { key: '인문', body: '작품 뒤의 시대와 사람 이야기 — 생각의 재료가 되는 질문들.' },
+  { key: '정서', body: '그림과 음악 앞에서 자기 마음을 말로 표현하는 연습.' },
+  { key: '창의', body: '"나라면 어떻게 그렸을까?" — 매 수업이 아이의 창작으로 끝납니다.' },
+  { key: '독서', body: '이야기로 시작해 책으로 이어지는 습관. 어휘가 함께 쌓입니다.' },
+];
+
+// 개인화 흐름 — 부모 대화 → 아이 반응 → 맞춤 커리큘럼 (§2-3 가치 스택 ②③④).
+const PERSONAL_STEPS = [
+  {
+    step: '01',
+    title: '부모님과의 대화로 시작',
+    body: '아이의 관심사와 성향을 먼저 여쭤보고, 첫 커리큘럼을 함께 짭니다.',
+  },
+  {
+    step: '02',
+    title: '아이의 반응을 읽습니다',
+    body: '다시 본 장면, 오래 머문 놀이를 매주 리포트로 보내드립니다. 다음 주제는 부모님이 고르거나, 큐레이터가 아이의 반응을 보고 제안합니다.',
+  },
+  {
+    step: '03',
+    title: '이름을 불러주는 수업',
+    body: '영상이 아이의 이름을 부르며 시작합니다. 모두에게 같은 영상이 아니라, 우리 아이에게 맞춰 자라는 커리큘럼입니다.',
+  },
+];
 
 // 가격 앵커 비교는 랜딩 내부 표에서만 쓴다(트랙2 마케팅 플랜 §0-1 — 광고 크리에이티브에서는 금지).
 const ANCHORS = [
@@ -111,7 +138,7 @@ export default async function Home({
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-black/30" />
         <Reveal className="relative z-10 mx-4 mb-10 w-full max-w-xl sm:mb-0">
           <div className={`${GLASS_DARK} px-7 py-10 text-center text-white sm:px-12 sm:py-14`}>
-            <p className="text-sm font-bold text-white/80">어린이 인문·예술 수업 · 7~10세</p>
+            <p className="text-sm font-bold text-white/80">우리 아이 맞춤 인문·예술 수업 · 7~10세</p>
             {showLibraryBenefit && (
               <div className="mx-auto mt-4 inline-flex items-center rounded-full border border-gold/70 bg-white/15 px-4 py-1.5 text-sm font-black text-gold backdrop-blur-xl">
                 도서관 한정 월 ₩19,000
@@ -123,8 +150,8 @@ export default async function Home({
               익숙한 아이로.
             </h1>
             <p className="mt-6 text-sm leading-relaxed text-white/85 sm:text-base">
-              런던에서 수학한 미디어아티스트가 한 편 한 편 직접 만드는 명화·클래식 이야기 수업.
-              매주 화·금 오후 4시, 카톡으로 도착합니다.
+              명화와 클래식, 이야기와 질문으로 인문·정서·창의·독서를 아우르는 맞춤 수업.
+              부모님과의 대화로 커리큘럼을 짜고, 매주 화·금 오후 4시 카톡으로 도착합니다.
             </p>
             <Link
               href={START_HREF}
@@ -165,6 +192,33 @@ export default async function Home({
             </figcaption>
           </figure>
         </Reveal>
+      </section>
+
+      {/* 네 갈래 가치 — 미술 단독 교육이 아니다 */}
+      <section className="mx-auto w-full max-w-5xl px-5 pb-28 sm:px-8 sm:pb-36">
+        <Reveal>
+          <h2 className="text-3xl font-black leading-snug tracking-tight sm:text-5xl">
+            미술만 배우는 게
+            <br />
+            아닙니다.
+          </h2>
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink2 sm:text-lg">
+            한 작품을 인문·정서·창의·독서 네 갈래로 넓혀 갑니다. 그림은 문이고, 그 뒤에 아이의
+            세계가 있습니다.
+          </p>
+        </Reveal>
+        <div className="mt-12 grid gap-5 sm:grid-cols-2">
+          {PILLARS.map((pillar, index) => (
+            <Reveal key={pillar.key} delay={index * 90}>
+              <div className={`${GLASS_LIGHT} h-full px-7 py-8 transition-transform duration-300 hover:-translate-y-1`}>
+                <h3 className="text-2xl font-black tracking-tight">
+                  <span className="text-gold">{pillar.key}</span>
+                </h3>
+                <p className="mt-3 leading-relaxed text-ink2">{pillar.body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
       </section>
 
       {/* 문제 공감 + 앵커 표 (글라스 카드) */}
@@ -264,6 +318,32 @@ export default async function Home({
             마흔여덟 편 — 아이만의 전집 한 질이 쌓입니다.
           </p>
         </Reveal>
+      </section>
+
+      {/* 개인화 — 부모와의 대화로 짜는 우리 아이 커리큘럼 */}
+      <section className="mx-auto w-full max-w-5xl px-5 pb-28 sm:px-8 sm:pb-36">
+        <Reveal>
+          <h2 className="text-3xl font-black leading-snug tracking-tight sm:text-5xl">
+            우리 아이에게만
+            <br />
+            맞춘 커리큘럼.
+          </h2>
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink2 sm:text-lg">
+            정해진 전집을 순서대로 트는 게 아닙니다. 부모님과 대화하고, 아이의 반응을 읽으며,
+            매주 커리큘럼이 아이를 따라갑니다.
+          </p>
+        </Reveal>
+        <div className="mt-12 grid gap-5 lg:grid-cols-3">
+          {PERSONAL_STEPS.map((item, index) => (
+            <Reveal key={item.step} delay={index * 100}>
+              <div className={`${GLASS_LIGHT} h-full px-7 py-8`}>
+                <p className="text-sm font-black tracking-[0.2em] text-gold">{item.step}</p>
+                <h3 className="mt-3 text-xl font-black">{item.title}</h3>
+                <p className="mt-3 leading-relaxed text-ink2">{item.body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
       </section>
 
       {/* 만드는 사람 */}
