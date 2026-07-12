@@ -5,17 +5,20 @@ import Reveal from '@/components/landing/Reveal';
 const START_HREF = '/auth/login?next=/onboarding';
 
 export const metadata: Metadata = {
-  title: 'Kindy — 그림과 클래식이 익숙한 아이로',
+  title: 'Kindy — 읽고 느낀 것을 생각으로 만드는 힘',
   description:
-    '부모님과의 대화로 시작하는 우리 아이 맞춤 인문·예술 커리큘럼. 명화와 클래식, 이야기와 질문으로 인문·정서·창의·독서를 아우릅니다. 매주 화·금, 카톡으로 도착합니다.',
+    '명화와 클래식, 고전 이야기를 인문·정서·창의·독서로 연결하는 우리 아이 맞춤 통합 인문 수업. 매주 화·금, 카톡으로 도착합니다.',
 };
 
 // 한 작품에서 넓혀 가는 네 갈래 — 미술 단독 교육이 아니다 (대표 교정 2026-07-12).
 const PILLARS = [
-  { key: '인문', body: '작품 뒤의 시대와 사람 이야기 — 생각의 재료가 되는 질문들.' },
-  { key: '정서', body: '그림과 음악 앞에서 자기 마음을 말로 표현하는 연습.' },
-  { key: '창의', body: '"나라면 어떻게 그렸을까?" — 매 수업이 아이의 창작으로 끝납니다.' },
-  { key: '독서', body: '이야기로 시작해 책으로 이어지는 습관. 어휘가 함께 쌓입니다.' },
+  {
+    key: '인문',
+    body: '그림과 음악 뒤의 시대와 사람을 만나고, 세상을 이해하는 질문을 나눕니다.',
+  },
+  { key: '정서', body: '장면 속 마음을 헤아리고, 내가 느낀 감정을 자기 말로 표현합니다.' },
+  { key: '창의', body: '정답을 찾기 전에 “나라면?”을 묻고, 아이만의 생각으로 다시 만듭니다.' },
+  { key: '독서', body: '이야기의 흐름을 따라가고, 장면의 앞뒤를 자기 말로 다시 들려줍니다.' },
 ];
 
 // 개인화 흐름 — 부모 대화 → 아이 반응 → 맞춤 커리큘럼 (§2-3 가치 스택 ②③④).
@@ -46,17 +49,21 @@ const ANCHORS = [
 ];
 
 const SESSION_STEPS = [
-  { step: '하나', title: '명화 이야기 영상', body: '3분. 아이의 이름을 불러주며 시작합니다.' },
-  { step: '둘', title: '퀴즈와 게임', body: '방금 본 작품 속으로 다시 들어가 봅니다.' },
-  { step: '셋', title: '"나라면?" 창작', body: '아이가 자기 버전을 만들어 봅니다.' },
-  { step: '넷', title: '부모 리포트', body: '아이가 오래 머문 장면과, 물어볼 질문 세 가지.' },
+  { step: '하나', title: '이야기로 만나는 세상', body: '명화·클래식·고전 속 시대와 사람을 만납니다.' },
+  { step: '둘', title: '느끼고 말하는 질문', body: '보고 들은 내용을 떠올리고, 자기 마음과 생각을 답합니다.' },
+  { step: '셋', title: '“나라면?” 창작', body: '정답 없이 고르고, 그리고, 아이만의 이야기를 만듭니다.' },
+  { step: '넷', title: '부모 리포트', body: '아이의 선택과 반응, 집에서 이어갈 대화 질문을 전해드립니다.' },
 ];
 
 const CURRICULUM = [
-  { work: '모차르트 〈마술피리〉', question: '오페라는 왜 노래로 말할까', field: '오페라' },
-  { work: '모네 〈건초더미〉', question: '같은 건초더미를 서른 번 그린 이유', field: '미술' },
-  { work: '쇠라 〈그랑드 자트 섬의 일요일 오후〉', question: '점 백만 개로 그린 일요일', field: '미술' },
-  { work: '생상스 〈백조〉', question: '첼로는 어떻게 헤엄칠까', field: '클래식' },
+  {
+    work: '쇠라 〈그랑드 자트 섬의 일요일 오후〉',
+    question: '그때 사람들은 일요일을 어떻게 보냈을까',
+    field: '인문 · 미술',
+  },
+  { work: '생상스 〈백조〉', question: '백조의 마음은 어떤 소리일까', field: '정서 · 음악' },
+  { work: '아기돼지 삼형제', question: '튼튼한 집을 다르게 만든다면', field: '창의 · 고전' },
+  { work: '모차르트 〈마술피리〉', question: '노래로 말하면 이야기가 어떻게 달라질까', field: '독서 · 이야기' },
 ];
 
 const FAQ = [
@@ -137,20 +144,22 @@ export default async function Home({
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-black/15" />
         <Reveal className="relative z-10 mx-4 mb-8 w-full max-w-xl sm:mb-0">
           <div className={`${GLASS_DARK} px-6 py-8 text-center text-white sm:px-12 sm:py-14`}>
-            <p className="text-sm font-bold text-white/80">우리 아이 맞춤 인문·예술 수업</p>
+            <p className="text-sm font-bold text-white/80">KINDY · 우리 아이 맞춤 통합 인문 수업</p>
             {showLibraryBenefit && (
               <div className="mx-auto mt-4 inline-flex items-center rounded-full border border-gold/70 bg-white/15 px-4 py-1.5 text-sm font-black text-gold backdrop-blur-xl">
                 도서관 한정 월 ₩19,000
               </div>
             )}
-            <h1 className="mt-4 text-balance text-4xl font-black leading-[1.15] tracking-tight sm:text-6xl">
-              그림과 클래식이
-              <br />
-              익숙한 아이로.
+            <h1 className="mt-4 text-3xl font-black leading-[1.2] tracking-normal sm:text-5xl">
+              <span className="block whitespace-nowrap">읽고 느낀 것을,</span>
+              <span className="block whitespace-nowrap">생각으로 만드는 힘.</span>
             </h1>
-            <p className="mt-6 text-pretty text-sm leading-relaxed text-white/85 sm:text-base">
-              명화와 클래식, 이야기와 질문으로 인문·정서·창의·독서를 아우르는 맞춤 수업.
-              부모님과의 대화로 커리큘럼을 짜고, 매주 화·금 오후 4시 카톡으로 도착합니다.
+            <p className="mx-auto mt-6 max-w-2xl text-pretty text-sm leading-relaxed text-white/85 sm:text-base">
+              명화·클래식·고전 이야기에서 질문하고 표현하고 창작합니다. 인문·정서·창의·독서를
+              한 흐름으로 연결합니다.
+            </p>
+            <p className="mx-auto mt-5 max-w-sm border-y border-white/25 py-3 text-sm font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+              인문 · 정서 · 창의 · 독서
             </p>
             <Link
               href={START_HREF}
@@ -165,45 +174,17 @@ export default async function Home({
         </Reveal>
       </section>
 
-      {/* 살아 움직이는 수업 — 쇠라 비디오 글라스 프레임 */}
+      {/* 네 갈래 가치 — 예술은 네 역량을 연결하는 매개다 */}
       <section className="mx-auto w-full max-w-5xl px-5 py-28 sm:px-8 sm:py-36">
         <Reveal>
           <h2 className="text-balance text-3xl font-black leading-snug tracking-tight sm:text-5xl">
-            명화가 살아
+            한 편의 이야기로
             <br />
-            움직이는 수업.
+            네 가지 힘을 함께.
           </h2>
           <p className="mt-6 max-w-2xl text-pretty text-base leading-relaxed text-ink2 sm:text-lg">
-            정지 화면이 아닙니다. 물결이 일렁이고 낚싯줄이 흔들리는 그림 속에서, 아이 눈높이의
-            도슨트가 이야기를 들려줍니다.
-          </p>
-        </Reveal>
-        <Reveal delay={120}>
-          <figure className={`${GLASS_LIGHT} mt-12 overflow-hidden p-3 sm:p-4`}>
-            <LoopVideo
-              src="/landing/seurat-alive.mp4"
-              poster="/landing/seurat-poster.jpg"
-              className="aspect-video w-full rounded-2xl object-cover"
-            />
-            <figcaption className="px-2 pb-1 pt-4 text-sm text-ink3">
-              조르주 쇠라, 〈그랑드 자트 섬의 일요일 오후〉 (1886) — 시즌 1에서 아이가 실제로 만나는
-              장면
-            </figcaption>
-          </figure>
-        </Reveal>
-      </section>
-
-      {/* 네 갈래 가치 — 미술 단독 교육이 아니다 */}
-      <section className="mx-auto w-full max-w-5xl px-5 pb-28 sm:px-8 sm:pb-36">
-        <Reveal>
-          <h2 className="text-balance text-3xl font-black leading-snug tracking-tight sm:text-5xl">
-            미술만 배우는 게
-            <br />
-            아닙니다.
-          </h2>
-          <p className="mt-6 max-w-2xl text-pretty text-base leading-relaxed text-ink2 sm:text-lg">
-            한 작품을 인문·정서·창의·독서 네 갈래로 넓혀 갑니다. 그림은 문이고, 그 뒤에 아이의
-            세계가 있습니다.
+            Kindy에서 명화와 클래식은 외워야 할 지식이 아닙니다. 아이가 세상을 이해하고,
+            마음을 말하고, 자기 생각을 만드는 이야기의 출발점입니다.
           </p>
         </Reveal>
         <div className="mt-12 grid gap-5 sm:grid-cols-2">
@@ -220,17 +201,44 @@ export default async function Home({
         </div>
       </section>
 
+      {/* 살아 움직이는 수업 — 쇠라 비디오 글라스 프레임 */}
+      <section className="mx-auto w-full max-w-5xl px-5 pb-28 sm:px-8 sm:pb-36">
+        <Reveal>
+          <h2 className="text-balance text-3xl font-black leading-snug tracking-tight sm:text-5xl">
+            명화는 목적이 아니라,
+            <br />
+            이야기의 시작입니다.
+          </h2>
+          <p className="mt-6 max-w-2xl text-pretty text-base leading-relaxed text-ink2 sm:text-lg">
+            살아 움직이는 그림 속으로 들어가 시대와 사람을 만나고, 음악으로 마음을 느끼고,
+            질문과 창작으로 아이의 이야기를 꺼냅니다.
+          </p>
+        </Reveal>
+        <Reveal delay={120}>
+          <figure className={`${GLASS_LIGHT} mt-12 overflow-hidden p-3 sm:p-4`}>
+            <LoopVideo
+              src="/landing/seurat-alive.mp4"
+              poster="/landing/seurat-poster.jpg"
+              className="aspect-video w-full rounded-2xl object-cover"
+            />
+            <figcaption className="px-2 pb-1 pt-4 text-sm text-ink3">
+              쇠라의 한 장면에서 시대 이야기, 감정 질문, 아이의 창작으로 이어지는 수업
+            </figcaption>
+          </figure>
+        </Reveal>
+      </section>
+
       {/* 문제 공감 + 앵커 표 (글라스 카드) */}
       <section className="mx-auto w-full max-w-4xl px-5 pb-28 sm:px-8 sm:pb-36">
         <Reveal>
           <h2 className="text-balance text-3xl font-black leading-snug tracking-tight sm:text-5xl">
-            작품을 보는 눈은
+            따로 배우던 경험을
             <br />
-            누가 가르치죠?
+            한 수업 안에서.
           </h2>
           <p className="mt-6 max-w-2xl text-pretty text-base leading-relaxed text-ink2 sm:text-lg">
-            미술학원은 그리기를 가르칩니다. 명화를 읽고, 클래식을 듣고, 자기 생각을 말하는 힘은
-            따로 배워야 합니다.
+            책으로 만나는 인문 이야기, 음악으로 느끼는 감정, 질문으로 넓히는 생각, 손으로 만드는
+            창작을 하나의 흐름으로 연결합니다.
           </p>
         </Reveal>
         <Reveal delay={120}>
