@@ -1,2 +1,4 @@
 base: main
-# docs repo — no build; trivial gate (codex edits + draft PR)
+# Next.js app (not a docs repo — the previous gate was copied from kindy-web by mistake).
+# typecheck + unit tests; both verified green in the Hermes container 2026-07-12.
+test: ( test -d node_modules || npm ci --silent --no-audit --no-fund ) && node_modules/.bin/tsc --noEmit && npm test
