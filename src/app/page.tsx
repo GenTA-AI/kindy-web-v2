@@ -134,21 +134,21 @@ export default async function Home({
           poster="/landing/starry-poster.jpg"
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-black/30" />
-        <Reveal className="relative z-10 mx-4 mb-10 w-full max-w-xl sm:mb-0">
-          <div className={`${GLASS_DARK} px-7 py-10 text-center text-white sm:px-12 sm:py-14`}>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-black/15" />
+        <Reveal className="relative z-10 mx-4 mb-8 w-full max-w-xl sm:mb-0">
+          <div className={`${GLASS_DARK} px-6 py-8 text-center text-white sm:px-12 sm:py-14`}>
             <p className="text-sm font-bold text-white/80">우리 아이 맞춤 인문·예술 수업</p>
             {showLibraryBenefit && (
               <div className="mx-auto mt-4 inline-flex items-center rounded-full border border-gold/70 bg-white/15 px-4 py-1.5 text-sm font-black text-gold backdrop-blur-xl">
                 도서관 한정 월 ₩19,000
               </div>
             )}
-            <h1 className="mt-4 text-4xl font-black leading-[1.15] tracking-tight sm:text-6xl">
+            <h1 className="mt-4 text-balance text-4xl font-black leading-[1.15] tracking-tight sm:text-6xl">
               그림과 클래식이
               <br />
               익숙한 아이로.
             </h1>
-            <p className="mt-6 text-sm leading-relaxed text-white/85 sm:text-base">
+            <p className="mt-6 text-pretty text-sm leading-relaxed text-white/85 sm:text-base">
               명화와 클래식, 이야기와 질문으로 인문·정서·창의·독서를 아우르는 맞춤 수업.
               부모님과의 대화로 커리큘럼을 짜고, 매주 화·금 오후 4시 카톡으로 도착합니다.
             </p>
@@ -160,7 +160,7 @@ export default async function Home({
               첫 이야기 무료로 보기
             </Link>
             <p className="mt-4 text-xs text-white/70">결제 없이 볼 수 있어요 · 첫 14일 100% 환불 보장</p>
-            <p className="mt-6 text-xs text-white/50">지금 화면: 반 고흐 〈별이 빛나는 밤〉이 실제 수업처럼 살아 움직이는 모습</p>
+            <p className="mt-6 hidden text-xs text-white/50 sm:block">지금 화면: 반 고흐 〈별이 빛나는 밤〉이 실제 수업처럼 살아 움직이는 모습</p>
           </div>
         </Reveal>
       </section>
@@ -168,12 +168,12 @@ export default async function Home({
       {/* 살아 움직이는 수업 — 쇠라 비디오 글라스 프레임 */}
       <section className="mx-auto w-full max-w-5xl px-5 py-28 sm:px-8 sm:py-36">
         <Reveal>
-          <h2 className="text-3xl font-black leading-snug tracking-tight sm:text-5xl">
+          <h2 className="text-balance text-3xl font-black leading-snug tracking-tight sm:text-5xl">
             명화가 살아
             <br />
             움직이는 수업.
           </h2>
-          <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink2 sm:text-lg">
+          <p className="mt-6 max-w-2xl text-pretty text-base leading-relaxed text-ink2 sm:text-lg">
             정지 화면이 아닙니다. 물결이 일렁이고 낚싯줄이 흔들리는 그림 속에서, 아이 눈높이의
             도슨트가 이야기를 들려줍니다.
           </p>
@@ -196,12 +196,12 @@ export default async function Home({
       {/* 네 갈래 가치 — 미술 단독 교육이 아니다 */}
       <section className="mx-auto w-full max-w-5xl px-5 pb-28 sm:px-8 sm:pb-36">
         <Reveal>
-          <h2 className="text-3xl font-black leading-snug tracking-tight sm:text-5xl">
+          <h2 className="text-balance text-3xl font-black leading-snug tracking-tight sm:text-5xl">
             미술만 배우는 게
             <br />
             아닙니다.
           </h2>
-          <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink2 sm:text-lg">
+          <p className="mt-6 max-w-2xl text-pretty text-base leading-relaxed text-ink2 sm:text-lg">
             한 작품을 인문·정서·창의·독서 네 갈래로 넓혀 갑니다. 그림은 문이고, 그 뒤에 아이의
             세계가 있습니다.
           </p>
@@ -213,7 +213,7 @@ export default async function Home({
                 <h3 className="text-2xl font-black tracking-tight">
                   <span className="text-gold">{pillar.key}</span>
                 </h3>
-                <p className="mt-3 leading-relaxed text-ink2">{pillar.body}</p>
+                <p className="mt-3 text-pretty leading-relaxed text-ink2">{pillar.body}</p>
               </div>
             </Reveal>
           ))}
@@ -223,12 +223,12 @@ export default async function Home({
       {/* 문제 공감 + 앵커 표 (글라스 카드) */}
       <section className="mx-auto w-full max-w-4xl px-5 pb-28 sm:px-8 sm:pb-36">
         <Reveal>
-          <h2 className="text-3xl font-black leading-snug tracking-tight sm:text-5xl">
+          <h2 className="text-balance text-3xl font-black leading-snug tracking-tight sm:text-5xl">
             작품을 보는 눈은
             <br />
             누가 가르치죠?
           </h2>
-          <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink2 sm:text-lg">
+          <p className="mt-6 max-w-2xl text-pretty text-base leading-relaxed text-ink2 sm:text-lg">
             미술학원은 그리기를 가르칩니다. 명화를 읽고, 클래식을 듣고, 자기 생각을 말하는 힘은
             따로 배워야 합니다.
           </p>
@@ -272,7 +272,7 @@ export default async function Home({
         <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/30 to-black/50" />
         <div className="relative z-10 mx-auto w-full max-w-5xl px-5 py-28 text-white sm:px-8 sm:py-36">
           <Reveal>
-            <h2 className="text-3xl font-black leading-snug tracking-tight sm:text-5xl">
+            <h2 className="text-balance text-3xl font-black leading-snug tracking-tight sm:text-5xl">
               3분 영상이 아니라,
               <br />
               20분 수업입니다.
@@ -285,7 +285,7 @@ export default async function Home({
                 <div className={`${GLASS_DARK} h-full px-7 py-8 transition-transform duration-300 hover:-translate-y-1`}>
                   <p className="text-sm font-bold text-gold">{item.step}</p>
                   <h3 className="mt-2 text-xl font-black">{item.title}</h3>
-                  <p className="mt-2 leading-relaxed text-white/80">{item.body}</p>
+                  <p className="mt-2 text-pretty leading-relaxed text-white/80">{item.body}</p>
                 </div>
               </Reveal>
             ))}
@@ -312,7 +312,7 @@ export default async function Home({
           ))}
         </div>
         <Reveal delay={200}>
-          <p className="mt-8 max-w-2xl leading-relaxed text-ink2">
+          <p className="mt-8 max-w-2xl text-pretty leading-relaxed text-ink2">
             받은 수업은 회차별로 아이의 계정에 남아 언제든 다시 볼 수 있습니다. 여섯 달이면
             마흔여덟 편 — 아이만의 전집 한 질이 쌓입니다.
           </p>
@@ -322,12 +322,12 @@ export default async function Home({
       {/* 개인화 — 부모와의 대화로 짜는 우리 아이 커리큘럼 */}
       <section className="mx-auto w-full max-w-5xl px-5 pb-28 sm:px-8 sm:pb-36">
         <Reveal>
-          <h2 className="text-3xl font-black leading-snug tracking-tight sm:text-5xl">
+          <h2 className="text-balance text-3xl font-black leading-snug tracking-tight sm:text-5xl">
             우리 아이에게만
             <br />
             맞춘 커리큘럼.
           </h2>
-          <p className="mt-6 max-w-2xl text-base leading-relaxed text-ink2 sm:text-lg">
+          <p className="mt-6 max-w-2xl text-pretty text-base leading-relaxed text-ink2 sm:text-lg">
             정해진 전집을 순서대로 트는 게 아닙니다. 부모님과 대화하고, 아이의 반응을 읽으며,
             매주 커리큘럼이 아이를 따라갑니다.
           </p>
@@ -338,7 +338,7 @@ export default async function Home({
               <div className={`${GLASS_LIGHT} h-full px-7 py-8`}>
                 <p className="text-sm font-black tracking-[0.2em] text-gold">{item.step}</p>
                 <h3 className="mt-3 text-xl font-black">{item.title}</h3>
-                <p className="mt-3 leading-relaxed text-ink2">{item.body}</p>
+                <p className="mt-3 text-pretty leading-relaxed text-ink2">{item.body}</p>
               </div>
             </Reveal>
           ))}
@@ -349,12 +349,12 @@ export default async function Home({
       <section className="mx-auto w-full max-w-4xl px-5 pb-28 text-center sm:px-8 sm:pb-36">
         <Reveal>
           <h2 className="text-sm font-black tracking-[0.25em] text-ink3">만드는 사람</h2>
-          <p className="mt-10 text-2xl font-black leading-snug tracking-tight sm:text-4xl">
+          <p className="mt-10 text-balance text-2xl font-black leading-snug tracking-tight sm:text-4xl">
             30년 인문학·예술 교수의
             <br />
             커리큘럼을 그대로 옮겼습니다.
           </p>
-          <p className="mx-auto mt-8 max-w-xl leading-relaxed text-ink2">
+          <p className="mx-auto mt-8 max-w-xl text-pretty leading-relaxed text-ink2">
             런던에서 수학한 미디어아티스트가 한 편 한 편 직접 연출합니다. AI는 붓입니다 —
             연출과 대본, 감수는 사람이 합니다.
           </p>
@@ -401,7 +401,7 @@ export default async function Home({
                     +
                   </span>
                 </summary>
-                <p className="mt-3 leading-relaxed text-ink2">{item.a}</p>
+                <p className="mt-3 text-pretty leading-relaxed text-ink2">{item.a}</p>
               </details>
             </Reveal>
           ))}
