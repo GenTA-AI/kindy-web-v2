@@ -42,7 +42,7 @@ const ANCHORS = [
   { name: '미술·피아노 학원', price: '월 12~20만원', limit: '이동 필요, 그리기 기술 중심' },
   { name: '어린이 명작 전집', price: '세트당 29~41만원', limit: '일시불 부담, 아이 혼자 안 읽음' },
   { name: '예술의전당 어린이 아카데미', price: '90분 1회 62,000원', limit: '서울 집중, 예약 경쟁' },
-  { name: 'Kindy', price: '월 34,900원 · 파운딩 24,900원', limit: '매주 새 작품, 카톡으로 도착' },
+  { name: 'Kindy', price: '월 34,900원 · 얼리버드 24,900원', limit: '매주 새 작품, 카톡으로 도착' },
 ];
 
 const SESSION_STEPS = [
@@ -68,7 +68,6 @@ const FAQ = [
     q: '키즈 OTT랑 뭐가 달라요?',
     a: '라이브러리가 아니라 커리큘럼입니다. 매주 아이의 반응을 보고 다음 편을 고릅니다.',
   },
-  { q: '몇 살부터 볼 수 있나요?', a: '7~10세에 맞춰 설계했습니다.' },
   { q: '해지는 어떻게 하나요?', a: '카톡 한 줄이면 즉시 됩니다. 첫 14일은 100% 환불을 보장합니다.' },
 ];
 
@@ -138,7 +137,7 @@ export default async function Home({
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-black/30" />
         <Reveal className="relative z-10 mx-4 mb-10 w-full max-w-xl sm:mb-0">
           <div className={`${GLASS_DARK} px-7 py-10 text-center text-white sm:px-12 sm:py-14`}>
-            <p className="text-sm font-bold text-white/80">우리 아이 맞춤 인문·예술 수업 · 7~10세</p>
+            <p className="text-sm font-bold text-white/80">우리 아이 맞춤 인문·예술 수업</p>
             {showLibraryBenefit && (
               <div className="mx-auto mt-4 inline-flex items-center rounded-full border border-gold/70 bg-white/15 px-4 py-1.5 text-sm font-black text-gold backdrop-blur-xl">
                 도서관 한정 월 ₩19,000
@@ -366,7 +365,7 @@ export default async function Home({
       <section className="mx-auto w-full max-w-4xl px-5 pb-28 sm:px-8 sm:pb-36">
         <Reveal>
           <div className={`${GLASS_LIGHT} mx-auto max-w-lg px-8 py-14 text-center`}>
-            <p className="text-sm font-black tracking-[0.25em] text-gold">파운딩 멤버 · 첫 20가정</p>
+            <p className="text-sm font-black tracking-[0.25em] text-gold">얼리버드 특가 · 기간 한정</p>
             <p className="mt-6 text-5xl font-black tracking-tight">월 24,900원</p>
             <p className="mt-2 font-bold text-ink2">평생 고정</p>
             <p className="mt-6 text-sm leading-relaxed text-ink3">
