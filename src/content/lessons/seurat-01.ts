@@ -46,7 +46,7 @@ export const SEURAT_01: DocentLesson = {
   topic: 'docent_seurat',
   title: '점으로 그린 일요일',
   artwork: '조르주 쇠라, 〈그랑드 자트 섬의 일요일 오후〉 (1886)',
-  videoPath: 'first-story/seurat-episode-720p.mp4',
+  videoPath: 'lessons/seurat-01-vertical.mp4', // 세로 1080x1920, 큰 자막 번인
   posterPath: '/landing/seurat-poster.jpg',
   chapters: [
     {

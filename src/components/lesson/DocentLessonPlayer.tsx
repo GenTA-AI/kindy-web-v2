@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { emitGameEvent } from '@/lib/game/events-client';
-import { GLASS_LIGHT } from '@/components/ui/glass';
+import { GLASS_DARK, GLASS_LIGHT } from '@/components/ui/glass';
 import type { DocentLesson, LessonQuestion } from '@/content/lessons/seurat-01';
 import type { GameRoundResult } from '@/types/game';
 
@@ -166,7 +166,7 @@ export default function DocentLessonPlayer({
           </section>
         )}
 
-        <div className={stage === 'video' || stage === 'question' || stage === 'feedback' ? 'flex flex-1 flex-col' : 'hidden'}>
+        <div className={stage === 'video' || stage === 'question' || stage === 'feedback' ? 'relative mx-auto mt-3 w-full max-w-[520px] flex-1 overflow-hidden rounded-3xl bg-[#101623]' : 'hidden'} style={{ aspectRatio: '9 / 16' }}>
           <video
             ref={videoRef}
             src={videoUrl}
@@ -174,17 +174,17 @@ export default function DocentLessonPlayer({
             playsInline
             preload="auto"
             onTimeUpdate={handleTimeUpdate}
-            className={`mt-4 aspect-video w-full rounded-3xl bg-black ${stage === 'video' ? '' : 'opacity-40'}`}
+            className="absolute inset-0 h-full w-full object-cover"
           />
           {stage === 'video' && (
-            <p className="mt-4 text-center text-sm font-bold text-ink3">
-              {chapter.title} — 잘 보고 있으면 질문이 나와요
+            <p className="absolute inset-x-0 top-3 text-center text-sm font-bold text-white/70">
+              {chapter.title}
             </p>
           )}
 
           {(stage === 'question' || stage === 'feedback') && (
-            <section className="mt-5 flex flex-1 flex-col" aria-live="polite">
-              <h2 className="text-balance text-center text-2xl font-black leading-snug">{question.prompt}</h2>
+            <section className="absolute inset-0 flex flex-col justify-center bg-black/50 px-4 backdrop-blur-sm" aria-live="polite">
+              <h2 className="text-balance text-center text-2xl font-black leading-snug text-white">{question.prompt}</h2>
               <div className="mt-5 flex flex-col gap-3">
                 {question.options.map((option, index) => {
                   const picked = pickedIndex === index;
@@ -199,7 +199,7 @@ export default function DocentLessonPlayer({
                           ? 'border-sage bg-sagebg text-saged'
                           : picked
                             ? 'border-gold bg-white text-ink'
-                            : 'border-line bg-white text-ink2'
+                            : 'border-white/30 bg-white/90 text-ink'
                       }`}
                     >
                       {option}
@@ -208,17 +208,17 @@ export default function DocentLessonPlayer({
                 })}
               </div>
               {stage === 'feedback' && (
-                <div className="mt-5 rounded-2xl bg-sagebg/70 px-5 py-4 text-center">
-                  <p className="text-base font-black leading-relaxed text-saged">
+                <div className={`${GLASS_DARK} mt-5 px-5 py-4 text-center`}>
+                  <p className="text-base font-black leading-relaxed text-white">
                     {question.scored && !isCorrectPick ? '괜찮아! 정답을 같이 볼까? ' : ''}
                     {question.feedback}
                   </p>
                   {question.reasonPrompt && (
-                    <p className="mt-2 text-sm font-bold leading-relaxed text-ink2">{question.reasonPrompt}</p>
+                    <p className="mt-2 text-sm font-bold leading-relaxed text-white/80">{question.reasonPrompt}</p>
                   )}
                   <button
                     onClick={next}
-                    className="mt-4 min-h-14 w-full rounded-full bg-ink text-base font-black text-cream transition active:scale-[0.97]"
+                    className="mt-4 min-h-14 w-full rounded-full bg-white text-base font-black text-ink transition active:scale-[0.97]"
                   >
                     {chapterIndex + 1 < lesson.chapters.length ? '다음 이야기 보기' : '수업 마치기'}
                   </button>
