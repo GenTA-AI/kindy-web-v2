@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { emitGameEvent } from '@/lib/game/events-client';
+import { markLessonComplete } from '@/lib/world/world-state';
 import { GLASS_DARK, GLASS_LIGHT } from '@/components/ui/glass';
 import type { DocentLesson, LessonQuestion } from '@/content/lessons/seurat-01';
 import type { GameRoundResult } from '@/types/game';
@@ -64,6 +65,11 @@ export default function DocentLessonPlayer({
       if (res.game_session_id) sessionIdRef.current = res.game_session_id;
     });
   }, [emit, lesson.chapters.length]);
+
+  // 수업 완료 시 이야기 지도(데모)에 지역 완료를 마킹 — /world 로 돌아가면 다음 지역 안개가 걷힌다.
+  useEffect(() => {
+    if (stage === 'complete') markLessonComplete(lesson.id);
+  }, [stage, lesson.id]);
 
   // 장 구간 재생 — 종료 시각 도달 시 멈추고 질문으로.
   const handleTimeUpdate = useCallback(() => {
@@ -248,6 +254,12 @@ export default function DocentLessonPlayer({
                 className="mt-6 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-ink text-base font-bold text-cream transition active:scale-[0.98]"
               >
                 부모님 리포트에서 오늘 기록 보기
+              </Link>
+              <Link
+                href="/world"
+                className="mt-3 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-sage text-base font-bold text-white transition active:scale-[0.98]"
+              >
+                🗺️ 지도로 돌아가기
               </Link>
               <button
                 onClick={() => { setCorrectCount(0); setScoredCount(0); startChapter(0); }}
