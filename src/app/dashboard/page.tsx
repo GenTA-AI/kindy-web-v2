@@ -592,6 +592,9 @@ function DashboardContent() {
                 </div>
               </div>
             )}
+            <p className="mt-3 text-xs leading-relaxed text-ink3">
+              활동 중 관찰을 요약한 참고 자료예요. 검사나 진단이 아니며, 아이의 능력을 점수로 판정하지 않습니다.
+            </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {c6Map.map((tool) => (
                 <C6MapCard key={tool.key} tool={tool} />

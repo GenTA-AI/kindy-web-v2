@@ -363,6 +363,9 @@ function GrowthMapSections({ report }: { report: ParentReportGrowthData }) {
             <p className="mt-3 max-w-3xl text-sm font-semibold leading-relaxed text-ink2">
               놀이에서 보인 작은 단서를 씨앗 상태로만 정리합니다. 더 살펴볼 부분은 천천히 선명해집니다.
             </p>
+            <p className="mt-2 max-w-3xl text-xs leading-relaxed text-ink3">
+              이 지도는 활동 중 관찰을 요약한 참고 자료예요. 검사나 진단이 아니며, 아이의 능력을 점수로 판정하지 않습니다.
+            </p>
           </div>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">

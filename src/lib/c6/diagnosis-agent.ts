@@ -9,6 +9,7 @@ import {
   DEFAULT_AXIS_PROFILE_STATE,
   buildEvidence,
   evidenceFromRound,
+  isAssessableRound,
   trendFrom,
   updateAxis,
   type AxisProfileState,
@@ -128,6 +129,7 @@ function evidenceRecord(round: GameRoundResult, axisId: C6AxisId): GameRoundEvid
     elapsed_ms: round.elapsed_ms ?? null,
     hint_count: round.hint_count ?? null,
     retry_count: round.retry_count ?? null,
+    auto_selected: round.auto_selected ?? null,
   };
 
   if (typeof round.is_correct === 'boolean') {
@@ -147,6 +149,10 @@ export async function processRoundGrowth(
 
   const axisId = axisForRound(input.round);
   if (!axisId) return;
+
+  // 노출·사용성 신호(자동선택, 정오답 없는 완료)는 역량 갱신에서 제외 (로드맵 P0).
+  // claimRound가 이미 처리 마킹을 했으므로 재처리되지 않는다.
+  if (!isAssessableRound(evidenceRecord(input.round, axisId))) return;
 
   const recentRounds = await loadRecentRounds({
     client,
