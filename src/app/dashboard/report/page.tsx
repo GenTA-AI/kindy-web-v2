@@ -187,6 +187,62 @@ function toRoundResult(row: RoundRow): GameRoundResult | null {
   };
 }
 
+type SessionTimelineRow = {
+  id: string;
+  started_at: string | null;
+  completed_at: string | null;
+  rounds_completed: number | null;
+  rounds_total: number | null;
+};
+
+function formatSessionTime(value: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function SessionTimeline({ sessions }: { sessions: SessionTimelineRow[] }) {
+  if (sessions.length === 0) return null;
+
+  return (
+    <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[.16em] text-sage">세션 타임라인</p>
+      <h2 className="mt-2 text-2xl font-black">최근 7일, 아이가 만난 수업</h2>
+      <p className="mt-2 text-sm leading-relaxed text-ink3">
+        수업을 마치는 순간이 여기에 쌓입니다. 완료 표시는 아이가 끝까지 함께했다는 뜻이에요.
+      </p>
+      <ol className="mt-5 flex flex-col gap-3">
+        {sessions.map((session) => {
+          const done = Boolean(session.completed_at);
+          return (
+            <li
+              key={session.id}
+              className={`flex items-center justify-between gap-4 rounded-2xl border p-4 ${
+                done ? 'border-sage/50 bg-sagebg/60' : 'border-line bg-mist'
+              }`}
+            >
+              <div>
+                <p className="text-sm font-black text-ink">
+                  {done ? '수업 완료 🎉' : '수업 진행 중'}
+                </p>
+                <p className="mt-0.5 text-xs font-semibold text-ink3">
+                  {formatSessionTime(session.started_at)}
+                  {done ? ` → ${formatSessionTime(session.completed_at)} 마침` : ''}
+                </p>
+              </div>
+              {session.rounds_total ? (
+                <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-saged">
+                  놀이 {session.rounds_completed ?? 0}/{session.rounds_total}
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 async function loadReport(parentId: string | null, requestedChildId: string | null, sampleMode = false) {
   if (sampleMode) {
     return {
@@ -196,6 +252,15 @@ async function loadReport(parentId: string | null, requestedChildId: string | nu
         age: DEFAULT_LOCAL_PREVIEW_CHILD.age,
       },
       rounds: LOCAL_PREVIEW_ROUNDS,
+      sessions: [
+        {
+          id: 'sample-session',
+          started_at: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
+          completed_at: new Date().toISOString(),
+          rounds_completed: 3,
+          rounds_total: 3,
+        },
+      ] as SessionTimelineRow[],
       sessionCount: 1,
       completedSessionCount: 1,
       latestCompletedAt: null,
@@ -215,6 +280,17 @@ async function loadReport(parentId: string | null, requestedChildId: string | nu
         age: previewChild.age,
       },
       rounds: hasPlayedPreview ? previewRounds : [],
+      sessions: previewGame
+        ? ([
+            {
+              id: 'preview-session',
+              started_at: previewGame.updated_at ?? new Date().toISOString(),
+              completed_at: previewGame.completed_at ?? null,
+              rounds_completed: previewRounds.length,
+              rounds_total: previewGame.rounds.length,
+            },
+          ] as SessionTimelineRow[])
+        : [],
       sessionCount: previewGame ? 1 : 0,
       completedSessionCount: previewGame?.completed_at ? 1 : 0,
       latestCompletedAt: previewGame?.completed_at ?? null,
@@ -241,6 +317,7 @@ async function loadReport(parentId: string | null, requestedChildId: string | nu
     return {
       child: null,
       rounds: [] as GameRoundResult[],
+      sessions: [] as SessionTimelineRow[],
       sessionCount: 0,
       completedSessionCount: 0,
       latestCompletedAt: null,
@@ -259,7 +336,7 @@ async function loadReport(parentId: string | null, requestedChildId: string | nu
       .limit(120),
     supabase
       .from('game_sessions')
-      .select('id, completed_at')
+      .select('id, started_at, completed_at, rounds_completed, rounds_total')
       .eq('child_id', child.id)
       .gte('started_at', since)
       .order('started_at', { ascending: false })
@@ -272,6 +349,7 @@ async function loadReport(parentId: string | null, requestedChildId: string | nu
   return {
     child,
     rounds: ((rounds ?? []) as RoundRow[]).map(toRoundResult).filter((item): item is GameRoundResult => Boolean(item)),
+    sessions: ((sessions ?? []) as SessionTimelineRow[]),
     sessionCount: sessions?.length ?? 0,
     completedSessionCount: (sessions ?? []).filter((session) => Boolean(session.completed_at)).length,
     latestCompletedAt: (sessions ?? [])
@@ -523,7 +601,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
     report = await loadReport(parentId, requestedChildId, sampleMode);
   } catch {
     loadFailed = true;
-    report = { child: null, rounds: [], sessionCount: 0, completedSessionCount: 0, latestCompletedAt: null };
+    report = { child: null, rounds: [], sessions: [], sessionCount: 0, completedSessionCount: 0, latestCompletedAt: null };
   }
 
   const childName = displayName(report.child);
@@ -676,6 +754,8 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
           <Metric label="다시 본 순간" value={`${retriedCount}번`} />
           <Metric label="대화 힌트" value={`${starters.length}개`} />
         </section>
+
+        <SessionTimeline sessions={report.sessions} />
 
         {growthReport && <GrowthMapSections report={growthReport} />}
 

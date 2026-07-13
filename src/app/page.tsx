@@ -2,12 +2,13 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Reveal from '@/components/landing/Reveal';
 
-const START_HREF = '/auth/login?next=/onboarding';
+// §5-4 전환 퍼널: 랜딩 CTA는 결제·로그인이 아니라 무료 샘플 시청으로 (2026-07-13).
+const FIRST_STORY_HREF = '/first-story';
 
 export const metadata: Metadata = {
   title: 'Kindy — 읽고 느낀 것을 생각으로 만드는 힘',
   description:
-    '명화와 클래식, 고전 이야기를 인문·정서·창의·독서로 연결하는 우리 아이 맞춤 통합 인문 수업. 매주 화·금, 카톡으로 도착합니다.',
+    '명화와 클래식, 고전 이야기를 인문·정서·창의·독서로 연결하는 우리 아이 맞춤 통합 인문 수업. 매주 카톡으로 도착합니다.',
 };
 
 // 한 작품에서 넓혀 가는 네 갈래 — 미술 단독 교육이 아니다 (대표 교정 2026-07-12).
@@ -127,7 +128,7 @@ export default async function Home({
       <header className="fixed inset-x-4 top-4 z-50 mx-auto flex max-w-3xl items-center justify-between rounded-full border border-white/50 bg-white/40 px-6 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_8px_24px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150">
         <span className="text-sm font-black tracking-[0.3em]">KINDY</span>
         <Link
-          href={START_HREF}
+          href={FIRST_STORY_HREF}
           className="rounded-full bg-ink px-4 py-1.5 text-sm font-bold text-cream transition hover:bg-saged"
         >
           첫 이야기 무료
@@ -162,7 +163,7 @@ export default async function Home({
               인문 · 정서 · 창의 · 독서
             </p>
             <Link
-              href={START_HREF}
+              href={FIRST_STORY_HREF}
               className="group relative mt-8 inline-flex min-h-14 items-center justify-center overflow-hidden rounded-full bg-white px-10 text-base font-bold text-ink transition hover:scale-[1.03] active:scale-[0.98]"
             >
               <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-ink/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
@@ -380,7 +381,7 @@ export default async function Home({
               정가 월 34,900원 · 하루로 치면 1,163원
             </p>
             <Link
-              href={START_HREF}
+              href={FIRST_STORY_HREF}
               className="group relative mt-10 inline-flex min-h-14 w-full items-center justify-center overflow-hidden rounded-full bg-ink px-8 text-base font-bold text-cream transition hover:scale-[1.02] active:scale-[0.98]"
             >
               <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
