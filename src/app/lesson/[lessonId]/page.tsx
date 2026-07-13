@@ -22,6 +22,14 @@ export default async function LessonPage({
   const lesson = LESSONS[lessonId];
   if (!lesson) notFound();
 
+  // 프리뷰 게스트 모드 — 프리뷰 Cloud Run 서비스에만 켜는 런타임 env.
+  // 로그인·게이트를 건너뛰고 수업 UX만 검수한다 (이벤트는 미인증이라 기록되지 않음).
+  // 프로덕션(kindy 서비스)에는 이 env 가 없어 항상 잠김.
+  if (process.env.LESSON_GUEST_MODE === '1') {
+    const guestVideoUrl = await getSignedUrl(lesson.videoPath, 60 * 60 * 6);
+    return <DocentLessonPlayer lesson={lesson} videoUrl={guestVideoUrl} childId="preview-guest" />;
+  }
+
   let parentId: string;
   try {
     parentId = await getCurrentParentId();
