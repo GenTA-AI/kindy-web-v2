@@ -199,7 +199,7 @@ function LoginContent() {
     >
       <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[420px] flex-col justify-center">
         <div className="mb-7">
-          <MoriCharacter className="mb-5 h-20 w-20 overflow-hidden rounded-[24px] border border-line bg-white shadow-sm" imageClassName="scale-125" label="모리" withGlow={false} />
+          <MoriCharacter className="mb-5 h-20 w-20 overflow-hidden rounded-[24px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150" imageClassName="scale-125" label="모리" withGlow={false} />
           <div className="mb-3 text-[11px] font-black uppercase tracking-[.16em] text-sage">Kindy Mori</div>
           <h1 className="text-[30px] font-black leading-tight">
             보호자 계정으로
@@ -211,7 +211,7 @@ function LoginContent() {
           </p>
         </div>
 
-        <section className="mb-5 rounded-3xl border border-line bg-white p-4">
+        <section className="mb-5 rounded-3xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-4">
           <p className="text-[11px] font-black uppercase tracking-[.14em] text-sage">처음이라면</p>
           <div className="mt-3 grid gap-2">
             {SERVICE_FLOW.map(([num, title, body]) => (
@@ -230,7 +230,7 @@ function LoginContent() {
 
         <section className="mb-5 grid gap-2">
           {AUTH_PROMISES.map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-line bg-white p-4">
+            <div key={title} className="rounded-2xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-4">
               <p className="text-sm font-black text-ink">{title}</p>
               <p className="mt-1 text-xs font-semibold leading-relaxed text-ink3">{body}</p>
             </div>
@@ -270,13 +270,13 @@ function LoginContent() {
               autoComplete="email"
               aria-invalid={emailFieldInvalid}
               aria-describedby={hasFeedback ? 'login-feedback' : undefined}
-              className="w-full rounded-2xl border border-line bg-white px-4 py-4 text-base font-bold text-ink outline-none transition placeholder:text-ink3 focus:border-sage focus:ring-4 focus:ring-sagebg"
+              className="w-full rounded-2xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 px-4 py-4 text-base font-bold text-ink outline-none transition placeholder:text-ink3 focus:border-sage focus:ring-4 focus:ring-sagebg"
             />
           </label>
           <button
             type="submit"
             disabled={pending !== null || !email.trim()}
-            className="w-full rounded-2xl border border-line bg-white px-6 py-3.5 text-sm font-black text-saged transition hover:bg-mist active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-2xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 px-6 py-3.5 text-sm font-black text-saged transition hover:bg-mist active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending === 'email' ? '코드 보내는 중...' : codeSent ? '코드 다시 받기' : '이메일로 코드 받기'}
           </button>
@@ -296,7 +296,7 @@ function LoginContent() {
                 placeholder="000000"
                 aria-invalid={codeFieldInvalid}
                 aria-describedby={hasFeedback ? 'login-feedback' : undefined}
-                className="w-full rounded-2xl border border-line bg-white px-4 py-4 text-center text-2xl font-black tracking-[0.4em] text-ink outline-none transition placeholder:text-line focus:border-sage focus:ring-4 focus:ring-sagebg"
+                className="w-full rounded-2xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 px-4 py-4 text-center text-2xl font-black tracking-[0.4em] text-ink outline-none transition placeholder:text-line focus:border-sage focus:ring-4 focus:ring-sagebg"
               />
             </label>
             <button
@@ -326,7 +326,7 @@ function LoginContent() {
           </div>
         )}
 
-        <section className="mt-6 rounded-3xl border border-line bg-white p-4">
+        <section className="mt-6 rounded-3xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-4">
           <p className="text-[11px] font-black uppercase tracking-[.14em] text-sage">가입 전 확인</p>
           <p className="mt-2 text-sm font-semibold leading-relaxed text-ink2">
             아직 망설여진다면 모리의 첫 이야기와 보호자 기록 예시를 먼저 볼 수 있어요.

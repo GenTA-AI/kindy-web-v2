@@ -205,7 +205,7 @@ function SessionTimeline({ sessions }: { sessions: SessionTimelineRow[] }) {
   if (sessions.length === 0) return null;
 
   return (
-    <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
+    <section className="mt-5 rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
       <p className="text-xs font-black uppercase tracking-[.16em] text-sage">세션 타임라인</p>
       <h2 className="mt-2 text-2xl font-black">최근 7일, 아이가 만난 수업</h2>
       <p className="mt-2 text-sm leading-relaxed text-ink3">
@@ -433,7 +433,7 @@ function SeedStateCard({ seed }: { seed: ParentReportGrowthData['seeds'][number]
 function GrowthMapSections({ report }: { report: ParentReportGrowthData }) {
   return (
     <>
-      <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
+      <section className="mt-5 rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[.16em] text-sage">성장지도</p>
@@ -454,20 +454,20 @@ function GrowthMapSections({ report }: { report: ParentReportGrowthData }) {
       </section>
 
       <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+        <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
           <p className="text-xs font-black uppercase tracking-[.16em] text-sage">잘 들어간 학습 문</p>
           <h2 className="mt-2 text-2xl font-black">잘 들어온 문으로 이어가요</h2>
           <p className="mt-4 text-sm font-semibold leading-relaxed text-ink2">{report.strengthLine}</p>
         </section>
 
-        <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+        <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
           <p className="text-xs font-black uppercase tracking-[.16em] text-clay">더 자랄 씨앗</p>
           <h2 className="mt-2 text-2xl font-black">다음에 함께 열어볼 문</h2>
           <p className="mt-4 text-sm font-semibold leading-relaxed text-ink2">{report.growthLine}</p>
         </section>
       </section>
 
-      <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
+      <section className="mt-5 rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
         <p className="text-xs font-black uppercase tracking-[.16em] text-sage">생각도구 기록</p>
         <h2 className="mt-2 text-2xl font-black">놀이 속 생각 흐름</h2>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -492,7 +492,7 @@ function GrowthRecommendationPanel({
   recommendationLabel: string;
 }) {
   return (
-    <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+    <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
       <p className="text-xs font-black uppercase tracking-[.16em] text-clay">다음 이야기</p>
       <h2 className="mt-2 text-2xl font-black">오늘 이어갈 이야기 문</h2>
       {recommendation.storyTitles.length > 0 && (
@@ -520,7 +520,7 @@ function GrowthRecommendationPanel({
 
 function EmptyReport({ childName }: { childName: string }) {
   return (
-    <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+    <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
       <p className="text-xs font-black uppercase tracking-[.16em] text-sage">아직 피는 중</p>
       <h2 className="mt-2 text-2xl font-black leading-snug">{childName}의 첫 기록이 곧 자라나요.</h2>
       <p className="mt-3 text-sm font-semibold leading-relaxed text-ink2">
@@ -552,7 +552,7 @@ function HomeUseGuide({
   ];
 
   return (
-    <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
+    <section className="mt-5 rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-[.16em] text-clay">가정 사용 가이드</p>
@@ -691,7 +691,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
             </p>
           </section>
 
-          <section className="overflow-hidden rounded-[34px] border border-line bg-white shadow-sm">
+          <section className="overflow-hidden rounded-[34px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150">
             <MoriCharacter className="aspect-square w-full" imageClassName="scale-110" label="모리" />
           </section>
         </header>
@@ -705,7 +705,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
         )}
 
         <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1.05fr_.95fr]">
-          <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+          <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
             <p className="text-xs font-black uppercase tracking-[.16em] text-sage">기록 요약</p>
             <h2 className="mt-2 text-2xl font-black">다음에 해볼 놀이</h2>
             <div className="mt-5 grid gap-3">
@@ -726,7 +726,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
               recommendationLabel={recommendationLabel}
             />
           ) : (
-            <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+            <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
               <p className="text-xs font-black uppercase tracking-[.16em] text-clay">이번 주 이야기</p>
               <h2 className="mt-2 text-2xl font-black">영상과 단서 놀이 3일 흐름</h2>
               <div className="mt-5 grid gap-3">
@@ -775,7 +775,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
         ) : (
           <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[.94fr_1.06fr]">
             <div className="space-y-5">
-              <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+              <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
                 <p className="text-xs font-black uppercase tracking-[.16em] text-sage">
                   {growthReport ? '이번 주 이야기' : '성장 하이라이트'}
                 </p>
@@ -785,7 +785,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
                 </p>
               </section>
 
-              <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+              <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
                 <p className="text-xs font-black uppercase tracking-[.16em] text-clay">이번 주 함께한 활동</p>
                 <h2 className="mt-2 text-2xl font-black leading-snug">{summaryLine}</h2>
                 <p className="mt-3 text-sm font-semibold leading-relaxed text-ink2">
@@ -794,7 +794,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
               </section>
             </div>
 
-            <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+            <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[.16em] text-sage">놀이 기록</p>
@@ -811,7 +811,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
           </section>
         )}
 
-        <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
+        <section className="mt-5 rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[.16em] text-sage">놀이 지도</p>
@@ -834,7 +834,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
         </section>
 
         <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1.05fr_.95fr]">
-          <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+          <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
             <p className="text-xs font-black uppercase tracking-[.16em] text-sage">
               {growthReport ? '부모 대화 힌트' : '오늘 이렇게 물어보세요'}
             </p>
@@ -858,7 +858,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
             </ol>
           </section>
 
-          <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+          <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
             <p className="text-xs font-black uppercase tracking-[.16em] text-clay">자주 고른 단서</p>
             <h2 className="mt-2 text-2xl font-black">자주 고른 단서를 모았어요</h2>
             <dl className="mt-5 space-y-3">
@@ -878,7 +878,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <article className="rounded-[26px] border border-line bg-white p-5 shadow-sm">
+    <article className="rounded-[26px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-5">
       <p className="text-[11px] font-black uppercase tracking-[.14em] text-sage">{label}</p>
       <p className="mt-3 text-3xl font-black text-ink">{value}</p>
     </article>

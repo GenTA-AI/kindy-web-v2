@@ -184,7 +184,7 @@ export default function SubscribeClient({
             </p>
           </div>
           <MoriCharacter
-            className="h-20 w-20 shrink-0 overflow-hidden rounded-[26px] border border-line bg-white shadow-sm"
+            className="h-20 w-20 shrink-0 overflow-hidden rounded-[26px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150"
             imageClassName="scale-125"
             label="Kindy Mori"
             withGlow={false}
@@ -250,7 +250,7 @@ export default function SubscribeClient({
           </div>
         </section>
 
-        <section className="mb-5 rounded-2xl border border-line bg-white p-4 shadow-sm">
+        <section className="mb-5 rounded-2xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-4">
           <h2 className="text-sm font-black text-ink">결제 전에 확인해요</h2>
           <div className="mt-3 grid gap-2">
             {PAYMENT_NOTES.map((note) => (
@@ -263,7 +263,7 @@ export default function SubscribeClient({
 
         {/* 구독 상태 / CTA */}
         {isSubscribed ? (
-          <section className="mb-5 rounded-2xl border border-line bg-white p-5 shadow-sm">
+          <section className="mb-5 rounded-2xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-5">
             <h2 className="mb-3 text-base font-black text-ink">멤버십 관리</h2>
             <div className="space-y-1.5 text-sm font-semibold text-ink2">
               <div className="flex justify-between">
@@ -345,7 +345,7 @@ export default function SubscribeClient({
               </div>
             )}
             {checkoutReady && (
-              <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-2xl border border-line bg-white px-4 py-3">
+              <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-2xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 px-4 py-3">
                 <input
                   type="checkbox"
                   checked={billingConsent}

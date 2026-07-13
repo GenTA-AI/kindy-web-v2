@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getSignedUrl } from '@/lib/supabase-storage';
+import { GLASS_LIGHT } from '@/components/ui/glass';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,8 +18,6 @@ const SIGNED_URL_EXPIRY_SEC = 60 * 60 * 6;
 const KAKAO_CHANNEL_URL = process.env.NEXT_PUBLIC_KAKAO_CHANNEL_URL;
 const FALLBACK_CTA_HREF = '/auth/login?next=/onboarding';
 
-const GLASS_LIGHT =
-  'rounded-3xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150';
 
 async function loadEpisodeUrl(): Promise<string | null> {
   try {

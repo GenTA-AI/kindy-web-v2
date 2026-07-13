@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Reveal from '@/components/landing/Reveal';
+import { GLASS_DARK, GLASS_LIGHT } from '@/components/ui/glass';
 
 // §5-4 전환 퍼널: 랜딩 CTA는 결제·로그인이 아니라 무료 샘플 시청으로 (2026-07-13).
 const FIRST_STORY_HREF = '/first-story';
@@ -79,11 +80,6 @@ const FAQ = [
   { q: '해지는 어떻게 하나요?', a: '카톡 한 줄이면 즉시 됩니다. 첫 14일은 100% 환불을 보장합니다.' },
 ];
 
-// 리퀴드 글라스 재질 — 밝은 면/어두운 면 두 벌. 상단 1px 하이라이트가 유리의 스펙큘러.
-const GLASS_LIGHT =
-  'rounded-3xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150';
-const GLASS_DARK =
-  'rounded-3xl border border-white/20 bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-2xl backdrop-saturate-150';
 
 function LoopVideo({
   src,
