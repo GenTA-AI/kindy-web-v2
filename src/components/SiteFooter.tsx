@@ -38,6 +38,9 @@ export default function SiteFooter() {
           <Link href="/legal/privacy" className="inline-flex min-h-[44px] items-center hover:text-ink">
             개인정보처리방침
           </Link>
+          <Link href="/legal/refund" className="inline-flex min-h-[44px] items-center hover:text-ink">
+            취소·환불 정책
+          </Link>
           <Link href="/legal/business" className="inline-flex min-h-[44px] items-center hover:text-ink">
             사업자정보확인
           </Link>
