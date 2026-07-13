@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
+import * as PortOne from '@portone/browser-sdk/v2';
 import MoriCharacter from '@/components/MoriCharacter';
 import type { SubscriptionRow, EntitlementRow } from '@/lib/subscription-types';
 import { businessInfo, isBusinessInfoComplete } from '@/lib/business-info';
@@ -13,7 +13,7 @@ interface SubscribeClientProps {
   initialEntitlement: EntitlementRow;
 }
 
-const PRICE_KRW = 25000;
+const PRICE_KRW = 24900;
 const krw = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 
 function formatDate(iso: string | null): string {
@@ -56,14 +56,17 @@ export default function SubscribeClient({
   // 정기결제 사전 명시 동의(전자상거래법·여신전문금융업법). 카드 등록 전 필수.
   const [billingConsent, setBillingConsent] = useState(false);
 
-  const hasTossClientKey = Boolean(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
+  // 반드시 리터럴 접근 (business-info.ts 의 인라인 규칙과 동일).
+  const hasPortOneKeys = Boolean(
+    process.env.NEXT_PUBLIC_PORTONE_STORE_ID && process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY,
+  );
   const isSubscribed =
     !!subscription &&
     (subscription.status === 'active' || subscription.status === 'past_due');
   const isCanceledButPremium =
     !!subscription && subscription.status === 'canceled' && entitlement.is_premium;
   const businessComplete = isBusinessInfoComplete();
-  const checkoutReady = hasTossClientKey && businessComplete;
+  const checkoutReady = hasPortOneKeys && businessComplete;
   const currentPeriodEndLabel = formatDate(
     subscription?.current_period_end ?? entitlement.premium_until ?? null,
   );
@@ -74,8 +77,9 @@ export default function SubscribeClient({
     setPending('card');
     setError(null);
     try {
-      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
-      if (!clientKey) {
+      const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
+      const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
+      if (!storeId || !channelKey) {
         throw new Error('지금은 결제창을 열 수 없어요. 잠시 후 다시 시도해주세요.');
       }
       if (!businessComplete) {
@@ -93,15 +97,36 @@ export default function SubscribeClient({
           throw new Error('동의 저장이 잠시 어려워요. 잠시 후 다시 시도해 주세요.');
         }
       }
-      const tossPayments = await loadTossPayments(clientKey);
-      const payment = tossPayments.payment({ customerKey: parentId });
-      await payment.requestBillingAuth({
-        method: 'CARD',
-        successUrl: `${window.location.origin}/subscribe/success`,
-        failUrl: `${window.location.origin}/subscribe/fail`,
-        customerEmail: email ?? undefined,
+      // 포트원 V2 빌링키 발급. 데스크톱(iframe)은 프라미스로 빌링키를 즉시 받고,
+      // 모바일(리다이렉트 환경)은 redirectUrl(/subscribe/success?billingKey=...)로 돌아온다.
+      const issue = await PortOne.requestIssueBillingKey({
+        storeId,
+        channelKey,
+        billingKeyMethod: 'CARD',
+        issueId: `issue-${parentId.replace(/-/g, '').slice(0, 16)}-${Date.now()}`,
+        issueName: 'Kindy 월 구독',
+        customer: {
+          customerId: parentId,
+          ...(email ? { email } : {}),
+        },
+        redirectUrl: `${window.location.origin}/subscribe/success`,
       });
-      // requestBillingAuth 는 리다이렉트되므로 여기 도달하지 않음.
+      if (!issue || issue.code !== undefined) {
+        // 사용자가 창을 닫은 경우는 조용히 복귀(아래 catch 의 취소 필터와 동일).
+        throw new Error(issue?.message ?? '카드 등록이 완료되지 않았어요.');
+      }
+      // 서버에 빌링키 등록 + 첫 달 결제 (서버가 빌링키를 포트원에 재조회해 검증한다)
+      const res = await fetch('/api/payments/portone/billing-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ billingKey: issue.billingKey }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error ?? '결제 처리에 실패했어요.');
+      }
+      window.location.href = `/subscribe/success?registered=1&charged=${data.charged === false ? 0 : 1}`;
+      return;
     } catch (e) {
       const message = e instanceof Error ? e.message : '카드 등록창을 열지 못했어요.';
       // 사용자가 창을 닫은 경우는 조용히 복귀.
@@ -265,7 +290,7 @@ export default function SubscribeClient({
                 </div>
                 <button
                   onClick={startCardRegistration}
-                  disabled={pending !== null || !hasTossClientKey}
+                  disabled={pending !== null || !hasPortOneKeys}
                   className="mt-3 w-full rounded-2xl bg-saged px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.98] disabled:opacity-60"
                 >
                   {pending === 'card' ? '카드 등록창 여는 중…' : '카드 다시 등록하기'}

@@ -21,6 +21,8 @@
     "@anthropic-ai/sdk": "^0.90.0",
     "@fal-ai/client": "^1.9.5",
     "@google/genai": "^1.51.0",
+    "@portone/browser-sdk": "^0.1.9",
+    "@portone/server-sdk": "^0.19.0",
     "@supabase/auth-js": "^2.103.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.0",
