@@ -139,8 +139,8 @@ export default function DocentLessonPlayer({
   const isCorrectPick = question.scored && pickedIndex === question.correctIndex;
 
   return (
-    <main className="min-h-screen bg-cream text-ink [word-break:keep-all]">
-      <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-5 py-6">
+    <main className="h-[100svh] overflow-hidden bg-cream text-ink [word-break:keep-all]">
+      <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-5 py-4">
         <header className="flex items-center justify-between">
           <span className="text-xs font-black tracking-[0.3em] text-ink3">KINDY 수업</span>
           <span className="rounded-full bg-sagebg px-3 py-1 text-xs font-black text-saged">
@@ -166,7 +166,7 @@ export default function DocentLessonPlayer({
           </section>
         )}
 
-        <div className={stage === 'video' || stage === 'question' || stage === 'feedback' ? 'relative mx-auto mt-3 w-full max-w-[520px] flex-1 overflow-hidden rounded-3xl bg-[#101623]' : 'hidden'} style={{ aspectRatio: '9 / 16' }}>
+        <div className={stage === 'video' || stage === 'question' || stage === 'feedback' ? 'relative mx-auto mt-3 w-full max-w-[520px] min-h-0 flex-1 overflow-hidden rounded-3xl bg-[#101623]' : 'hidden'}>
           <video
             ref={videoRef}
             src={videoUrl}
@@ -174,7 +174,7 @@ export default function DocentLessonPlayer({
             playsInline
             preload="auto"
             onTimeUpdate={handleTimeUpdate}
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-contain"
           />
           {stage === 'video' && (
             <p className="absolute inset-x-0 top-3 text-center text-sm font-bold text-white/70">
@@ -229,7 +229,7 @@ export default function DocentLessonPlayer({
         </div>
 
         {stage === 'complete' && (
-          <section className="flex flex-1 flex-col items-center justify-center text-center">
+          <section className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto text-center">
             <div className={`${GLASS_LIGHT} w-full px-7 py-10`}>
               <p className="text-5xl">🎉</p>
               <h1 className="mt-4 text-3xl font-black">오늘 수업 끝!</h1>
