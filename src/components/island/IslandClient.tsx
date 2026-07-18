@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { GLASS_LIGHT, GLASS_PILL } from '@/components/ui/glass';
 import { prefersReducedMotion } from '@/lib/juice';
-import { BODY_COLORS, readWorld } from '@/lib/world/world-state';
+import { readWorld } from '@/lib/world/world-state';
 import {
   FURNITURE,
   SEURAT_LESSON_ID,
@@ -20,6 +19,7 @@ import {
   type IslandSave,
 } from '@/lib/island/island-state';
 import { createIslandGame, type IslandGameHandle } from '@/components/island/island-game';
+import { furnitureDataUrl } from '@/components/island/pixel-art';
 
 /**
  * 등대섬 클라이언트 (docs/plan/11 I1) — Phaser 씬 부팅 + 글라스 오버레이 UI.
@@ -27,13 +27,6 @@ import { createIslandGame, type IslandGameHandle } from '@/components/island/isl
  * 이야기 조각 3개 지급 → 꾸미기 모드. 상태는 localStorage 'kindy:island'.
  * dynamic ssr:false 경계 안에서만 로드된다(IslandView).
  */
-
-function avatarTintFromWorld(bodyId: string | undefined): number | null {
-  if (!bodyId) return null;
-  const color = BODY_COLORS.find((c) => c.id === bodyId);
-  if (!color) return null;
-  return parseInt(color.light.slice(1), 16);
-}
 
 export default function IslandClient() {
   const router = useRouter();
@@ -64,7 +57,7 @@ export default function IslandClient() {
     const celebrate = needsCelebration(island, SEURAT_LESSON_ID);
 
     const handle = createIslandGame(el, {
-      avatarTint: avatarTintFromWorld(world.avatar?.body),
+      avatarBody: world.avatar?.body ?? null,
       initialPlaced: island.placed,
       initialLevel: lighthouseLevel(island),
       reducedMotion: prefersReducedMotion(),
@@ -128,34 +121,34 @@ export default function IslandClient() {
   const pieces = save?.pieces ?? 0;
 
   return (
-    <main className="relative h-[100svh] w-full overflow-hidden bg-[#5aa9cc] text-ink [word-break:keep-all]">
+    <main className="relative h-[100svh] w-full overflow-hidden bg-[#4ea6cc] text-ink [word-break:keep-all]">
       <div ref={containerRef} className="absolute inset-0" />
 
-      {/* HUD */}
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 mx-auto flex w-full max-w-md items-center justify-between px-4 py-3">
-        <span className={`${GLASS_PILL} pointer-events-auto px-4 py-2 text-sm font-black text-saged`}>
+      {/* HUD (도트 프레임) */}
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 mx-auto flex w-full max-w-md items-center justify-between px-4 py-4">
+        <span className="dot-panel pointer-events-auto px-3 py-2 text-sm font-black">
           🧩 이야기 조각 {pieces}
         </span>
         <button
           onClick={() => setMode((m) => (m === 'decorate' ? 'explore' : 'decorate'))}
-          className={`${GLASS_PILL} pointer-events-auto px-4 py-2 text-sm font-black text-ink`}
+          className="dot-panel pointer-events-auto px-3 py-2 text-sm font-black active:translate-y-[1px]"
         >
           {mode === 'decorate' ? '완료' : '꾸미기'}
         </button>
       </header>
 
-      {/* 점등·보상 배너 */}
+      {/* 점등·보상 배너 (도트 텍스트박스) */}
       {banner && (
         <div className="pointer-events-none absolute inset-x-0 top-16 z-30 flex justify-center px-6" aria-live="polite">
-          <p className={`${GLASS_PILL} px-4 py-2 text-center text-sm font-black text-ink`}>{banner}</p>
+          <p className="dot-panel px-4 py-2 text-center text-sm font-black">{banner}</p>
         </div>
       )}
 
       {/* 꾸미기 툴바 */}
       {mode === 'decorate' && (
-        <div className="absolute inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className={`${GLASS_LIGHT} px-4 py-4`}>
-            <p className="mb-2 text-center text-sm font-black text-ink2">
+        <div className="absolute inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="dot-panel px-4 py-4">
+            <p className="mb-2 text-center text-sm font-black">
               {pieces > 0 ? '가구를 고르고 오두막 옆 칸을 톡 눌러요' : '이야기를 더 모으면 더 꾸밀 수 있어요'}
             </p>
             <div className="flex justify-center gap-2">
@@ -166,11 +159,17 @@ export default function IslandClient() {
                   aria-pressed={selected === f.id}
                   aria-label={f.label}
                   disabled={pieces <= 0}
-                  className={`flex h-14 w-14 flex-col items-center justify-center rounded-2xl border-2 text-2xl transition active:scale-95 disabled:opacity-40 ${
-                    selected === f.id ? 'border-gold bg-white shadow-sm' : 'border-line bg-white/60'
+                  className={`dot-frame flex h-14 w-14 items-center justify-center transition active:translate-y-[1px] disabled:opacity-40 ${
+                    selected === f.id ? 'bg-gold/40' : 'bg-white/60'
                   }`}
                 >
-                  <span>{f.emoji}</span>
+                  {/* 게임 내와 동일한 도트 스프라이트(정수 확대, 스무딩 없음) */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={furnitureDataUrl(f.id)}
+                    alt={f.label}
+                    className="h-9 w-9 [image-rendering:pixelated]"
+                  />
                 </button>
               ))}
             </div>
@@ -178,14 +177,14 @@ export default function IslandClient() {
         </div>
       )}
 
-      {/* NPC 표류병 카드 */}
+      {/* NPC 표류병 카드 (도트 텍스트박스) */}
       {npcOpen && (
-        <div className="absolute inset-0 z-40 flex items-end justify-center bg-black/30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <div className={`${GLASS_LIGHT} world-rise relative w-full max-w-md px-6 py-6`}>
+        <div className="absolute inset-0 z-40 flex items-end justify-center bg-black/30 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          <div className="dot-panel world-rise relative mb-1 w-full max-w-md px-6 py-6">
             <button
               onClick={() => setNpcOpen(false)}
               aria-label="닫기"
-              className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-white/70 text-lg font-black text-ink2"
+              className="dot-frame absolute right-3 top-3 grid h-9 w-9 place-items-center bg-white/70 text-lg font-black"
             >
               ×
             </button>
@@ -196,7 +195,7 @@ export default function IslandClient() {
             </p>
             <button
               onClick={startStory}
-              className="mt-5 inline-flex min-h-14 w-full items-center justify-center rounded-full bg-ink text-lg font-black text-cream transition active:scale-[0.98]"
+              className="dot-frame mt-5 inline-flex min-h-14 w-full items-center justify-center bg-ink text-lg font-black text-cream transition active:translate-y-[1px]"
             >
               이야기 보러 가기
             </button>
