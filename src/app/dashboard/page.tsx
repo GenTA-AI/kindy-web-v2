@@ -320,7 +320,7 @@ function DashboardContent() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-cream px-6">
         <div className="max-w-sm text-center">
-          <MoriCharacter className="mx-auto h-28 w-28 overflow-hidden rounded-full border border-line bg-white" imageClassName="scale-125" label="모리" withGlow={false} />
+          <MoriCharacter className="mx-auto h-28 w-28 overflow-hidden rounded-full border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150" imageClassName="scale-125" label="모리" withGlow={false} />
           <h1 className="mt-5 text-2xl font-black text-ink">첫 아이 이름표가 필요해요</h1>
           <p className="mt-2 text-sm font-semibold leading-relaxed text-ink2">아이 프로필을 만들면 바로 모리의 이야기 숲으로 들어갈 수 있어요.</p>
           <button
@@ -388,7 +388,7 @@ function DashboardContent() {
       <div className="mx-auto w-full max-w-6xl px-5 py-6 sm:px-8 lg:py-8">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <MoriCharacter className="h-12 w-12 overflow-hidden rounded-full border border-line bg-white" imageClassName="scale-125" label="모리" withGlow={false} />
+            <MoriCharacter className="h-12 w-12 overflow-hidden rounded-full border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150" imageClassName="scale-125" label="모리" withGlow={false} />
             <div>
               <p className="text-[11px] font-black uppercase tracking-[.16em] text-sage">보호자 기록장</p>
               <h1 className="text-xl font-black">모리의 이야기 숲</h1>
@@ -398,7 +398,7 @@ function DashboardContent() {
             <ChildSwitcher currentChildId={childId} currentChildName={child?.name} />
             <button
               onClick={() => router.push(`/dashboard/settings?childId=${childId}`)}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-white text-sm font-black text-sage transition hover:bg-mist"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 text-sm font-black text-sage transition hover:bg-mist"
               aria-label="설정"
             >
               설정
@@ -433,7 +433,7 @@ function DashboardContent() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-[34px] border border-line bg-white">
+          <div className="overflow-hidden rounded-[34px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150">
             <MoriCharacter className="aspect-[1.2/1] w-full" imageClassName="scale-110" label="모리" />
             <div className="border-t border-line p-5">
               <p className="text-xs font-black uppercase tracking-[.16em] text-sage">모리 한마디</p>
@@ -446,7 +446,7 @@ function DashboardContent() {
         </section>
 
         <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[.95fr_1.05fr]">
-          <div className="rounded-[30px] border border-line bg-white p-5 shadow-sm">
+          <div className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-5">
             <p className="text-xs font-black uppercase tracking-[.16em] text-sage">오늘 놀이 기록</p>
             <h2 className="mt-2 text-2xl font-black">잘 들어온 놀이와 다음 추천</h2>
             <div className="mt-5 grid gap-3">
@@ -484,7 +484,7 @@ function DashboardContent() {
             </button>
           </div>
 
-          <div className="rounded-[30px] border border-line bg-white p-5 shadow-sm">
+          <div className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-5">
             <p className="text-xs font-black uppercase tracking-[.16em] text-clay">
               {hasCompletedToday ? '오늘은 여기까지' : '오늘 이어 할 놀이'}
             </p>
@@ -536,7 +536,7 @@ function DashboardContent() {
         </section>
 
         <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[.9fr_1.1fr]">
-          <div className="rounded-[30px] border border-line bg-white p-5 shadow-sm">
+          <div className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[.16em] text-sage">Story Map</p>
@@ -559,7 +559,7 @@ function DashboardContent() {
             </div>
           </div>
 
-          <div className="rounded-[30px] border border-line bg-white p-5 shadow-sm">
+          <div className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[.16em] text-clay">놀이 관찰 지도</p>
@@ -592,6 +592,9 @@ function DashboardContent() {
                 </div>
               </div>
             )}
+            <p className="mt-3 text-xs leading-relaxed text-ink3">
+              활동 중 관찰을 요약한 참고 자료예요. 검사나 진단이 아니며, 아이의 능력을 점수로 판정하지 않습니다.
+            </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {c6Map.map((tool) => (
                 <C6MapCard key={tool.key} tool={tool} />
@@ -628,7 +631,7 @@ function DashboardContent() {
 
 function InfoCard({ label, value, body }: { label: string; value: string; body: string }) {
   return (
-    <article className="rounded-[26px] border border-line bg-white p-5 shadow-sm">
+    <article className="rounded-[26px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-5">
       <p className="text-[11px] font-black uppercase tracking-[.14em] text-sage">{label}</p>
       <p className="mt-3 text-3xl font-black text-ink">{value}</p>
       <p className="mt-2 text-sm font-semibold leading-relaxed text-ink2">{body}</p>

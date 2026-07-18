@@ -151,3 +151,54 @@ summary:focus-visible {
   .juice-confetti-piece,
   .juice-star-piece { display: none !important; }
 }
+
+/* ───────────────────────────────────────────────────────────────────────── */
+/* 이야기 지도(RPG 월드) 모션 — 아바타 둥둥/걷기 바운스 + 지역 카드 떠오름.       */
+/* prefers-reduced-motion 이면 모두 비활성(아바타 이동은 JS에서 즉시 처리).      */
+/* ───────────────────────────────────────────────────────────────────────── */
+
+@keyframes world-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes world-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-7px) rotate(2deg); }
+}
+@keyframes world-rise {
+  0% { opacity: 0; transform: translateY(26px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes world-fog-drift { 0%, 100% { opacity: 0.72; } 50% { opacity: 0.92; } }
+
+.world-float { animation: world-float 3.4s ease-in-out infinite; }
+.world-bob { animation: world-bob 0.5s ease-in-out infinite; }
+.world-rise { animation: world-rise 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.world-fog-drift { animation: world-fog-drift 4.5s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .world-float,
+  .world-bob,
+  .world-rise,
+  .world-fog-drift {
+    animation: none !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────── */
+/* 등대섬(도트 RPG) 오버레이 — 2000년대 피처폰 RPG 텍스트박스 느낌의 도트 프레임.  */
+/* 폰트는 유지, 프레임만 각진 이중 테두리 + 하드 드롭섀도(둥근 모서리 없음).       */
+/* ───────────────────────────────────────────────────────────────────────── */
+
+.dot-panel {
+  background: #f6efdc;
+  color: #2b2620;
+  border: 3px solid #2b2620;
+  border-radius: 0;
+  box-shadow:
+    0 0 0 3px #f6efdc,
+    0 0 0 6px #2b2620,
+    6px 6px 0 6px rgba(43, 38, 32, 0.22);
+}
+
+.dot-frame {
+  border: 2px solid #2b2620;
+  border-radius: 0;
+}

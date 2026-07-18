@@ -6,7 +6,12 @@ import { businessInfo, businessInfoRows } from '@/lib/business-info';
 
 export default function SiteFooter() {
   const pathname = usePathname();
-  const hidden = pathname.startsWith('/play') || pathname.startsWith('/demo/kiosk');
+  const hidden =
+    pathname.startsWith('/play') ||
+    pathname.startsWith('/demo/kiosk') ||
+    pathname.startsWith('/lesson') ||
+    pathname.startsWith('/world') ||
+    pathname.startsWith('/island');
 
   if (hidden) return null;
 

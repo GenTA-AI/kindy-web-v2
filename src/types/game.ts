@@ -76,6 +76,8 @@ export interface GameRoundResult {
   max_score: number | null;
   latency_ms: number | null;
   retried: boolean;
+  /** 30초 무응답 자동선택 — 노출로만 기록, 역량 업데이트 제외 (로드맵 P0). */
+  auto_selected?: boolean;
   reward_payload: RewardDelta | null;
   axis_id?: string | null;
   thinking_tool?: string | null;

@@ -6,11 +6,12 @@ import {
   ageBandAdjustment,
   buildEvidence,
   evidenceFromRound,
+  isAssessableRound,
   planSessionAxes,
   trendFrom,
   updateAxis,
 } from './evidence';
-import type { AxisEvidence, AxisProfileState, RoundEvidenceInput } from './evidence';
+import type { AxisProfileState, RoundEvidenceInput } from './evidence';
 
 const DEFAULT_PREVIOUS: AxisProfileState = DEFAULT_AXIS_PROFILE_STATE;
 
@@ -31,89 +32,69 @@ function input(overrides: Partial<RoundEvidenceInput> = {}): RoundEvidenceInput 
   };
 }
 
-function baseOf(evidence: AxisEvidence): number {
-  return (
-    0.3 * evidence.performance +
-    0.25 * evidence.process +
-    0.2 * evidence.persistence +
-    0.1 * evidence.preference +
-    0.15 * evidence.transfer
-  );
-}
+// ── 로드맵 P0: 관찰되지 않은 요소는 중립값을 지어내지 않고 가중치에서 제외한다 ──
 
-function assertNearlyEqual(actual: number, expected: number): void {
-  assert.ok(Math.abs(actual - expected) < 1e-12, `expected ${actual} to equal ${expected}`);
-}
-
-test('first observation applies the spec formula from the default profile', () => {
+test('전이·선호 미관찰 시 관찰된 요소(performance/process)만으로 재정규화한다', () => {
   const evidence = buildEvidence(input());
-  const next = updateAxis(DEFAULT_PREVIOUS, evidence);
 
-  assert.deepEqual(
-    {
-      performance: evidence.performance,
-      process: evidence.process,
-      persistence: evidence.persistence,
-      preference: evidence.preference,
-      transfer: evidence.transfer,
-    },
-    {
-      performance: 1,
-      process: 1,
-      persistence: 0.7,
-      preference: 0.5,
-      transfer: 0.5,
-    },
-  );
-  assertNearlyEqual(baseOf(evidence), 0.815);
-  assert.equal(next.level, 55);
-  assertNearlyEqual(next.confidence, 0.044);
+  assert.deepEqual(evidence.observed, {
+    performance: true,
+    process: true,
+    persistence: false,
+    preference: false,
+    transfer: false,
+  });
+
+  // base = (0.3*1 + 0.25*1) / (0.3 + 0.25) = 1 → level = 100*(0.85*0.5 + 0.15*1) = 57.49999...(부동소수점) → 57
+  const next = updateAxis(DEFAULT_PREVIOUS, evidence);
+  assert.equal(next.level, 57);
   assert.equal(next.evidence_count, 1);
 });
 
-test('retry success has a higher base than no-retry success', () => {
+test('정오답 없는 완료는 performance 0.6을 받지 않는다', () => {
+  const evidence = buildEvidence(input({ is_correct: null }));
+  assert.equal(evidence.performance, 0);
+  assert.equal(evidence.observed.performance, false);
+});
+
+test('전이 신호가 없으면 transfer는 0.5 중립이 아니라 미관찰이다', () => {
+  const neutral = buildEvidence(input({ transfer_success: null }));
+  const success = buildEvidence(input({ transfer_success: true }));
+
+  assert.equal(neutral.observed.transfer, false);
+  assert.equal(success.observed.transfer, true);
+  assert.equal(success.transfer, 1);
+  assert.ok(updateAxis(DEFAULT_PREVIOUS, success).level >= updateAxis(DEFAULT_PREVIOUS, neutral).level);
+});
+
+test('아무 신호도 관찰되지 않으면 프로필을 바꾸지 않는다', () => {
+  const evidence = buildEvidence(
+    input({ is_correct: null, elapsed_ms: null, hint_count: 0 }),
+  );
+  const next = updateAxis(DEFAULT_PREVIOUS, evidence);
+
+  assert.deepEqual(next, DEFAULT_PREVIOUS);
+});
+
+test('재시도 성공은 무재시도 성공보다 persistence가 높다', () => {
   const noRetry = buildEvidence(input({ retried: false, retry_count: 0 }));
   const retrySuccess = buildEvidence(input({ retried: true, retry_count: 1 }));
 
-  assert.equal(noRetry.persistence, 0.7);
+  assert.equal(noRetry.observed.persistence, false);
+  assert.equal(retrySuccess.observed.persistence, true);
   assert.equal(retrySuccess.persistence, 1);
-  assert.ok(baseOf(retrySuccess) > baseOf(noRetry));
 });
 
-test('three hints lower process and the final level', () => {
+test('힌트 3회는 process를 낮추고 레벨도 낮춘다', () => {
   const noHints = buildEvidence(input({ hint_count: 0 }));
   const manyHints = buildEvidence(input({ hint_count: 3 }));
 
   assert.equal(noHints.process, 1);
-  assertNearlyEqual(manyHints.process, 0.4);
+  assert.ok(Math.abs(manyHints.process - 0.4) < 1e-12);
   assert.ok(updateAxis(DEFAULT_PREVIOUS, manyHints).level < updateAxis(DEFAULT_PREVIOUS, noHints).level);
 });
 
-test('abandoned rounds zero performance and persistence and lower the level below 50', () => {
-  const evidence = buildEvidence(
-    input({
-      is_correct: null,
-      completed: false,
-      abandoned: true,
-    }),
-  );
-  const next = updateAxis(DEFAULT_PREVIOUS, evidence);
-
-  assert.equal(evidence.performance, 0);
-  assert.equal(evidence.persistence, 0);
-  assert.ok(next.level < 50);
-});
-
-test('transfer success raises base above neutral transfer', () => {
-  const neutralTransfer = buildEvidence(input({ transfer_success: null }));
-  const successfulTransfer = buildEvidence(input({ transfer_success: true }));
-
-  assert.equal(neutralTransfer.transfer, 0.5);
-  assert.equal(successfulTransfer.transfer, 1);
-  assert.ok(baseOf(successfulTransfer) > baseOf(neutralTransfer));
-});
-
-test('confidence gain is capped at 0.08 and confidence and level stay in bounds', () => {
+test('confidence 증가는 0.08 상한, 레벨·confidence는 범위 안', () => {
   const evidence = buildEvidence(
     input({
       hint_count: 1,
@@ -131,7 +112,52 @@ test('confidence gain is capped at 0.08 and confidence and level stay in bounds'
   assert.equal(next.evidence_count, 8);
 });
 
-test('evidenceFromRound normalizes round records with explicit correctness priority', () => {
+// ── 로드맵 P0: 역량 갱신 대상 게이트 ──
+
+test('isAssessableRound — 자동선택 라운드는 노출로만 남고 갱신 대상이 아니다', () => {
+  assert.equal(
+    isAssessableRound({
+      game_type: 'Q_quiz',
+      objective_code: null,
+      score: 1,
+      max_score: 1,
+      latency_ms: 900,
+      retried: false,
+      auto_selected: true,
+    }),
+    false,
+  );
+});
+
+test('isAssessableRound — 정오답 없는 라운드(분기 선택·감정 표현)는 갱신 대상이 아니다', () => {
+  assert.equal(
+    isAssessableRound({
+      game_type: 'emotion_expression',
+      objective_code: 'sel_empathy',
+      score: null,
+      max_score: null,
+      latency_ms: 3_000,
+      retried: false,
+    }),
+    false,
+  );
+});
+
+test('isAssessableRound — 정오답이 있는 일반 라운드는 갱신 대상이다', () => {
+  assert.equal(
+    isAssessableRound({
+      game_type: 'Q_quiz',
+      objective_code: null,
+      score: 1,
+      max_score: 1,
+      latency_ms: 900,
+      retried: false,
+    }),
+    true,
+  );
+});
+
+test('evidenceFromRound는 명시적 정오답을 점수 추론보다 우선한다', () => {
   const normalized = evidenceFromRound(
     {
       game_type: 'hidden_friend',
@@ -169,7 +195,7 @@ test('evidenceFromRound normalizes round records with explicit correctness prior
   });
 });
 
-test('age adjustment, session axis plan, and trend helpers follow v0.1 rules', () => {
+test('연령 보정·세션 축 계획·추세 헬퍼는 v0.1 규칙 유지', () => {
   assert.equal(ageBandAdjustment(5), 0.05);
   assert.equal(ageBandAdjustment(6), 0);
   assert.equal(ageBandAdjustment(null), 0);

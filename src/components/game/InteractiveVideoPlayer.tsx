@@ -49,19 +49,22 @@ function buildRoundResult(input: {
   option: ChoiceOption;
   latencyMs: number;
   retried: boolean;
+  autoSelected: boolean;
 }): GameRoundResult {
   const gameType = optionGameType(input.choice.format);
-  const isClueLike = input.choice.format === 'clue' || input.choice.format === 'creative';
 
+  // 분기 선택에는 정답이 없다 — 형식과 무관하게 1/1점을 지어내지 않는다 (로드맵 P0).
+  // 정오답 없는 라운드는 노출·사용성 신호이며 isAssessableRound 게이트가 역량 갱신에서 제외한다.
   return {
     game_type: gameType,
     difficulty: 1,
     objective_code: input.option.objective_code ?? null,
     standard_anchor: 'interactive_video_session',
-    score: input.choice.format === 'emotion' ? null : 1,
-    max_score: isClueLike ? 1 : null,
+    score: null,
+    max_score: null,
     latency_ms: input.latencyMs,
     retried: input.retried,
+    auto_selected: input.autoSelected,
     reward_payload: null,
   };
 }
@@ -269,7 +272,8 @@ export default function InteractiveVideoPlayer({
       choice,
       option,
       latencyMs,
-      retried: repromptedRef.current || autoSelected,
+      retried: repromptedRef.current,
+      autoSelected,
     }));
 
     speak({ text: autoSelected ? '모리가 함께 골라봤어. 이어서 볼까?' : `${option.label_ko}, 좋아. 이어서 볼까?` });

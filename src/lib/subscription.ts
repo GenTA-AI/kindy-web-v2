@@ -7,7 +7,8 @@ import type { SubscriptionRow, EntitlementRow } from '@/lib/subscription-types';
 export type { SubscriptionRow, EntitlementRow, SubscriptionStatus } from '@/lib/subscription-types';
 
 export const SUBSCRIPTION_PLAN = 'kindy_monthly';
-export const SUBSCRIPTION_PRICE_KRW = 25000;
+// 얼리버드 특가 (트랙2 마케팅 §3-1, §0-2) — 평생 고정. 정가 34,900은 얼리버드 종료 시 별도 plan 으로.
+export const SUBSCRIPTION_PRICE_KRW = 24900;
 export const SUBSCRIPTION_ORDER_NAME = 'Kindy 멤버십 월 구독';
 /** 구독 orderId 접두사 — webhook 에서 구독 결제 식별에 사용. */
 export const SUBSCRIPTION_ORDER_PREFIX = 'sub_';
