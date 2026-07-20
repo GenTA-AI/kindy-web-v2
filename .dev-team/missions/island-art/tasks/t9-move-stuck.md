@@ -28,6 +28,7 @@ high_risk: 0
 - src/components/island/engine.ts
 - src/components/island/map.ts (isWalkableWorld 보조 함수 추가 필요 시)
 - src/components/island/engine.test.ts (신규 또는 기존 테스트 관례 위치)
+- package.json (test 스크립트에 신규 테스트 등록 1줄만)
 
 ## Constraints
 - 카메라·줌·pixelArt 설정 불변, 탭 이동 외 조작 추가 금지(7~10세 불변), island-state.ts 금지
