@@ -4,7 +4,7 @@ import { PAL, TILE } from '@/components/island/pixel-art';
 import { WORLD_HEIGHT, WORLD_WIDTH, type PixelTextureFactory } from '@/components/island/map';
 
 const PROP_ATLAS = 'island-props-pack';
-const WATER_ATLAS = 'island-water-pack';
+const WATER_ATLAS = 'island-water-props';
 const PROP_ATLAS_URL = '/island/tiles/props.png';
 const PROP_ATLAS_JSON_URL = '/island/tiles/props.json';
 const WATER_ATLAS_URL = '/island/tiles/water.png';
