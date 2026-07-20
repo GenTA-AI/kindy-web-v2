@@ -1,5 +1,15 @@
 {
-  "animations": {},
+  "animations": {
+    "water-ripples": {
+      "frameDurationMs": 720,
+      "frames": [
+        "water-decoration__r000_c000",
+        "water-decoration__r000_c001",
+        "water-decoration__r000_c002"
+      ],
+      "repeat": -1
+    }
+  },
   "frames": {
     "water-tile__r000_c000": {
       "frame": {
@@ -11,7 +21,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 0
       },
       "sourceSize": {
@@ -36,7 +46,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 0
       },
       "sourceSize": {
@@ -61,7 +71,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 0
       },
       "sourceSize": {
@@ -86,7 +96,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 1
       },
       "sourceSize": {
@@ -111,7 +121,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 1
       },
       "sourceSize": {
@@ -136,7 +146,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 1
       },
       "sourceSize": {
@@ -161,7 +171,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 2
       },
       "sourceSize": {
@@ -186,7 +196,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 2
       },
       "sourceSize": {
@@ -211,7 +221,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 2
       },
       "sourceSize": {
@@ -236,7 +246,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 3
       },
       "sourceSize": {
@@ -261,7 +271,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 3
       },
       "sourceSize": {
@@ -286,7 +296,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 3
       },
       "sourceSize": {
@@ -311,7 +321,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 4
       },
       "sourceSize": {
@@ -336,7 +346,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 4
       },
       "sourceSize": {
@@ -361,7 +371,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
         "row": 4
       },
       "sourceSize": {
@@ -376,7 +386,7 @@
       },
       "trimmed": false
     },
-    "water-tile__r005_c000": {
+    "water-decoration__r000_c000": {
       "frame": {
         "h": 16,
         "w": 16,
@@ -386,8 +396,8 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
-        "row": 5
+        "file": "Cute_Fantasy/Tiles/Water/Water_Decoration.png",
+        "row": 0
       },
       "sourceSize": {
         "h": 16,
@@ -401,7 +411,7 @@
       },
       "trimmed": false
     },
-    "water-tile__r005_c001": {
+    "water-decoration__r000_c001": {
       "frame": {
         "h": 16,
         "w": 16,
@@ -411,8 +421,8 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
-        "row": 5
+        "file": "Cute_Fantasy/Tiles/Water/Water_Decoration.png",
+        "row": 0
       },
       "sourceSize": {
         "h": 16,
@@ -426,7 +436,7 @@
       },
       "trimmed": false
     },
-    "water-tile__r005_c002": {
+    "water-decoration__r000_c002": {
       "frame": {
         "h": 16,
         "w": 16,
@@ -436,8 +446,8 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
-        "row": 5
+        "file": "Cute_Fantasy/Tiles/Water/Water_Decoration.png",
+        "row": 0
       },
       "sourceSize": {
         "h": 16,
@@ -461,7 +471,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Water_Middle.png",
+        "file": "Cute_Fantasy/Tiles/Water/Water_Middle.png",
         "row": 0
       },
       "sourceSize": {
@@ -481,6 +491,8 @@
     "app": "scripts/island/build-atlas.mjs",
     "format": "RGBA8888",
     "image": "water.png",
+    "frameSize": 16,
+    "gridSize": 16,
     "pixelArt": true,
     "scale": "1",
     "size": {

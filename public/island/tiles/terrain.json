@@ -11,7 +11,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Grass_Middle.png",
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_1_Middle.png",
         "row": 0
       },
       "sourceSize": {
@@ -36,7 +36,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 0
       },
       "sourceSize": {
@@ -61,7 +61,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 0
       },
       "sourceSize": {
@@ -86,7 +86,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 0
       },
       "sourceSize": {
@@ -111,7 +111,7 @@
       "rotated": false,
       "source": {
         "column": 3,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 0
       },
       "sourceSize": {
@@ -136,7 +136,7 @@
       "rotated": false,
       "source": {
         "column": 4,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 0
       },
       "sourceSize": {
@@ -161,7 +161,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 1
       },
       "sourceSize": {
@@ -186,7 +186,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 1
       },
       "sourceSize": {
@@ -211,7 +211,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 1
       },
       "sourceSize": {
@@ -236,7 +236,7 @@
       "rotated": false,
       "source": {
         "column": 3,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 1
       },
       "sourceSize": {
@@ -261,7 +261,7 @@
       "rotated": false,
       "source": {
         "column": 4,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 1
       },
       "sourceSize": {
@@ -286,7 +286,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 2
       },
       "sourceSize": {
@@ -311,7 +311,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 2
       },
       "sourceSize": {
@@ -336,7 +336,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 2
       },
       "sourceSize": {
@@ -361,7 +361,7 @@
       "rotated": false,
       "source": {
         "column": 3,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 2
       },
       "sourceSize": {
@@ -386,383 +386,8 @@
       "rotated": false,
       "source": {
         "column": 4,
-        "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
         "row": 2
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r000_c000": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 32
-      },
-      "rotated": false,
-      "source": {
-        "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 0
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r000_c001": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 16,
-        "y": 32
-      },
-      "rotated": false,
-      "source": {
-        "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 0
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r000_c002": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 32,
-        "y": 32
-      },
-      "rotated": false,
-      "source": {
-        "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 0
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r001_c000": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 48,
-        "y": 32
-      },
-      "rotated": false,
-      "source": {
-        "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 1
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r001_c001": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 64,
-        "y": 32
-      },
-      "rotated": false,
-      "source": {
-        "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 1
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r001_c002": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 80,
-        "y": 32
-      },
-      "rotated": false,
-      "source": {
-        "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 1
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r002_c000": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 96,
-        "y": 32
-      },
-      "rotated": false,
-      "source": {
-        "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 2
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r002_c001": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 112,
-        "y": 32
-      },
-      "rotated": false,
-      "source": {
-        "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 2
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r002_c002": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 48
-      },
-      "rotated": false,
-      "source": {
-        "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 2
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r003_c000": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 16,
-        "y": 48
-      },
-      "rotated": false,
-      "source": {
-        "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 3
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r003_c001": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 32,
-        "y": 48
-      },
-      "rotated": false,
-      "source": {
-        "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 3
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r003_c002": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 48,
-        "y": 48
-      },
-      "rotated": false,
-      "source": {
-        "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 3
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r004_c000": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 64,
-        "y": 48
-      },
-      "rotated": false,
-      "source": {
-        "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 4
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r004_c001": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 80,
-        "y": 48
-      },
-      "rotated": false,
-      "source": {
-        "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 4
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "path-tile__r004_c002": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 96,
-        "y": 48
-      },
-      "rotated": false,
-      "source": {
-        "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 4
       },
       "sourceSize": {
         "h": 16,
@@ -780,13 +405,13 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 112,
-        "y": 48
+        "x": 0,
+        "y": 32
       },
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
         "row": 5
       },
       "sourceSize": {
@@ -805,13 +430,13 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 0,
-        "y": 64
+        "x": 16,
+        "y": 32
       },
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
         "row": 5
       },
       "sourceSize": {
@@ -830,14 +455,389 @@
       "frame": {
         "h": 16,
         "w": 16,
+        "x": 32,
+        "y": 32
+      },
+      "rotated": false,
+      "source": {
+        "column": 2,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 5
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-tile__r006_c000": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 48,
+        "y": 32
+      },
+      "rotated": false,
+      "source": {
+        "column": 0,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 6
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-tile__r006_c001": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 64,
+        "y": 32
+      },
+      "rotated": false,
+      "source": {
+        "column": 1,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 6
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-tile__r006_c002": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 80,
+        "y": 32
+      },
+      "rotated": false,
+      "source": {
+        "column": 2,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 6
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-tile__r007_c000": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 96,
+        "y": 32
+      },
+      "rotated": false,
+      "source": {
+        "column": 0,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 7
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-tile__r007_c001": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 112,
+        "y": 32
+      },
+      "rotated": false,
+      "source": {
+        "column": 1,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 7
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-tile__r007_c002": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 48
+      },
+      "rotated": false,
+      "source": {
+        "column": 2,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 7
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-tile__r008_c000": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 16,
+        "y": 48
+      },
+      "rotated": false,
+      "source": {
+        "column": 0,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 8
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-tile__r008_c001": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 32,
+        "y": 48
+      },
+      "rotated": false,
+      "source": {
+        "column": 1,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 8
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-tile__r008_c002": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 48,
+        "y": 48
+      },
+      "rotated": false,
+      "source": {
+        "column": 2,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 8
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-tile__r009_c000": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 64,
+        "y": 48
+      },
+      "rotated": false,
+      "source": {
+        "column": 0,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 9
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-tile__r009_c001": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 80,
+        "y": 48
+      },
+      "rotated": false,
+      "source": {
+        "column": 1,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 9
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-tile__r009_c002": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 96,
+        "y": 48
+      },
+      "rotated": false,
+      "source": {
+        "column": 2,
+        "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+        "row": 9
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-decoration__r000_c000": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 112,
+        "y": 48
+      },
+      "rotated": false,
+      "source": {
+        "column": 0,
+        "file": "Cute_Fantasy/Tiles/Grass/Path_Decoration.png",
+        "row": 0
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-decoration__r000_c001": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 64
+      },
+      "rotated": false,
+      "source": {
+        "column": 1,
+        "file": "Cute_Fantasy/Tiles/Grass/Path_Decoration.png",
+        "row": 0
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "path-decoration__r000_c002": {
+      "frame": {
+        "h": 16,
+        "w": 16,
         "x": 16,
         "y": 64
       },
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
-        "row": 5
+        "file": "Cute_Fantasy/Tiles/Grass/Path_Decoration.png",
+        "row": 0
       },
       "sourceSize": {
         "h": 16,
@@ -861,7 +861,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Path_Middle.png",
+        "file": "Cute_Fantasy/Tiles/Grass/Path_Middle.png",
         "row": 0
       },
       "sourceSize": {
@@ -886,7 +886,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 0
       },
       "sourceSize": {
@@ -911,7 +911,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 0
       },
       "sourceSize": {
@@ -936,7 +936,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 0
       },
       "sourceSize": {
@@ -961,7 +961,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 1
       },
       "sourceSize": {
@@ -986,7 +986,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 1
       },
       "sourceSize": {
@@ -1011,7 +1011,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 1
       },
       "sourceSize": {
@@ -1036,7 +1036,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 2
       },
       "sourceSize": {
@@ -1061,7 +1061,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 2
       },
       "sourceSize": {
@@ -1086,7 +1086,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 2
       },
       "sourceSize": {
@@ -1111,7 +1111,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 3
       },
       "sourceSize": {
@@ -1136,7 +1136,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 3
       },
       "sourceSize": {
@@ -1161,7 +1161,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 3
       },
       "sourceSize": {
@@ -1186,7 +1186,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 4
       },
       "sourceSize": {
@@ -1211,7 +1211,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 4
       },
       "sourceSize": {
@@ -1236,7 +1236,7 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 4
       },
       "sourceSize": {
@@ -1261,7 +1261,7 @@
       "rotated": false,
       "source": {
         "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 5
       },
       "sourceSize": {
@@ -1286,7 +1286,7 @@
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 5
       },
       "sourceSize": {
@@ -1311,33 +1311,8 @@
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+        "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
         "row": 5
-      },
-      "sourceSize": {
-        "h": 16,
-        "w": 16
-      },
-      "spriteSourceSize": {
-        "h": 16,
-        "w": 16,
-        "x": 0,
-        "y": 0
-      },
-      "trimmed": false
-    },
-    "farmland-tile__r000_c000": {
-      "frame": {
-        "h": 16,
-        "w": 16,
-        "x": 80,
-        "y": 96
-      },
-      "rotated": false,
-      "source": {
-        "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/FarmLand_Tile.png",
-        "row": 0
       },
       "sourceSize": {
         "h": 16,
@@ -1355,13 +1330,13 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 96,
+        "x": 80,
         "y": 96
       },
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/FarmLand_Tile.png",
+        "file": "Cute_Fantasy/Tiles/FarmLand/FarmLand_Tile.png",
         "row": 0
       },
       "sourceSize": {
@@ -1380,13 +1355,13 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 112,
+        "x": 96,
         "y": 96
       },
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/FarmLand_Tile.png",
+        "file": "Cute_Fantasy/Tiles/FarmLand/FarmLand_Tile.png",
         "row": 0
       },
       "sourceSize": {
@@ -1401,18 +1376,18 @@
       },
       "trimmed": false
     },
-    "farmland-tile__r001_c000": {
+    "farmland-tile__r000_c003": {
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 0,
-        "y": 112
+        "x": 112,
+        "y": 96
       },
       "rotated": false,
       "source": {
-        "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/FarmLand_Tile.png",
-        "row": 1
+        "column": 3,
+        "file": "Cute_Fantasy/Tiles/FarmLand/FarmLand_Tile.png",
+        "row": 0
       },
       "sourceSize": {
         "h": 16,
@@ -1430,13 +1405,13 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 16,
+        "x": 0,
         "y": 112
       },
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/FarmLand_Tile.png",
+        "file": "Cute_Fantasy/Tiles/FarmLand/FarmLand_Tile.png",
         "row": 1
       },
       "sourceSize": {
@@ -1455,13 +1430,13 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 32,
+        "x": 16,
         "y": 112
       },
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/FarmLand_Tile.png",
+        "file": "Cute_Fantasy/Tiles/FarmLand/FarmLand_Tile.png",
         "row": 1
       },
       "sourceSize": {
@@ -1476,18 +1451,18 @@
       },
       "trimmed": false
     },
-    "farmland-tile__r002_c000": {
+    "farmland-tile__r001_c003": {
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 48,
+        "x": 32,
         "y": 112
       },
       "rotated": false,
       "source": {
-        "column": 0,
-        "file": "Cute_Fantasy_Free/Tiles/FarmLand_Tile.png",
-        "row": 2
+        "column": 3,
+        "file": "Cute_Fantasy/Tiles/FarmLand/FarmLand_Tile.png",
+        "row": 1
       },
       "sourceSize": {
         "h": 16,
@@ -1505,13 +1480,13 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 64,
+        "x": 48,
         "y": 112
       },
       "rotated": false,
       "source": {
         "column": 1,
-        "file": "Cute_Fantasy_Free/Tiles/FarmLand_Tile.png",
+        "file": "Cute_Fantasy/Tiles/FarmLand/FarmLand_Tile.png",
         "row": 2
       },
       "sourceSize": {
@@ -1530,13 +1505,38 @@
       "frame": {
         "h": 16,
         "w": 16,
-        "x": 80,
+        "x": 64,
         "y": 112
       },
       "rotated": false,
       "source": {
         "column": 2,
-        "file": "Cute_Fantasy_Free/Tiles/FarmLand_Tile.png",
+        "file": "Cute_Fantasy/Tiles/FarmLand/FarmLand_Tile.png",
+        "row": 2
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "farmland-tile__r002_c003": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 80,
+        "y": 112
+      },
+      "rotated": false,
+      "source": {
+        "column": 3,
+        "file": "Cute_Fantasy/Tiles/FarmLand/FarmLand_Tile.png",
         "row": 2
       },
       "sourceSize": {
@@ -1556,6 +1556,8 @@
     "app": "scripts/island/build-atlas.mjs",
     "format": "RGBA8888",
     "image": "terrain.png",
+    "frameSize": 16,
+    "gridSize": 16,
     "pixelArt": true,
     "scale": "1",
     "size": {

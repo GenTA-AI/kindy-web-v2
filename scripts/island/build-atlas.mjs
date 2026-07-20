@@ -19,7 +19,14 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 export const TILE_SIZE = 16;
-export const ATLAS_NAMES = ["terrain", "water", "props", "character"];
+export const ATLAS_NAMES = [
+  "terrain",
+  "water",
+  "props",
+  "character",
+  "ui",
+  "avatar-parts",
+];
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "../..");
@@ -27,6 +34,7 @@ const DEFAULT_INPUT = path.join(REPO_ROOT, "assets-inbox");
 const DEFAULT_OUTPUT = path.join(REPO_ROOT, "public/island/tiles");
 const CONFIG_NAME = "atlas.config.json";
 const MAX_ATLAS_COLUMNS = 64;
+const DOM_ATLAS_NAMES = ["props", "character", "avatar-parts"];
 
 const CATEGORY_PATTERNS = {
   water: /(?:^|[\s_./-])(water|ocean|sea|river|waterfall|wave|foam)(?:$|[\s_./-])/i,
@@ -37,6 +45,8 @@ const CATEGORY_PATTERNS = {
   props:
     /(?:^|[\s_./-])(prop|object|decor|furniture|item|tree|plant|rock|building)(?:$|[\s_./-])/i,
 };
+const FORBIDDEN_CHILD_ASSET =
+  /(?:^|\/)(?:Enemies|Goblins|Knights|Orcs|Military(?: War Camp)?)(?:\/|$)|(?:^|[\s_./-])(?:weapon|sword|bow)(?:$|[\s_./-])/i;
 
 function usage() {
   return `Usage: node scripts/island/build-atlas.mjs [options]
@@ -156,11 +166,13 @@ export function assertSafeZipEntries(entries) {
   }
 }
 
-async function extractZip(zipPath) {
-  const listing = await runCommand("unzip", ["-Z1", zipPath]);
-  assertSafeZipEntries(listing.split(/\r?\n/));
+async function extractZips(zipPaths) {
   const extractionRoot = await mkdtemp(path.join(tmpdir(), "kindy-island-atlas-"));
-  await runCommand("unzip", ["-qq", zipPath, "-d", extractionRoot]);
+  for (const zipPath of zipPaths) {
+    const listing = await runCommand("unzip", ["-Z1", zipPath]);
+    assertSafeZipEntries(listing.split(/\r?\n/));
+    await runCommand("unzip", ["-qq", zipPath, "-d", extractionRoot]);
+  }
   return extractionRoot;
 }
 
@@ -174,15 +186,15 @@ async function resolvePackInput(options) {
     if (path.extname(options.input).toLowerCase() !== ".zip") {
       throw new Error(`Input file must be a ZIP: ${options.input}`);
     }
-    const extractedRoot = await extractZip(options.input);
-    return { cleanupRoot: extractedRoot, packRoot: extractedRoot, zipPath: options.input };
+    const extractedRoot = await extractZips([options.input]);
+    return {
+      cleanupRoot: extractedRoot,
+      configRoot: path.dirname(options.input),
+      packRoot: extractedRoot,
+    };
   }
   if (!inputStats.isDirectory()) {
     throw new Error(`Input is not a directory or ZIP: ${options.input}`);
-  }
-
-  if (options.inputWasExplicit) {
-    return { cleanupRoot: null, packRoot: options.input, zipPath: null };
   }
 
   const zipFiles = (await readdir(options.input, { withFileTypes: true }))
@@ -192,26 +204,21 @@ async function resolvePackInput(options) {
     .map((entry) => path.join(options.input, entry.name))
     .sort((left, right) => left.localeCompare(right, "en"));
 
-  if (zipFiles.length === 0) return null;
-  if (zipFiles.length > 1) {
-    throw new Error(
-      `Found multiple pack ZIPs. Select one with --input:\n${zipFiles
-        .map((filePath) => `- ${path.relative(REPO_ROOT, filePath)}`)
-        .join("\n")}`,
-    );
-  }
-  if (zipFiles.length === 1) {
-    const extractedRoot = await extractZip(zipFiles[0]);
-    return { cleanupRoot: extractedRoot, packRoot: extractedRoot, zipPath: zipFiles[0] };
+  if (zipFiles.length > 0) {
+    const extractedRoot = await extractZips(zipFiles);
+    return {
+      cleanupRoot: extractedRoot,
+      configRoot: options.input,
+      packRoot: extractedRoot,
+    };
   }
 
   const directPngs = await collectFiles(
     options.input,
     (filePath) => path.extname(filePath).toLowerCase() === ".png",
   );
-  const directConfig = path.join(options.input, CONFIG_NAME);
-  if (directPngs.length > 0 || (await pathExists(directConfig))) {
-    return { cleanupRoot: null, packRoot: options.input, zipPath: null };
+  if (directPngs.length > 0 || options.inputWasExplicit) {
+    return { cleanupRoot: null, configRoot: options.input, packRoot: options.input };
   }
   return null;
 }
@@ -224,9 +231,7 @@ async function findConfig(packInput, explicitConfig) {
     return explicitConfig;
   }
 
-  const sidecarConfig = packInput.zipPath
-    ? path.join(path.dirname(packInput.zipPath), CONFIG_NAME)
-    : null;
+  const sidecarConfig = path.join(packInput.configRoot, CONFIG_NAME);
   if (sidecarConfig && (await pathExists(sidecarConfig))) return sidecarConfig;
 
   const configs = await collectFiles(
@@ -312,7 +317,46 @@ function validateConfig(config) {
       }
       if (seenIds.has(id)) throw new Error(`Duplicate source id: ${id}`);
       seenIds.add(id);
-      return { atlas, file, id };
+      const frameSize = source.frameSize ?? TILE_SIZE;
+      if (
+        !Number.isInteger(frameSize) ||
+        frameSize < TILE_SIZE ||
+        frameSize % TILE_SIZE !== 0
+      ) {
+        throw new Error(
+          `sources[${index}].frameSize must be a positive multiple of ${TILE_SIZE}.`,
+        );
+      }
+
+      let regions = null;
+      if (source.regions !== undefined) {
+        if (!Array.isArray(source.regions) || source.regions.length === 0) {
+          throw new Error(`sources[${index}].regions must be a non-empty array.`);
+        }
+        regions = source.regions.map((region, regionIndex) => {
+          if (!region || typeof region !== "object" || Array.isArray(region)) {
+            throw new Error(`sources[${index}].regions[${regionIndex}] must be an object.`);
+          }
+          for (const field of ["row", "startColumn", "frameCount"]) {
+            if (!Number.isInteger(region[field]) || region[field] < 0) {
+              throw new Error(
+                `sources[${index}].regions[${regionIndex}].${field} must be a non-negative integer.`,
+              );
+            }
+          }
+          if (region.frameCount < 1) {
+            throw new Error(
+              `sources[${index}].regions[${regionIndex}].frameCount must be at least 1.`,
+            );
+          }
+          return {
+            frameCount: region.frameCount,
+            row: region.row,
+            startColumn: region.startColumn,
+          };
+        });
+      }
+      return { atlas, file, frameSize, id, regions };
     });
   }
 
@@ -390,6 +434,10 @@ async function resolveSources(packRoot, configuredSources) {
   if (configuredSources) {
     const resolved = [];
     for (const source of configuredSources) {
+      const normalizedFile = source.file.replaceAll("\\", "/");
+      if (FORBIDDEN_CHILD_ASSET.test(normalizedFile)) {
+        throw new Error(`Forbidden child-facing combat asset selected: ${source.file}`);
+      }
       const absolutePath = resolveInside(packRoot, source.file, `source ${source.id}.file`);
       if (!(await pathExists(absolutePath))) {
         throw new Error(`Source PNG does not exist: ${source.file}`);
@@ -424,7 +472,9 @@ async function resolveSources(packRoot, configuredSources) {
       absolutePath,
       atlas,
       file: relativePath,
+      frameSize: TILE_SIZE,
       id: occurrence === 1 ? idBase : `${idBase}_${occurrence}`,
+      regions: null,
     });
   }
   if (unclassified.length > 0) {
@@ -443,16 +493,42 @@ export async function inspectSource(source) {
   if (!metadata.width || !metadata.height) {
     throw new Error(`Could not read dimensions for ${source.file}.`);
   }
-  if (metadata.width % TILE_SIZE !== 0 || metadata.height % TILE_SIZE !== 0) {
+  const frameSize = source.frameSize ?? TILE_SIZE;
+  if (metadata.width % frameSize !== 0 || metadata.height % frameSize !== 0) {
     throw new Error(
-      `${source.file} is ${metadata.width}x${metadata.height}; both dimensions must align to the ${TILE_SIZE}px grid.`,
+      `${source.file} is ${metadata.width}x${metadata.height}; both dimensions must align to its ${frameSize}px frame size.`,
     );
+  }
+  const columns = metadata.width / frameSize;
+  const rows = metadata.height / frameSize;
+  const cells = [];
+  const seenCells = new Set();
+  const regions = source.regions ?? Array.from({ length: rows }, (_, row) => ({
+    frameCount: columns,
+    row,
+    startColumn: 0,
+  }));
+  for (const region of regions) {
+    if (region.row >= rows || region.startColumn + region.frameCount > columns) {
+      throw new Error(
+        `Selected region row ${region.row}, columns ${region.startColumn}..${region.startColumn + region.frameCount - 1} exceeds ${source.file} (${columns}x${rows} frames).`,
+      );
+    }
+    for (let offset = 0; offset < region.frameCount; offset += 1) {
+      const cell = { column: region.startColumn + offset, row: region.row };
+      const key = `${cell.row},${cell.column}`;
+      if (seenCells.has(key)) throw new Error(`Duplicate selected frame in ${source.file}: ${key}`);
+      seenCells.add(key);
+      cells.push(cell);
+    }
   }
   return {
     ...source,
-    columns: metadata.width / TILE_SIZE,
+    cells,
+    columns,
+    frameSize,
     height: metadata.height,
-    rows: metadata.height / TILE_SIZE,
+    rows,
     width: metadata.width,
   };
 }
@@ -482,6 +558,15 @@ function compileAnimations(atlas, animations, sources) {
         `Animation ${atlas}/${animation.id} exceeds ${source.file} (${source.columns}x${source.rows} tiles).`,
       );
     }
+    const selectedFrames = new Set(source.cells.map(({ column, row }) => `${row},${column}`));
+    for (let offset = 0; offset < animation.frameCount; offset += 1) {
+      const key = `${animation.row},${animation.startColumn + offset}`;
+      if (!selectedFrames.has(key)) {
+        throw new Error(
+          `Animation ${atlas}/${animation.id} references ${source.id} frame ${key}, which is not selected.`,
+        );
+      }
+    }
     compiled[animation.id] = {
       frameDurationMs: animation.frameDurationMs,
       frames: Array.from({ length: animation.frameCount }, (_, offset) =>
@@ -495,33 +580,36 @@ function compileAnimations(atlas, animations, sources) {
 
 export async function buildAtlas(atlas, allSources, animations) {
   const sources = allSources.filter((source) => source.atlas === atlas);
+  const frameSizes = new Set(sources.map((source) => source.frameSize));
+  if (frameSizes.size > 1) {
+    throw new Error(`${atlas} sources must use one shared frameSize.`);
+  }
+  const frameSize = sources[0]?.frameSize ?? TILE_SIZE;
   const tiles = [];
   for (const source of sources) {
-    for (let row = 0; row < source.rows; row += 1) {
-      for (let column = 0; column < source.columns; column += 1) {
-        const buffer = await sharp(source.absolutePath)
-          .extract({
-            height: TILE_SIZE,
-            left: column * TILE_SIZE,
-            top: row * TILE_SIZE,
-            width: TILE_SIZE,
-          })
-          .png()
-          .toBuffer();
-        tiles.push({ buffer, column, row, source });
-      }
+    for (const { column, row } of source.cells) {
+      const buffer = await sharp(source.absolutePath)
+        .extract({
+          height: frameSize,
+          left: column * frameSize,
+          top: row * frameSize,
+          width: frameSize,
+        })
+        .png()
+        .toBuffer();
+      tiles.push({ buffer, column, row, source });
     }
   }
 
   const tileCount = tiles.length;
   const columns = tileCount === 0 ? 1 : Math.min(MAX_ATLAS_COLUMNS, Math.ceil(Math.sqrt(tileCount)));
   const rows = tileCount === 0 ? 1 : Math.ceil(tileCount / columns);
-  const width = columns * TILE_SIZE;
-  const height = rows * TILE_SIZE;
+  const width = columns * frameSize;
+  const height = rows * frameSize;
   const composites = tiles.map((tile, index) => ({
     input: tile.buffer,
-    left: (index % columns) * TILE_SIZE,
-    top: Math.floor(index / columns) * TILE_SIZE,
+    left: (index % columns) * frameSize,
+    top: Math.floor(index / columns) * frameSize,
   }));
   const png = await sharp({
     create: {
@@ -537,14 +625,14 @@ export async function buildAtlas(atlas, allSources, animations) {
 
   const frames = {};
   tiles.forEach((tile, index) => {
-    const x = (index % columns) * TILE_SIZE;
-    const y = Math.floor(index / columns) * TILE_SIZE;
+    const x = (index % columns) * frameSize;
+    const y = Math.floor(index / columns) * frameSize;
     frames[frameId(tile.source.id, tile.row, tile.column)] = {
-      frame: { h: TILE_SIZE, w: TILE_SIZE, x, y },
+      frame: { h: frameSize, w: frameSize, x, y },
       rotated: false,
       source: { column: tile.column, file: tile.source.file, row: tile.row },
-      sourceSize: { h: TILE_SIZE, w: TILE_SIZE },
-      spriteSourceSize: { h: TILE_SIZE, w: TILE_SIZE, x: 0, y: 0 },
+      sourceSize: { h: frameSize, w: frameSize },
+      spriteSourceSize: { h: frameSize, w: frameSize, x: 0, y: 0 },
       trimmed: false,
     };
   });
@@ -556,6 +644,8 @@ export async function buildAtlas(atlas, allSources, animations) {
       app: "scripts/island/build-atlas.mjs",
       format: "RGBA8888",
       image: `${atlas}.png`,
+      frameSize,
+      gridSize: TILE_SIZE,
       pixelArt: true,
       scale: "1",
       size: { h: height, w: width },
@@ -592,12 +682,24 @@ async function expectedOutputs(packRoot, config) {
 
   const outputs = new Map();
   const summary = [];
+  const runtimeAtlas = {};
   for (const atlas of ATLAS_NAMES) {
     const built = await buildAtlas(atlas, sources, config.animations);
     outputs.set(`${atlas}.png`, built.png);
     outputs.set(`${atlas}.json`, Buffer.from(built.json));
+    if (DOM_ATLAS_NAMES.includes(atlas)) {
+      const data = JSON.parse(built.json);
+      runtimeAtlas[atlas] = {
+        frames: Object.fromEntries(
+          Object.entries(data.frames).map(([name, { frame }]) => [name, frame]),
+        ),
+        image: data.meta.image,
+        size: data.meta.size,
+      };
+    }
     summary.push(`${atlas}: ${built.tileCount} tiles`);
   }
+  outputs.set("runtime-atlas.json", Buffer.from(`${JSON.stringify(runtimeAtlas)}\n`));
   outputs.set("LICENSE.md", Buffer.from(renderLicense(config.pack)));
   return { outputs, summary, sources };
 }

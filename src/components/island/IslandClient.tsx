@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { prefersReducedMotion } from '@/lib/juice';
-import { readWorld } from '@/lib/world/world-state';
+import {
+  DEFAULT_AVATAR,
+  readWorld,
+  saveAvatar,
+  type AvatarConfig,
+} from '@/lib/world/world-state';
 import {
   FURNITURE,
   SEURAT_BOTTLE_ID,
@@ -21,6 +26,15 @@ import {
 } from '@/lib/island/island-state';
 import { createIslandGame, type IslandGameHandle } from '@/components/island/island-game';
 import { propCatalogIconStyle } from '@/components/island/props';
+import { atlasFrameName, atlasFrameStyle, type IslandAtlasName } from '@/components/island/atlas-frames';
+import {
+  PACK_HATS,
+  PACK_SHIRTS,
+  packAvatarFrames,
+  selectedPackHat,
+  withPackHat,
+  withPackShirt,
+} from '@/components/island/avatar-parts';
 
 /**
  * 등대섬 클라이언트 (docs/plan/11 I1) — Phaser 씬 + 팩 팔레트 기반 도트 HUD.
@@ -35,25 +49,74 @@ const TYPING_INTERVAL_MS = 34;
 const TRANSITION_MS = 620;
 const REDUCED_TRANSITION_MS = 160;
 const LIGHTHOUSE_ICON_FRAME = FURNITURE.find((furniture) => furniture.id === 'lamp')?.emoji;
+const PACK_TILE = 16;
+const AVATAR_PARTS_IMAGE_URL = '/island/tiles/avatar-parts.png';
 
-// t7-premium-upgrade에서 유료 팩의 검증된 실프레임 키로 채움.
-const RESERVED_PACK_FRAMES: Readonly<Record<'fisherwoman' | 'boat', string | null>> = {
-  fisherwoman: null,
-  boat: null,
+const PREMIUM_PACK_FRAMES = {
+  fisherwoman: atlasFrameName('fisherwoman', 0, 0),
+  boat: { prefix: 'boat', rows: 3, columns: 3 },
 };
 
-interface ReservedPackSpriteProps {
-  frame: string | null;
-  fallback: string;
+interface AtlasSpriteProps {
+  atlas: IslandAtlasName;
+  frame: string;
+  scale?: number;
 }
 
-function ReservedPackSprite({ frame, fallback }: ReservedPackSpriteProps) {
-  const style = frame ? propCatalogIconStyle(frame) : undefined;
+function AtlasSprite({ atlas, frame, scale = 1 }: AtlasSpriteProps) {
+  const style = atlasFrameStyle(atlas, frame, scale);
+  return style ? <span aria-hidden className="dot-pack-sprite" style={style} /> : null;
+}
 
-  return style ? (
-    <span aria-hidden className="dot-pack-sprite" style={style} />
-  ) : (
-    <span aria-hidden className="dot-sprite-fallback">{fallback}</span>
+interface PackStampProps {
+  prefix: string;
+  startRow?: number;
+  startColumn?: number;
+  rows: number;
+  columns: number;
+  scale?: number;
+}
+
+function PackStamp({
+  prefix,
+  startRow = 0,
+  startColumn = 0,
+  rows,
+  columns,
+  scale = 1,
+}: PackStampProps) {
+  const frames = Array.from({ length: rows * columns }, (_, index) => {
+    const row = startRow + Math.floor(index / columns);
+    const column = startColumn + (index % columns);
+    return atlasFrameName(prefix, row, column);
+  });
+
+  return (
+    <span
+      aria-hidden
+      className="dot-pack-stamp"
+      style={{
+        gridTemplateColumns: `repeat(${columns}, ${PACK_TILE * scale}px)`,
+        width: columns * PACK_TILE * scale,
+        height: rows * PACK_TILE * scale,
+      }}
+    >
+      {frames.map((frame) => (
+        <AtlasSprite key={frame} atlas="props" frame={frame} scale={scale} />
+      ))}
+    </span>
+  );
+}
+
+function AvatarPreview({ avatar, scale = 2 }: { avatar: AvatarConfig; scale?: number }) {
+  const frames = packAvatarFrames(avatar, 'down', 0);
+  const size = 64 * scale;
+  return (
+    <span aria-hidden className="dot-avatar-preview" style={{ width: size, height: size }}>
+      {frames.map((frame) => (
+        <AtlasSprite key={frame} atlas="avatar-parts" frame={frame} scale={scale} />
+      ))}
+    </span>
   );
 }
 
@@ -64,7 +127,9 @@ export default function IslandClient() {
   const cellTapRef = useRef<(gx: number, gy: number) => void>(() => {});
   const reducedMotionRef = useRef(false);
   const dialogRef = useRef<HTMLElement>(null);
+  const avatarDialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const avatarCloseButtonRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
   const transitioningRef = useRef(false);
@@ -73,6 +138,10 @@ export default function IslandClient() {
   const [mode, setMode] = useState<'explore' | 'decorate'>('explore');
   const [selected, setSelected] = useState<FurnitureId | null>(null);
   const [npcOpen, setNpcOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [avatar, setAvatar] = useState<AvatarConfig | null>(null);
+  const [avatarAtlasStatus, setAvatarAtlasStatus] = useState<'error' | 'loading' | 'ready'>('loading');
+  const [avatarAtlasAttempt, setAvatarAtlasAttempt] = useState(0);
   const [dialogueLength, setDialogueLength] = useState(0);
   const [banner, setBanner] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -95,6 +164,23 @@ export default function IslandClient() {
     });
   }, []);
 
+  const openAvatar = useCallback(() => {
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setAvatarOpen(true);
+  }, []);
+
+  const closeAvatar = useCallback(() => {
+    setAvatarOpen(false);
+    window.requestAnimationFrame(() => {
+      const target = returnFocusRef.current;
+      if (target?.isConnected && target !== document.body) {
+        target.focus();
+        return;
+      }
+      containerRef.current?.focus();
+    });
+  }, []);
+
   // 모션 선호는 ref에 반영해 런타임 토글이 Phaser 재부팅을 일으키지 않게 한다.
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -106,6 +192,23 @@ export default function IslandClient() {
     return () => query.removeEventListener('change', updatePreference);
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    const image = new window.Image();
+    image.onload = () => {
+      if (active) setAvatarAtlasStatus('ready');
+    };
+    image.onerror = () => {
+      if (active) setAvatarAtlasStatus('error');
+    };
+    image.src = avatarAtlasAttempt === 0
+      ? AVATAR_PARTS_IMAGE_URL
+      : `${AVATAR_PARTS_IMAGE_URL}?retry=${avatarAtlasAttempt}`;
+    return () => {
+      active = false;
+    };
+  }, [avatarAtlasAttempt]);
+
   // Phaser 부팅(1회). localStorage 읽기·보상 지급은 여기서, React state 반영은 setTimeout(0)
   // 으로 미뤄 effect 본문 동기 setState 를 피한다(하이드레이션·lint 안전).
   useEffect(() => {
@@ -113,6 +216,7 @@ export default function IslandClient() {
     if (!el) return;
 
     const world = readWorld();
+    const worldAvatar = world.avatar ?? DEFAULT_AVATAR;
     let island = readIsland();
     // 보상 지급(멱등, claimed 로 가드). 축하 연출은 celebrated 마커로 별도 판단해
     // React Strict Mode 이중 마운트에도 정확히 1회만 연출된다.
@@ -124,7 +228,7 @@ export default function IslandClient() {
 
     let handle: IslandGameHandle | null = null;
     handle = createIslandGame(el, {
-      avatarBody: world.avatar?.body ?? null,
+      avatar: worldAvatar,
       initialPlaced: island.placed,
       initialLevel: lighthouseLevel(island),
       reducedMotion: prefersReducedMotion(),
@@ -142,7 +246,10 @@ export default function IslandClient() {
     });
     handleRef.current = handle;
 
-    const initialStateTimer = window.setTimeout(() => setSave(readIsland()), 0);
+    const initialStateTimer = window.setTimeout(() => {
+      setSave(readIsland());
+      setAvatar(worldAvatar);
+    }, 0);
     return () => {
       window.clearTimeout(initialStateTimer);
       if (transitionTimeoutRef.current !== null) {
@@ -232,6 +339,43 @@ export default function IslandClient() {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [closeNpc, npcOpen]);
 
+  useEffect(() => {
+    if (!avatarOpen) return;
+    const dialog = avatarDialogRef.current;
+    if (!dialog) return;
+
+    avatarCloseButtonRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeAvatar();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>('button:not(:disabled), [href], [tabindex]:not([tabindex="-1"])'),
+      );
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [avatarOpen, closeAvatar]);
+
   const startStory = useCallback(() => {
     if (transitioningRef.current || !save) return;
     transitioningRef.current = true;
@@ -248,6 +392,17 @@ export default function IslandClient() {
     }, delay);
   }, [router, save]);
 
+  const applyAvatar = useCallback((next: AvatarConfig) => {
+    saveAvatar(next);
+    setAvatar(next);
+    handleRef.current?.setAvatar(next);
+  }, []);
+
+  const retryAvatarAtlas = () => {
+    setAvatarAtlasStatus('loading');
+    setAvatarAtlasAttempt((attempt) => attempt + 1);
+  };
+
   const toggleMode = () => {
     if (!save || isTransitioning) return;
     if (mode === 'decorate') {
@@ -261,7 +416,7 @@ export default function IslandClient() {
   const pieces = save?.pieces ?? 0;
   const lightLevel = save ? lighthouseLevel(save) : 0;
   const selectedFurniture = FURNITURE.find((furniture) => furniture.id === selected);
-  const isBlocked = npcOpen || isTransitioning;
+  const isBlocked = npcOpen || avatarOpen || isTransitioning;
   const toolbarMessage = !save
     ? '섬을 불러오고 있어요'
     : pieces === 0
@@ -307,6 +462,18 @@ export default function IslandClient() {
 
             <button
               type="button"
+              onClick={openAvatar}
+              disabled={!avatar || avatarAtlasStatus === 'loading' || isTransitioning}
+              className="dot-button dot-avatar-button min-h-14 shrink-0 px-2 text-xs font-black"
+              aria-label="내 캐릭터 꾸미기"
+            >
+              {avatar && avatarAtlasStatus === 'ready' ? (
+                <AvatarPreview avatar={avatar} scale={1} />
+              ) : avatarAtlasStatus === 'error' ? '옷 오류' : '옷 준비 중'}
+            </button>
+
+            <button
+              type="button"
               onClick={toggleMode}
               aria-pressed={mode === 'decorate'}
               disabled={!save || isTransitioning}
@@ -342,7 +509,6 @@ export default function IslandClient() {
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {FURNITURE.map((furniture) => {
-                  const iconStyle = propCatalogIconStyle(furniture.emoji);
                   return (
                     <button
                       type="button"
@@ -354,11 +520,7 @@ export default function IslandClient() {
                       disabled={!save || pieces <= 0 || isTransitioning}
                       className="dot-button dot-tool-button flex min-h-14 items-center justify-center"
                     >
-                      {iconStyle ? (
-                        <span aria-hidden className="dot-pack-sprite" style={iconStyle} />
-                      ) : (
-                        <span aria-hidden className="dot-sprite-fallback">{furniture.label}</span>
-                      )}
+                      <PackStamp {...furniture.stamp} />
                     </button>
                   );
                 })}
@@ -391,7 +553,7 @@ export default function IslandClient() {
 
             <div className="flex items-start gap-4 pr-12">
               <figure className="dot-portrait flex shrink-0 items-center justify-center text-center" aria-label="낚시하는 여인 초상">
-                <ReservedPackSprite frame={RESERVED_PACK_FRAMES.fisherwoman} fallback="낚시하는 여인" />
+                <AtlasSprite atlas="character" frame={PREMIUM_PACK_FRAMES.fisherwoman} />
               </figure>
               <div className="min-w-0 pt-1">
                 <p className="dot-label">그림 섬 · 쇠라의 강가</p>
@@ -421,6 +583,109 @@ export default function IslandClient() {
         </div>
       )}
 
+      {avatarOpen && avatar && (
+        <div className="dot-scrim absolute inset-0 z-40 flex items-end justify-center px-3 dot-safe-bottom">
+          <section
+            ref={avatarDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="avatar-title"
+            aria-describedby="avatar-help"
+            tabIndex={-1}
+            className="dot-panel dot-dialog dot-avatar-dialog relative w-full max-w-md p-5 outline-none"
+          >
+            <button
+              ref={avatarCloseButtonRef}
+              type="button"
+              onClick={closeAvatar}
+              aria-label="내 캐릭터 꾸미기 닫기"
+              className="dot-button dot-close-button absolute right-3 top-3 grid min-h-12 min-w-12 place-items-center text-xl font-black"
+            >
+              ×
+            </button>
+
+            <div className="flex items-center gap-4 pr-12">
+              <div className="dot-avatar-stage flex shrink-0 items-center justify-center">
+                {avatarAtlasStatus === 'ready' ? <AvatarPreview avatar={avatar} /> : null}
+              </div>
+              <div>
+                <p className="dot-label">팩 파츠로 골라요</p>
+                <h2 id="avatar-title" className="mt-1 text-xl font-black">내 캐릭터</h2>
+                <p id="avatar-help" className="mt-1 text-sm font-bold text-ink2">셔츠와 모자를 톡 눌러요.</p>
+              </div>
+            </div>
+
+            {avatarAtlasStatus === 'loading' && (
+              <p className="dot-avatar-status mt-4 p-4 text-center text-sm font-black" role="status">
+                옷 그림을 불러오고 있어요…
+              </p>
+            )}
+            {avatarAtlasStatus === 'error' && (
+              <div className="dot-avatar-status mt-4 p-4 text-center" role="alert">
+                <p className="text-sm font-black">옷 그림을 불러오지 못했어요.</p>
+                <button
+                  type="button"
+                  onClick={retryAvatarAtlas}
+                  className="dot-button mt-3 min-h-12 px-5 text-sm font-black"
+                >
+                  다시 불러오기
+                </button>
+              </div>
+            )}
+
+            <fieldset className="mt-4" disabled={avatarAtlasStatus !== 'ready'}>
+              <legend className="text-base font-black">셔츠 색</legend>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {PACK_SHIRTS.map((shirt) => {
+                  const optionAvatar = withPackShirt(avatar, shirt.body);
+                  return (
+                    <button
+                      type="button"
+                      key={shirt.body}
+                      onClick={() => applyAvatar(optionAvatar)}
+                      aria-pressed={avatar.body === shirt.body}
+                      aria-label={shirt.label}
+                      className="dot-button dot-avatar-option flex min-h-24 items-center justify-center"
+                    >
+                      <AvatarPreview avatar={optionAvatar} scale={1} />
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <fieldset className="mt-4" disabled={avatarAtlasStatus !== 'ready'}>
+              <legend className="text-base font-black">모자</legend>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {PACK_HATS.map((hat) => {
+                  const optionAvatar = withPackHat(avatar, hat.id);
+                  return (
+                    <button
+                      type="button"
+                      key={hat.id}
+                      onClick={() => applyAvatar(optionAvatar)}
+                      aria-pressed={selectedPackHat(avatar) === hat.id}
+                      className="dot-button dot-avatar-hat-option flex min-h-20 items-center justify-center gap-2 px-3 text-sm font-black"
+                    >
+                      <AvatarPreview avatar={optionAvatar} scale={1} />
+                      <span>{hat.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <button
+              type="button"
+              onClick={closeAvatar}
+              className="dot-button dot-primary-button mt-4 inline-flex min-h-14 w-full items-center justify-center px-6 text-lg font-black"
+            >
+              다 골랐어요
+            </button>
+          </section>
+        </div>
+      )}
+
       {isTransitioning && (
         <div
           className="dot-transition absolute inset-0 z-50 grid place-items-center px-6 text-center"
@@ -430,7 +695,7 @@ export default function IslandClient() {
         >
           <div className="dot-transition-content">
             <div className="dot-boat-slot mx-auto flex items-center justify-center" aria-hidden>
-              <ReservedPackSprite frame={RESERVED_PACK_FRAMES.boat} fallback="배" />
+              <PackStamp {...PREMIUM_PACK_FRAMES.boat} />
             </div>
             <p className="mt-4 text-xl font-black">그림 섬으로 가요</p>
           </div>

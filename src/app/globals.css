@@ -333,10 +333,36 @@ summary:focus-visible {
   background: color-mix(in srgb, var(--color-surface) 82%, var(--color-sagebg));
 }
 
+.dot-avatar-button {
+  width: calc(var(--spacing) * 14);
+  overflow: hidden;
+  background: var(--color-sagebg);
+}
+
 .dot-pack-sprite {
   display: block;
   flex: none;
   image-rendering: pixelated;
+}
+
+.dot-pack-stamp {
+  display: grid;
+  flex: none;
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+
+.dot-avatar-preview {
+  position: relative;
+  display: block;
+  flex: none;
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+
+.dot-avatar-preview > .dot-pack-sprite {
+  position: absolute;
+  inset: 0;
 }
 
 .dot-sprite-fallback {
@@ -376,6 +402,31 @@ summary:focus-visible {
   background: var(--dot-panel-raised);
   border: calc(var(--spacing) * 0.5) solid var(--dot-edge);
   box-shadow: inset calc(var(--spacing) * 0.75) calc(var(--spacing) * 0.75) 0 var(--color-line);
+}
+
+.dot-avatar-dialog {
+  max-height: calc(100svh - env(safe-area-inset-top) - var(--spacing) * 6);
+}
+
+.dot-avatar-stage {
+  width: calc(var(--spacing) * 32);
+  height: calc(var(--spacing) * 32);
+  overflow: hidden;
+  background: var(--color-sagebg);
+  border: calc(var(--spacing) * 0.75) solid var(--dot-edge);
+  box-shadow: inset calc(var(--spacing) * 0.75) calc(var(--spacing) * 0.75) 0 var(--color-sages);
+}
+
+.dot-avatar-status {
+  background: var(--dot-panel-raised);
+  border: calc(var(--spacing) * 0.5) solid var(--dot-edge);
+  box-shadow: inset calc(var(--spacing) * 0.75) calc(var(--spacing) * 0.75) 0 var(--color-line);
+}
+
+.dot-avatar-option,
+.dot-avatar-hat-option {
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-surface) 82%, var(--color-sagebg));
 }
 
 .dot-caret {

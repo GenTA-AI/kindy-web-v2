@@ -2,6 +2,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import propsAtlas from '../../../public/island/tiles/props.json';
+import avatarPartsAtlas from '../../../public/island/tiles/avatar-parts.json';
+import characterAtlas from '../../../public/island/tiles/character.json';
+import {
+  PACK_HATS,
+  PACK_SHIRTS,
+  packAvatarFrames,
+  withPackHat,
+  withPackShirt,
+} from '../../components/island/avatar-parts';
+import { DEFAULT_AVATAR } from '../world/world-state';
 
 import {
   EMPTY_ISLAND,
@@ -110,5 +120,38 @@ test('가구 6종의 카탈로그 프레임 키가 props 아틀라스에 실존'
 
   for (const furniture of FURNITURE) {
     assert.ok(atlasFrames.has(furniture.emoji), `${furniture.label}: ${furniture.emoji}`);
+    const { prefix, startRow, startColumn, rows, columns } = furniture.stamp;
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        const frame = `${prefix}__r${String(startRow + row).padStart(3, '0')}_c${String(startColumn + column).padStart(3, '0')}`;
+        assert.ok(atlasFrames.has(frame), `${furniture.label} 조립 셀: ${frame}`);
+      }
+    }
+  }
+});
+
+test('유료 팩 NPC·배·아바타 파츠 매핑의 모든 프레임이 실존', () => {
+  const propFrames = new Set(Object.keys(propsAtlas.frames));
+  const characterFrames = new Set(Object.keys(characterAtlas.frames));
+  const avatarFrames = new Set(Object.keys(avatarPartsAtlas.frames));
+
+  assert.ok(characterFrames.has('fisherwoman__r000_c000'));
+  for (let row = 0; row < 3; row += 1) {
+    for (let column = 0; column < 3; column += 1) {
+      assert.ok(propFrames.has(`boat__r00${row}_c00${column}`));
+    }
+  }
+
+  for (const shirt of PACK_SHIRTS) {
+    for (const hat of PACK_HATS) {
+      const avatar = withPackHat(withPackShirt(DEFAULT_AVATAR, shirt.body), hat.id);
+      for (const direction of ['down', 'side', 'up'] as const) {
+        for (const frame of [0, 1] as const) {
+          for (const frameName of packAvatarFrames(avatar, direction, frame)) {
+            assert.ok(avatarFrames.has(frameName), `${shirt.label}/${hat.label}: ${frameName}`);
+          }
+        }
+      }
+    }
   }
 });

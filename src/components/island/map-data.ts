@@ -314,14 +314,13 @@ function isCliffRampAt(col: number, row: number): boolean {
   return row >= 29 && row <= 32 && col >= 34 && col <= 37;
 }
 
+function isInnerPlateauAt(col: number, row: number): boolean {
+  return ((col - 37) / 8) ** 2 + ((row - 23) / 7) ** 2 <= 1;
+}
+
 function isCliffAt(col: number, row: number): boolean {
   if (!isPlateauAt(col, row) || isCliffRampAt(col, row)) return false;
-  return (
-    !isPlateauAt(col, row - 1) ||
-    !isPlateauAt(col, row + 1) ||
-    !isPlateauAt(col - 1, row) ||
-    !isPlateauAt(col + 1, row)
-  );
+  return !isInnerPlateauAt(col, row);
 }
 
 const CLIFF_FRAMES: AutoTileFrames = {
@@ -338,6 +337,13 @@ const CLIFF_FRAMES: AutoTileFrames = {
 
 function cliffFrameAt(col: number, row: number): number {
   if (!isCliffAt(col, row)) return -1;
+  const onOuterEdge =
+    !isPlateauAt(col, row - 1) ||
+    !isPlateauAt(col, row + 1) ||
+    !isPlateauAt(col - 1, row) ||
+    !isPlateauAt(col + 1, row);
+  // 곶 남쪽 두꺼운 밴드는 돌벽 면을 반복해 플라토 높이가 한눈에 읽히게 한다.
+  if (!onOuterEdge && row >= 23) return TERRAIN_FRAME.cliffBottom;
   return autoTileFrame(col, row, isPlateauAt, CLIFF_FRAMES);
 }
 
@@ -392,14 +398,22 @@ function blockCell(col: number, row: number): void {
   blockedScenery.add(`${col},${row}`);
 }
 
-function addStamp(col: number, row: number, prefix: string, width: number, height: number): void {
+function addStamp(
+  col: number,
+  row: number,
+  prefix: string,
+  width: number,
+  height: number,
+  sourceStartRow = 0,
+  sourceStartCol = 0,
+): void {
   const depthRow = row + height;
   for (let sourceRow = 0; sourceRow < height; sourceRow += 1) {
     for (let sourceCol = 0; sourceCol < width; sourceCol += 1) {
       scenery.push({
         col: col + sourceCol,
         row: row + sourceRow,
-        frame: atlasCell(prefix, sourceRow, sourceCol),
+        frame: atlasCell(prefix, sourceStartRow + sourceRow, sourceStartCol + sourceCol),
         depthRow,
         ground: false,
       });
@@ -421,7 +435,7 @@ const OAKS: readonly GridPoint[] = [
 ] as const;
 
 for (const oak of OAKS) {
-  addStamp(oak.col, oak.row, 'oak-tree', 4, 5);
+  addStamp(oak.col, oak.row, 'oak-tree', 4, 5, 0, 4);
   blockCell(oak.col + 1, oak.row + 4);
   blockCell(oak.col + 2, oak.row + 4);
 }
@@ -479,19 +493,19 @@ interface SingleScenery extends GridPoint {
 }
 
 const ROCKS: readonly SingleScenery[] = [
-  { col: 20, row: 60, sourceRow: 2, sourceCol: 1, blocking: true },
-  { col: 23, row: 65, sourceRow: 2, sourceCol: 2, blocking: true },
-  { col: 37, row: 62, sourceRow: 3, sourceCol: 0, blocking: true },
-  { col: 41, row: 57, sourceRow: 3, sourceCol: 2, blocking: true },
-  { col: 10, row: 57, sourceRow: 3, sourceCol: 1, blocking: true },
-  { col: 47, row: 36, sourceRow: 3, sourceCol: 3, blocking: true },
+  { col: 20, row: 60, sourceRow: 4, sourceCol: 3, blocking: true },
+  { col: 23, row: 65, sourceRow: 4, sourceCol: 4, blocking: true },
+  { col: 37, row: 62, sourceRow: 4, sourceCol: 5, blocking: true },
+  { col: 41, row: 57, sourceRow: 4, sourceCol: 6, blocking: true },
+  { col: 10, row: 57, sourceRow: 4, sourceCol: 7, blocking: true },
+  { col: 47, row: 36, sourceRow: 4, sourceCol: 8, blocking: true },
 ] as const;
 
 for (const rock of ROCKS) {
   scenery.push({
     col: rock.col,
     row: rock.row,
-    frame: atlasCell('outdoor-decor-free', rock.sourceRow, rock.sourceCol),
+    frame: atlasCell('outdoor-decor', rock.sourceRow, rock.sourceCol),
     depthRow: rock.row + 1,
     ground: false,
   });
@@ -499,14 +513,14 @@ for (const rock of ROCKS) {
 }
 
 const FLOWER_FRAMES = [
-  [8, 0],
-  [8, 1],
-  [9, 0],
-  [9, 1],
-  [10, 0],
-  [10, 1],
-  [11, 0],
-  [11, 1],
+  [0, 0],
+  [0, 1],
+  [0, 2],
+  [0, 3],
+  [1, 0],
+  [1, 1],
+  [1, 2],
+  [1, 3],
 ] as const;
 
 for (let row = 13; row < 68; row += 1) {
@@ -519,7 +533,7 @@ for (let row = 13; row < 68; row += 1) {
     scenery.push({
       col,
       row,
-      frame: atlasCell('outdoor-decor-free', sourceRow, sourceCol),
+      frame: atlasCell('flowers', sourceRow, sourceCol),
       depthRow: row + 1,
       ground: false,
     });
@@ -542,4 +556,3 @@ export function isWalkableTile(col: number, row: number): boolean {
   if (col < 0 || col >= MAP_COLS || row < 0 || row >= MAP_ROWS) return false;
   return !COLLISION_DATA[row][col];
 }
-

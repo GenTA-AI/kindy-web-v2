@@ -1,7 +1,8 @@
 import type Phaser from 'phaser';
-import { GRID_COLS, GRID_ROWS, SEURAT_BOTTLE_ID, type FurnitureId, type PlacedItem } from '@/lib/island/island-state';
-import { PAL, TILE } from '@/components/island/pixel-art';
-import { WORLD_HEIGHT, WORLD_WIDTH, type PixelTextureFactory } from '@/components/island/map';
+import { FURNITURE, GRID_COLS, GRID_ROWS, SEURAT_BOTTLE_ID, type PlacedItem } from '@/lib/island/island-state';
+import { PAL } from '@/components/island/pixel-art';
+import { atlasFrameName, atlasFrameStyle } from '@/components/island/atlas-frames';
+import { TILE, WORLD_HEIGHT, WORLD_WIDTH } from '@/components/island/map';
 
 const PROP_ATLAS = 'island-props-pack';
 const WATER_ATLAS = 'island-water-props';
@@ -9,7 +10,6 @@ const PROP_ATLAS_URL = '/island/tiles/props.png';
 const PROP_ATLAS_JSON_URL = '/island/tiles/props.json';
 const WATER_ATLAS_URL = '/island/tiles/water.png';
 const WATER_ATLAS_JSON_URL = '/island/tiles/water.json';
-const PROP_ATLAS_SIZE = 240;
 const CATALOG_ICON_SCALE = 2;
 
 const LIGHTHOUSE = { col: 36, row: 23 } as const;
@@ -23,24 +23,6 @@ const LAMP_YELLOW = Number.parseInt(PAL.Y.slice(1), 16);
 const LIGHT_GLOW = LAMP_YELLOW;
 const CELEBRATION_FLASH = LAMP_YELLOW;
 
-const FURNITURE_FRAME: Record<FurnitureId, string> = {
-  sofa: 'bridge-wood__r002_c004',
-  plant: 'outdoor-decor-free__r008_c002',
-  chair: 'outdoor-decor-free__r002_c000',
-  books: 'outdoor-decor-free__r000_c004',
-  flowers: 'outdoor-decor-free__r011_c000',
-  lamp: 'outdoor-decor-free__r004_c004',
-};
-
-const CATALOG_FRAME_POSITION: Readonly<Record<string, { x: number; y: number }>> = {
-  'bridge-wood__r002_c004': { x: 48, y: 112 },
-  'outdoor-decor-free__r008_c002': { x: 32, y: 208 },
-  'outdoor-decor-free__r002_c000': { x: 48, y: 160 },
-  'outdoor-decor-free__r000_c004': { x: 128, y: 144 },
-  'outdoor-decor-free__r011_c000': { x: 96, y: 224 },
-  'outdoor-decor-free__r004_c004': { x: 96, y: 176 },
-};
-
 const TREE_POSITIONS = [
   { col: 17, row: 31, small: false },
   { col: 43, row: 33, small: false },
@@ -49,19 +31,10 @@ const TREE_POSITIONS = [
 ] as const;
 
 const BUSH_POSITIONS = [
-  { col: 22, row: 36, frame: 'outdoor-decor-free__r011_c000' },
-  { col: 34, row: 40, frame: 'outdoor-decor-free__r011_c001' },
-  { col: 24, row: 51, frame: 'outdoor-decor-free__r010_c000' },
-  { col: 37, row: 54, frame: 'outdoor-decor-free__r010_c001' },
-] as const;
-
-const FENCE_POSITIONS = [
-  { col: 23, row: 40, frame: 'fences__r000_c002' },
-  { col: 24, row: 40, frame: 'fences__r000_c002' },
-  { col: 32, row: 40, frame: 'fences__r000_c002' },
-  { col: 33, row: 40, frame: 'fences__r000_c002' },
-  { col: 25, row: 44, frame: 'fences__r001_c001' },
-  { col: 34, row: 44, frame: 'fences__r001_c003' },
+  { col: 22, row: 36, frame: 'flowers__r006_c000' },
+  { col: 34, row: 40, frame: 'flowers__r006_c001' },
+  { col: 24, row: 51, frame: 'flowers__r007_c002' },
+  { col: 37, row: 54, frame: 'flowers__r007_c003' },
 ] as const;
 
 const FOAM_POSITIONS = [
@@ -71,9 +44,10 @@ const FOAM_POSITIONS = [
   { col: 46, row: 69, delay: 720 },
 ] as const;
 
-const BOTTLE_FRAME = 'outdoor-decor-free__r006_c004';
-const SPARKLE_FRAME = 'outdoor-decor-free__r003_c006';
-const GULL_FRAME = 'outdoor-decor-free__r001_c002';
+const BOTTLE_FRAME = 'placeable-decoration__r000_c001';
+const SPARKLE_FRAME = 'placeable-decoration__r000_c005';
+const LIGHTHOUSE_LAMP_FRAME = 'lantern__r000_c000';
+const BUTTERFLY_FRAMES = [0, 1, 2, 3].map((row) => atlasFrameName('butterfly', row, 0));
 
 export interface IslandPropsOptions {
   reducedMotion: boolean;
@@ -82,8 +56,7 @@ export interface IslandPropsOptions {
 }
 
 /** Phaser 씬이 만들어진 뒤에도 안전하게 시작할 수 있는 보조 로더. */
-export function registerPropTextures(scene: Phaser.Scene, makeTexture: PixelTextureFactory): void {
-  void makeTexture; // engine.ts의 기존 등록 함수 계약을 유지한다.
+export function registerPropTextures(scene: Phaser.Scene): void {
   if (!scene.textures.exists(PROP_ATLAS)) {
     scene.load.atlas(PROP_ATLAS, PROP_ATLAS_URL, PROP_ATLAS_JSON_URL);
   }
@@ -95,17 +68,7 @@ export function registerPropTextures(scene: Phaser.Scene, makeTexture: PixelText
 
 /** DOM 카탈로그도 게임과 같은 팩 프레임을 정수 배율로 잘라 쓴다. */
 export function propCatalogIconStyle(frame: string) {
-  const position = CATALOG_FRAME_POSITION[frame];
-  if (!position) return undefined;
-  return {
-    width: TILE * CATALOG_ICON_SCALE,
-    height: TILE * CATALOG_ICON_SCALE,
-    backgroundImage: `url(${PROP_ATLAS_URL})`,
-    backgroundPosition: `${-position.x * CATALOG_ICON_SCALE}px ${-position.y * CATALOG_ICON_SCALE}px`,
-    backgroundRepeat: 'no-repeat',
-    backgroundSize: `${PROP_ATLAS_SIZE * CATALOG_ICON_SCALE}px ${PROP_ATLAS_SIZE * CATALOG_ICON_SCALE}px`,
-    imageRendering: 'pixelated' as const,
-  };
+  return atlasFrameStyle('props', frame, CATALOG_ICON_SCALE);
 }
 
 export function cellToWorld(gx: number, gy: number): { x: number; y: number } {
@@ -116,7 +79,7 @@ export function cellToWorld(gx: number, gy: number): { x: number; y: number } {
 }
 
 function frameName(prefix: string, row: number, col: number): string {
-  return `${prefix}__r${String(row).padStart(3, '0')}_c${String(col).padStart(3, '0')}`;
+  return atlasFrameName(prefix, row, col);
 }
 
 function addFrameGrid(
@@ -151,7 +114,7 @@ export class IslandProps {
   private beam?: Phaser.GameObjects.Triangle;
   private gridOutline?: Phaser.GameObjects.Container;
   private gridZone?: Phaser.GameObjects.Zone;
-  private placedItems: Phaser.GameObjects.Image[] = [];
+  private placedItems: Phaser.GameObjects.Container[] = [];
   private pendingPlaced: PlacedItem[] = [];
   private pendingLevel = 0;
   private pendingCelebration = false;
@@ -190,7 +153,7 @@ export class IslandProps {
     this.drawDecorateGrid();
     this.renderPlaced(this.pendingPlaced);
     this.drawBottle();
-    this.drawGulls();
+    this.drawButterflies();
     this.setMode(this.mode);
     this.setLighthouse(this.pendingLevel);
     if (this.pendingCelebration) {
@@ -202,13 +165,13 @@ export class IslandProps {
   private drawLighthouse(): void {
     const x = LIGHTHOUSE.col * TILE;
     const y = LIGHTHOUSE.row * TILE;
-    addFrameGrid(this.scene, x, y, 'outdoor-decor-free', 3, 4, 4, 1);
+    addFrameGrid(this.scene, x, y, 'lighthouse-tower', 0, 0, 5, 3);
     this.beam = this.scene.add
-      .triangle(x + 3, y - 43, 0, 0, 48, -13, 48, 13, LIGHT_GLOW, 0)
+      .triangle(x + 3, y - 82, 0, 0, 48, -13, 48, 13, LIGHT_GLOW, 0)
       .setOrigin(0, 0.5)
       .setDepth(y - 1);
     this.lamp = this.scene.add
-      .image(x, y - 40, PROP_ATLAS, 'outdoor-decor-free__r004_c004')
+      .image(x, y - 80, PROP_ATLAS, LIGHTHOUSE_LAMP_FRAME)
       .setDepth(y + 1);
   }
 
@@ -225,14 +188,10 @@ export class IslandProps {
       if (small) {
         addFrameGrid(this.scene, col * TILE, row * TILE, 'oak-tree-small', 0, 2, 3, 2);
       } else {
-        addFrameGrid(this.scene, col * TILE, row * TILE, 'oak-tree', 0, 0, 5, 4);
+        addFrameGrid(this.scene, col * TILE, row * TILE, 'oak-tree', 0, 4, 5, 4);
       }
     });
     BUSH_POSITIONS.forEach(({ col, row, frame }) => {
-      const y = row * TILE;
-      this.scene.add.image(col * TILE, y, PROP_ATLAS, frame).setOrigin(0.5, 1).setDepth(y);
-    });
-    FENCE_POSITIONS.forEach(({ col, row, frame }) => {
       const y = row * TILE;
       this.scene.add.image(col * TILE, y, PROP_ATLAS, frame).setOrigin(0.5, 1).setDepth(y);
     });
@@ -241,32 +200,40 @@ export class IslandProps {
   private drawWaveFoam(): void {
     const frames = [0, 1, 2].map((col) => ({
       key: WATER_ATLAS,
-      frame: `water-tile__r005_c00${col}`,
+      frame: `water-decoration__r000_c00${col}`,
     }));
     if (!this.opts.reducedMotion && !this.scene.anims.exists('island-shore-foam')) {
       this.scene.anims.create({ key: 'island-shore-foam', frames, frameRate: 3, repeat: -1, yoyo: true });
     }
     FOAM_POSITIONS.forEach(({ col, row, delay }) => {
       const foam = this.scene.add
-        .sprite(col * TILE, row * TILE, WATER_ATLAS, 'water-tile__r005_c001')
+        .sprite(col * TILE, row * TILE, WATER_ATLAS, 'water-decoration__r000_c001')
         .setDepth(0.5);
       if (!this.opts.reducedMotion) foam.playAfterDelay('island-shore-foam', delay);
     });
   }
 
-  private drawGulls(): void {
-    const gulls = [
+  private drawButterflies(): void {
+    if (!this.opts.reducedMotion && !this.scene.anims.exists('island-butterfly-fly')) {
+      this.scene.anims.create({
+        key: 'island-butterfly-fly',
+        frames: BUTTERFLY_FRAMES.map((frame) => ({ key: PROP_ATLAS, frame })),
+        frameRate: 4,
+        repeat: -1,
+      });
+    }
+    const butterflies = [
       { x: 13 * TILE, y: 17 * TILE, duration: 14_000 },
       { x: 39 * TILE, y: 13 * TILE, duration: 17_000 },
     ];
-    gulls.forEach(({ x, y, duration }, index) => {
-      const gull = this.scene.add
-        .image(x, y, PROP_ATLAS, GULL_FRAME)
-        .setTintFill(WHITE)
+    butterflies.forEach(({ x, y, duration }, index) => {
+      const butterfly = this.scene.add
+        .sprite(x, y, PROP_ATLAS, BUTTERFLY_FRAMES[0])
         .setDepth(WORLD_HEIGHT + index);
+      if (!this.opts.reducedMotion) butterfly.play('island-butterfly-fly');
       if (this.opts.reducedMotion) return;
       this.scene.tweens.add({
-        targets: gull,
+        targets: butterfly,
         x: { from: -TILE, to: WORLD_WIDTH + TILE },
         duration,
         delay: index * 1800,
@@ -274,7 +241,7 @@ export class IslandProps {
         ease: 'Linear',
       });
       this.scene.tweens.add({
-        targets: gull,
+        targets: butterfly,
         y: y + (index === 0 ? TILE : -TILE),
         duration: 1800 + index * 300,
         yoyo: true,
@@ -347,10 +314,19 @@ export class IslandProps {
     this.placedItems.forEach((item) => item.destroy());
     this.placedItems = items.map(({ item, x: gx, y: gy }) => {
       const { x, y } = cellToWorld(gx, gy);
-      return this.scene.add
-        .image(x, y + 5, PROP_ATLAS, FURNITURE_FRAME[item])
-        .setOrigin(0.5, 1)
-        .setDepth(y + 5);
+      const furniture = FURNITURE.find(({ id }) => id === item);
+      if (!furniture) return this.scene.add.container(x, y + 5);
+      const { stamp } = furniture;
+      return addFrameGrid(
+        this.scene,
+        x,
+        y + 5,
+        stamp.prefix,
+        stamp.startRow,
+        stamp.startColumn,
+        stamp.rows,
+        stamp.columns,
+      );
     });
   }
 
@@ -393,7 +369,7 @@ export class IslandProps {
     });
 
     const x = LIGHTHOUSE.col * TILE;
-    const y = LIGHTHOUSE.row * TILE - 43;
+    const y = LIGHTHOUSE.row * TILE - 82;
     for (let index = 0; index < 8; index += 1) {
       const spark = this.scene.add.image(x, y, PROP_ATLAS, SPARKLE_FRAME).setDepth(WORLD_HEIGHT + 21);
       const angle = (index / 8) * Math.PI * 2;

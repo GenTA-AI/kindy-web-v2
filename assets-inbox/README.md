@@ -6,7 +6,8 @@ vendor-only files.
 
 ## Add a pack
 
-1. Put exactly one purchased `.zip` file directly in `assets-inbox/`.
+1. Put the purchased `.zip` file(s) directly in `assets-inbox/`. Bundles may use
+   multiple ZIPs when their extracted top-level directories do not collide.
 2. Add `assets-inbox/atlas.config.json` using the schema below. Paths in
    `sources` are relative to the root of the extracted ZIP.
 3. Run `node scripts/island/build-atlas.mjs`.
@@ -54,7 +55,11 @@ preview images.
     {
       "id": "hero-main",
       "file": "Pack/Characters/Hero.png",
-      "atlas": "character"
+      "atlas": "avatar-parts",
+      "frameSize": 64,
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 2 }
+      ]
     }
   ],
   "animations": [
@@ -71,6 +76,11 @@ preview images.
 }
 ```
 
+`frameSize` defaults to 16 and must be a multiple of the 16px pack grid. Use it
+for vendor sheets whose logical animation frames are 32px or 64px. `regions`
+selects only the horizontal runs needed at runtime, while frame names retain
+their original source row and column.
+
 Each animation is a horizontal run of frames in one source row. The generated
 atlas JSON records the ordered frame names, per-frame duration, and infinite
 repeat (`-1`). Add separate entries for water, swaying grass, or character
@@ -82,6 +92,9 @@ The build writes these committed runtime artifacts:
 - `public/island/tiles/water.png` and `water.json`
 - `public/island/tiles/props.png` and `props.json`
 - `public/island/tiles/character.png` and `character.json`
+- `public/island/tiles/ui.png` and `ui.json`
+- `public/island/tiles/avatar-parts.png` and `avatar-parts.json`
+- `public/island/tiles/runtime-atlas.json` (DOM sprite positions derived from the generated atlases)
 - `public/island/tiles/LICENSE.md`, generated from `pack`
 
 Use `--input path/to/pack.zip` to select a ZIP explicitly, or `--input` with an
@@ -94,4 +107,3 @@ Run the focused unit tests without a commercial pack:
 ```bash
 node --test scripts/island/build-atlas.test.mjs
 ```
-

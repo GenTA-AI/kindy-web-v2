@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { PAL, type Pal, type Pix } from '@/components/island/pixel-art';
+import { PAL } from '@/components/island/pixel-art';
 import {
   AVATAR_START,
   CLIFF_FRAME_DATA,
@@ -19,6 +19,7 @@ import {
 
 export { AVATAR_START, MAP_COLS, MAP_ROWS, TERRAIN_DATA, tileAt, type TerrainTile };
 
+export const TILE = MAP_TILE_SIZE;
 export const WORLD_WIDTH = MAP_COLS * MAP_TILE_SIZE;
 export const WORLD_HEIGHT = MAP_ROWS * MAP_TILE_SIZE;
 // 씬 로딩 중에만 보이는 기존 테마 토큰. 실제 월드는 팩 물 타일이 전부 덮는다.
@@ -31,8 +32,6 @@ const TERRAIN_IMAGE_URL = '/island/tiles/terrain.png';
 const WATER_IMAGE_URL = '/island/tiles/water.png';
 const SCENERY_IMAGE_URL = '/island/tiles/props.png';
 const SCENERY_ATLAS_URL = '/island/tiles/props.json';
-
-export type PixelTextureFactory = (scene: Phaser.Scene, key: string, pix: Pix, pal: Pal) => void;
 
 export function isWalkableWorld(x: number, y: number): boolean {
   if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return false;
@@ -52,11 +51,9 @@ export function clampWorldPoint(point: WorldPoint): WorldPoint {
 }
 
 /**
- * 기존 엔진의 텍스처 등록 훅을 유지하면서 지형만 팩 파일 로딩으로 전환한다.
- * makeTexture는 props/avatar의 단계적 이관이 끝날 때까지 타입 계약상 남겨 둔다.
+ * 지형·물·배경 소품은 구매 팩 아틀라스만 로드한다.
  */
-export function registerMapTextures(scene: Phaser.Scene, makeTexture: PixelTextureFactory): void {
-  void makeTexture;
+export function registerMapTextures(scene: Phaser.Scene): void {
   if (!scene.textures.exists(TERRAIN_TEXTURE_KEY)) scene.load.image(TERRAIN_TEXTURE_KEY, TERRAIN_IMAGE_URL);
   if (!scene.textures.exists(WATER_TEXTURE_KEY)) scene.load.image(WATER_TEXTURE_KEY, WATER_IMAGE_URL);
   if (!scene.textures.exists(SCENERY_TEXTURE_KEY)) {

@@ -26,18 +26,44 @@ export interface Furniture {
   id: FurnitureId;
   label: string;
   emoji: string;
+  /** 유료 props 아틀라스에서 조립할 원본 16px 셀 범위. */
+  stamp: {
+    prefix: string;
+    startRow: number;
+    startColumn: number;
+    rows: number;
+    columns: number;
+  };
   /** Phaser 배치 타일 바탕색. */
   tile: string;
 }
 
-// 가구 6종 — 아이콘 문자열은 public/island/tiles/props 아틀라스의 프레임을 참조한다.
+// 가구 6종 — DOM 카탈로그와 Phaser 배치가 이 한 벌의 실프레임 매핑을 함께 쓴다.
 export const FURNITURE: readonly Furniture[] = [
-  { id: 'sofa', label: '소파', emoji: 'bridge-wood__r002_c004', tile: '#EAD9BE' },
-  { id: 'plant', label: '화분', emoji: 'outdoor-decor-free__r008_c002', tile: '#DDE8DE' },
-  { id: 'chair', label: '의자', emoji: 'outdoor-decor-free__r002_c000', tile: '#F1E4CB' },
-  { id: 'books', label: '책장', emoji: 'outdoor-decor-free__r000_c004', tile: '#E7D8C0' },
-  { id: 'flowers', label: '꽃밭', emoji: 'outdoor-decor-free__r011_c000', tile: '#F6DCE6' },
-  { id: 'lamp', label: '등불', emoji: 'outdoor-decor-free__r004_c004', tile: '#F3E7C4' },
+  {
+    id: 'sofa', label: '소파', emoji: 'chairs__r005_c006', tile: '#EAD9BE',
+    stamp: { prefix: 'chairs', startRow: 4, startColumn: 5, rows: 2, columns: 3 },
+  },
+  {
+    id: 'plant', label: '화분', emoji: 'house-plants__r000_c000', tile: '#DDE8DE',
+    stamp: { prefix: 'house-plants', startRow: 0, startColumn: 0, rows: 1, columns: 1 },
+  },
+  {
+    id: 'chair', label: '의자', emoji: 'chairs__r001_c002', tile: '#F1E4CB',
+    stamp: { prefix: 'chairs', startRow: 0, startColumn: 2, rows: 2, columns: 1 },
+  },
+  {
+    id: 'books', label: '책장', emoji: 'bookshelves__r001_c000', tile: '#E7D8C0',
+    stamp: { prefix: 'bookshelves', startRow: 0, startColumn: 0, rows: 2, columns: 1 },
+  },
+  {
+    id: 'flowers', label: '꽃밭', emoji: 'flowers__r000_c000', tile: '#F6DCE6',
+    stamp: { prefix: 'flowers', startRow: 0, startColumn: 0, rows: 1, columns: 1 },
+  },
+  {
+    id: 'lamp', label: '등불', emoji: 'lantern__r000_c000', tile: '#F3E7C4',
+    stamp: { prefix: 'lantern', startRow: 0, startColumn: 0, rows: 1, columns: 1 },
+  },
 ];
 
 export interface PlacedItem {

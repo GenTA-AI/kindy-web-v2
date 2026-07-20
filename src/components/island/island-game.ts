@@ -5,6 +5,7 @@ import {
 } from '@/components/island/engine';
 import { WORLD_BACKGROUND } from '@/components/island/map';
 import type { PlacedItem } from '@/lib/island/island-state';
+import type { AvatarConfig } from '@/lib/world/world-state';
 
 /**
  * 등대섬의 클라이언트 전용 조립 엔트리. 씬 구현은 책임별 모듈에 두고
@@ -17,6 +18,7 @@ export interface IslandGameHandle {
   setMode(mode: 'explore' | 'decorate'): void;
   renderPlaced(items: PlacedItem[]): void;
   celebrate(): void;
+  setAvatar(avatar: AvatarConfig): void;
   setLighthouse(level: number): void;
 }
 
@@ -42,6 +44,7 @@ export function createIslandGame(parent: HTMLElement, opts: IslandGameOptions): 
     setMode: (mode) => scene.setMode(mode),
     renderPlaced: (items) => scene.renderPlaced(items),
     celebrate: () => scene.celebrate(),
+    setAvatar: (avatar) => scene.setAvatar(avatar),
     setLighthouse: (level) => scene.setLighthouse(level),
   };
 }

@@ -1,17 +1,9 @@
 import Phaser from 'phaser';
 import type { PlacedItem } from '@/lib/island/island-state';
-import type { BodyColorId } from '@/lib/world/world-state';
-import {
-  TILE,
-  bodyPalette,
-  drawAvatarDown,
-  drawAvatarSide,
-  drawAvatarUp,
-  type Pal,
-  type Pix,
-} from '@/components/island/pixel-art';
+import type { AvatarConfig } from '@/lib/world/world-state';
 import {
   AVATAR_START,
+  TILE,
   WORLD_BACKGROUND,
   WORLD_HEIGHT,
   WORLD_WIDTH,
@@ -23,7 +15,7 @@ import {
   type WorldPoint,
 } from '@/components/island/map';
 import { IslandProps, registerPropTextures } from '@/components/island/props';
-import { preloadCharacters, renderNpcs } from '@/components/island/npc';
+import { preloadCharacters, registerAvatarTextures, renderNpcs } from '@/components/island/npc';
 
 export const CAMERA_ZOOM = 2;
 
@@ -32,29 +24,14 @@ const WALK_SPEED = 46;
 const COLLISION_SAMPLE_PX = 1;
 
 export interface IslandEngineOptions {
-  /** /world 아바타 몸색 id — 도트 팔레트 스왑에 사용. null 이면 기본(민트). */
-  avatarBody: BodyColorId | null;
+  /** /world 선택을 유료 팩 셔츠·모자 파츠로 매핑한다. */
+  avatar: AvatarConfig | null;
   initialPlaced: PlacedItem[];
   initialLevel: number;
   reducedMotion: boolean;
   onBottleTap: (bottleId: string) => void;
   onCellTap: (gx: number, gy: number) => void;
   onReady: () => void;
-}
-
-function makePixelTexture(scene: Phaser.Scene, key: string, pix: Pix, pal: Pal): void {
-  if (scene.textures.exists(key)) scene.textures.remove(key);
-  const graphics = scene.make.graphics({ x: 0, y: 0 }, false);
-  for (let y = 0; y < pix.h; y += 1) {
-    for (let x = 0; x < pix.w; x += 1) {
-      const color = pal[pix.g[y][x]];
-      if (!color) continue;
-      graphics.fillStyle(Number.parseInt(color.slice(1), 16), 1);
-      graphics.fillRect(x, y, 1, 1);
-    }
-  }
-  graphics.generateTexture(key, pix.w, pix.h);
-  graphics.destroy();
 }
 
 function walkableInteger(point: WorldPoint, fallback: WorldPoint): WorldPoint {
@@ -93,10 +70,12 @@ export class IslandScene extends Phaser.Scene {
   private terrain?: TerrainLayer;
   private propsLayer?: IslandProps;
   private seaFrame: 0 | 1 = 0;
+  private avatarConfig: AvatarConfig | null;
 
   constructor(opts: IslandEngineOptions) {
     super('island');
     this.opts = opts;
+    this.avatarConfig = opts.avatar;
   }
 
   preload(): void { preloadCharacters(this); } // 팩 아바타 텍스처 로더만 NPC 모듈에 위임한다.
@@ -111,7 +90,7 @@ export class IslandScene extends Phaser.Scene {
       onCellTap: this.opts.onCellTap,
     });
     this.propsLayer.create(this.opts.initialPlaced, this.opts.initialLevel);
-    renderNpcs(this, this.opts.avatarBody, this.opts.reducedMotion, this.opts.onBottleTap);
+    renderNpcs(this, this.opts.reducedMotion, this.opts.onBottleTap);
     this.createAvatar();
     this.configureCamera();
     this.configureInput();
@@ -120,16 +99,9 @@ export class IslandScene extends Phaser.Scene {
   }
 
   private buildTextures(): void {
-    registerMapTextures(this, makePixelTexture);
-    registerPropTextures(this, makePixelTexture);
-
-    const avatarPalette = bodyPalette(this.opts.avatarBody);
-    makePixelTexture(this, 'av-down-0', drawAvatarDown(0), avatarPalette);
-    makePixelTexture(this, 'av-down-1', drawAvatarDown(1), avatarPalette);
-    makePixelTexture(this, 'av-side-0', drawAvatarSide(0), avatarPalette);
-    makePixelTexture(this, 'av-side-1', drawAvatarSide(1), avatarPalette);
-    makePixelTexture(this, 'av-up-0', drawAvatarUp(0), avatarPalette);
-    makePixelTexture(this, 'av-up-1', drawAvatarUp(1), avatarPalette);
+    registerMapTextures(this);
+    registerPropTextures(this);
+    registerAvatarTextures(this, this.avatarConfig);
   }
 
   private createAvatar(): void {
@@ -240,6 +212,13 @@ export class IslandScene extends Phaser.Scene {
 
   setLighthouse(level: number): void {
     this.propsLayer?.setLighthouse(level);
+  }
+
+  setAvatar(avatar: AvatarConfig): void {
+    this.avatarConfig = avatar;
+    if (!registerAvatarTextures(this, avatar) || !this.avatar) return;
+    this.avatar.anims.stop();
+    this.avatar.setTexture(this.idleTexture());
   }
 
   celebrate(): void {

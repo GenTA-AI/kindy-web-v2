@@ -53,7 +53,7 @@ test("rejects sheets that do not align to the 16px grid", async () => {
       .toFile(file);
     await assert.rejects(
       inspectSource({ absolutePath: file, atlas: "terrain", file: "bad.png", id: "bad" }),
-      /17x16.*16px grid/,
+      /17x16.*16px frame size/,
     );
   });
 });
@@ -130,7 +130,37 @@ test("cuts frames without scaling and compiles animation metadata", async () => 
   });
 });
 
-test("CLI builds all four runtime atlas pairs and verifies them with --check", async () => {
+test("selects 64px premium avatar frames while preserving source coordinates", async () => {
+  await withTempDirectory(async (directory) => {
+    const file = path.join(directory, "avatar.png");
+    await sharp({
+      create: {
+        background: "#345678",
+        channels: 4,
+        height: 128,
+        width: 128,
+      },
+    })
+      .png()
+      .toFile(file);
+
+    const source = await inspectSource({
+      absolutePath: file,
+      atlas: "avatar-parts",
+      file: "avatar.png",
+      frameSize: 64,
+      id: "avatar",
+      regions: [{ frameCount: 1, row: 1, startColumn: 1 }],
+    });
+    const result = await buildAtlas("avatar-parts", [source], []);
+    const json = JSON.parse(result.json);
+    assert.deepEqual(Object.keys(json.frames), ["avatar__r001_c001"]);
+    assert.equal(json.meta.frameSize, 64);
+    assert.deepEqual(json.meta.size, { h: 64, w: 64 });
+  });
+});
+
+test("CLI builds all six runtime atlas pairs and verifies them with --check", async () => {
   await withTempDirectory(async (directory) => {
     const sourceFile = path.join(directory, "Terrain.png");
     const output = path.join(directory, "output");
@@ -171,7 +201,7 @@ test("CLI builds all four runtime atlas pairs and verifies them with --check", a
       output,
     ]);
     assert.match(built.stdout, /Atlas build complete/);
-    for (const atlas of ["terrain", "water", "props", "character"]) {
+    for (const atlas of ["terrain", "water", "props", "character", "ui", "avatar-parts"]) {
       const json = JSON.parse(await readFile(path.join(output, `${atlas}.json`), "utf8"));
       const png = await sharp(path.join(output, `${atlas}.png`)).metadata();
       assert.equal(json.meta.tileSize, TILE_SIZE);

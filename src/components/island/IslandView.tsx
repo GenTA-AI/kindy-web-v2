@@ -9,7 +9,7 @@ import dynamic from 'next/dynamic';
 const IslandClient = dynamic(() => import('@/components/island/IslandClient'), {
   ssr: false,
   loading: () => (
-    <main className="grid h-[100svh] place-items-center bg-[#4ea6cc] text-white">
+    <main className="grid h-[100svh] place-items-center bg-sage text-cream">
       <p className="text-sm font-black tracking-[0.3em]">등대섬으로 가는 중…</p>
     </main>
   ),
