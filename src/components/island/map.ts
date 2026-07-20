@@ -25,6 +25,8 @@ export const WORLD_HEIGHT = MAP_ROWS * MAP_TILE_SIZE;
 // 씬 로딩 중에만 보이는 기존 테마 토큰. 실제 월드는 팩 물 타일이 전부 덮는다.
 export const WORLD_BACKGROUND = PAL.C;
 
+const COLLISION_EDGE_INSET_PX = 0.51;
+
 const TERRAIN_TEXTURE_KEY = 'island-terrain-pack';
 const WATER_TEXTURE_KEY = 'island-water-pack';
 const SCENERY_TEXTURE_KEY = 'island-scenery-pack';
@@ -48,6 +50,108 @@ export function clampWorldPoint(point: WorldPoint): WorldPoint {
     x: Math.min(WORLD_WIDTH - MAP_TILE_SIZE / 2, Math.max(MAP_TILE_SIZE / 2, point.x)),
     y: Math.min(WORLD_HEIGHT - MAP_TILE_SIZE / 2, Math.max(MAP_TILE_SIZE, point.y)),
   };
+}
+
+function nearestWalkableTileCenter(point: WorldPoint, preferred: WorldPoint): WorldPoint {
+  let nearest: WorldPoint | undefined;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  let nearestPreferredDistance = Number.POSITIVE_INFINITY;
+
+  for (let row = 0; row < MAP_ROWS; row += 1) {
+    for (let col = 0; col < MAP_COLS; col += 1) {
+      if (!isWalkableTile(col, row)) continue;
+      const candidate = {
+        x: (col + 0.5) * MAP_TILE_SIZE,
+        y: (row + 0.5) * MAP_TILE_SIZE,
+      };
+      const distance = Math.hypot(candidate.x - point.x, candidate.y - point.y);
+      const preferredDistance = Math.hypot(candidate.x - preferred.x, candidate.y - preferred.y);
+      if (
+        distance < nearestDistance ||
+        (distance === nearestDistance && preferredDistance < nearestPreferredDistance)
+      ) {
+        nearest = candidate;
+        nearestDistance = distance;
+        nearestPreferredDistance = preferredDistance;
+      }
+    }
+  }
+
+  if (!nearest) throw new Error('등대섬에 보행 가능한 안전 칸이 없습니다.');
+  return nearest;
+}
+
+function walkablePoint(point: WorldPoint, preferred: WorldPoint): WorldPoint {
+  return isWalkableWorld(point.x, point.y)
+    ? point
+    : nearestWalkableTileCenter(point, preferred);
+}
+
+function addGridBoundaryRatios(start: number, delta: number, ratios: number[]): void {
+  if (delta === 0) return;
+  const end = start + delta;
+  const lower = Math.min(start, end);
+  const upper = Math.max(start, end);
+  for (
+    let boundary = (Math.floor(lower / MAP_TILE_SIZE) + 1) * MAP_TILE_SIZE;
+    boundary < upper;
+    boundary += MAP_TILE_SIZE
+  ) {
+    const ratio = (boundary - start) / delta;
+    if (ratio > 0 && ratio < 1) ratios.push(ratio);
+  }
+}
+
+function collisionIntervalRatios(from: WorldPoint, target: WorldPoint): number[] {
+  const ratios = [0, 1];
+  addGridBoundaryRatios(from.x, target.x - from.x, ratios);
+  addGridBoundaryRatios(from.y, target.y - from.y, ratios);
+  ratios.sort((a, b) => a - b);
+  return ratios.filter((ratio, index) => index === 0 || Math.abs(ratio - ratios[index - 1]) > 1e-12);
+}
+
+/**
+ * 직선이 지나는 모든 타일 구간을 검사해 물·장애물을 건너뛰지 않게 한다.
+ * 비보행 칸에서 시작한 경우에는 첫 보행 지점까지 검사를 이어가 탈출을 허용한다.
+ */
+export function findWalkableDestination(from: WorldPoint, desired: WorldPoint): WorldPoint {
+  const target = clampWorldPoint({ x: Math.round(desired.x), y: Math.round(desired.y) });
+  const dx = target.x - from.x;
+  const dy = target.y - from.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance === 0) return walkablePoint(from, target);
+
+  let lastWalkable = isWalkableWorld(from.x, from.y) ? from : undefined;
+  const ratios = collisionIntervalRatios(from, target);
+  for (let index = 0; index < ratios.length - 1; index += 1) {
+    const intervalStart = ratios[index];
+    const intervalEnd = ratios[index + 1];
+    const midpointRatio = (intervalStart + intervalEnd) / 2;
+    const midpoint = { x: from.x + dx * midpointRatio, y: from.y + dy * midpointRatio };
+
+    if (isWalkableWorld(midpoint.x, midpoint.y)) {
+      const endPoint = { x: from.x + dx * intervalEnd, y: from.y + dy * intervalEnd };
+      if (intervalEnd === 1 && isWalkableWorld(endPoint.x, endPoint.y)) {
+        lastWalkable = endPoint;
+      } else {
+        const insetRatio = Math.min(
+          (intervalEnd - intervalStart) / 2,
+          COLLISION_EDGE_INSET_PX / distance,
+        );
+        const safeRatio = intervalEnd - insetRatio;
+        lastWalkable = { x: from.x + dx * safeRatio, y: from.y + dy * safeRatio };
+      }
+    } else if (lastWalkable) {
+      break;
+    }
+
+    if (intervalEnd < 1 && lastWalkable) {
+      const boundary = { x: from.x + dx * intervalEnd, y: from.y + dy * intervalEnd };
+      if (!isWalkableWorld(boundary.x, boundary.y)) break;
+    }
+  }
+
+  return walkablePoint(lastWalkable ?? from, target);
 }
 
 /**

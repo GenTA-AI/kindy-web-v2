@@ -7,12 +7,10 @@ import {
   WORLD_BACKGROUND,
   WORLD_HEIGHT,
   WORLD_WIDTH,
-  clampWorldPoint,
   createTerrain,
-  isWalkableWorld,
+  findWalkableDestination,
   registerMapTextures,
   type TerrainLayer,
-  type WorldPoint,
 } from '@/components/island/map';
 import { IslandProps, registerPropTextures } from '@/components/island/props';
 import { preloadCharacters, registerAvatarTextures, renderNpcs } from '@/components/island/npc';
@@ -21,7 +19,6 @@ export const CAMERA_ZOOM = 2;
 
 const CAMERA_LERP = 0.12;
 const WALK_SPEED = 46;
-const COLLISION_SAMPLE_PX = 1;
 
 export interface IslandEngineOptions {
   /** /world 선택을 유료 팩 셔츠·모자 파츠로 매핑한다. */
@@ -32,34 +29,6 @@ export interface IslandEngineOptions {
   onBottleTap: (bottleId: string) => void;
   onCellTap: (gx: number, gy: number) => void;
   onReady: () => void;
-}
-
-function walkableInteger(point: WorldPoint, fallback: WorldPoint): WorldPoint {
-  const rounded = { x: Math.round(point.x), y: Math.round(point.y) };
-  if (isWalkableWorld(rounded.x, rounded.y)) return rounded;
-
-  const floored = { x: Math.floor(point.x), y: Math.floor(point.y) };
-  return isWalkableWorld(floored.x, floored.y) ? floored : fallback;
-}
-
-/** 물 타일을 건너뛰지 않도록 이동 선분을 1px 간격으로 검사한다. */
-function findWalkableDestination(from: WorldPoint, desired: WorldPoint): WorldPoint {
-  const target = clampWorldPoint(desired);
-  const dx = target.x - from.x;
-  const dy = target.y - from.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance === 0) return walkableInteger(from, from);
-
-  const steps = Math.max(1, Math.ceil(distance / COLLISION_SAMPLE_PX));
-  let lastWalkable = from;
-  for (let step = 1; step <= steps; step += 1) {
-    const ratio = step / steps;
-    const point = { x: from.x + dx * ratio, y: from.y + dy * ratio };
-    if (!isWalkableWorld(point.x, point.y)) break;
-    lastWalkable = point;
-  }
-
-  return walkableInteger(lastWalkable, from);
 }
 
 export class IslandScene extends Phaser.Scene {
