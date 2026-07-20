@@ -4,3 +4,4 @@ t3-map-design: t1-engine-split t2-asset-pipeline
 t4-props-ambience: t1-engine-split t2-asset-pipeline
 t5-avatar-npc: t1-engine-split t2-asset-pipeline
 t6-ui-dot: t1-engine-split
+t7-premium-upgrade: t3-map-design t4-props-ambience t5-avatar-npc t6-ui-dot
