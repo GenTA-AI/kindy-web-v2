@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -29,6 +29,38 @@ async function withTempDirectory(run) {
   }
 }
 
+async function writeTestConfig(directory, sources) {
+  const config = {
+    animations: [],
+    pack: {
+      licenseConditions: "Use in this project; do not redistribute source art.",
+      name: "Fixture Pack",
+      purchaseUrl: "https://example.com/fixture-pack",
+      purchasedAt: "2026-07-20",
+    },
+    schemaVersion: 1,
+  };
+  if (sources) config.sources = sources;
+  await writeFile(
+    path.join(directory, "atlas.config.json"),
+    `${JSON.stringify(config, null, 2)}\n`,
+  );
+}
+
+async function writeTile(file) {
+  await mkdir(path.dirname(file), { recursive: true });
+  await sharp({
+    create: {
+      background: "#234567",
+      channels: 4,
+      height: TILE_SIZE,
+      width: TILE_SIZE,
+    },
+  })
+    .png()
+    .toFile(file);
+}
+
 test("classifies common pack sheet names", () => {
   assert.equal(classifyPng("Tiles/Grass Terrain.png"), "terrain");
   assert.equal(classifyPng("Environment/Water_Waves.png"), "water");
@@ -41,6 +73,44 @@ test("rejects ZIP path traversal", () => {
   assert.doesNotThrow(() => assertSafeZipEntries(["Pack/Tiles/grass.png"]));
   assert.throws(() => assertSafeZipEntries(["../outside.png"]), /Unsafe path/);
   assert.throws(() => assertSafeZipEntries(["C:\\outside.png"]), /Unsafe path/);
+});
+
+test("CLI rejects a forbidden explicitly configured source", async () => {
+  await withTempDirectory(async (directory) => {
+    await writeTile(path.join(directory, "Props", "sword.png"));
+    await writeTestConfig(directory, [
+      { atlas: "props", file: "Props/sword.png", id: "sword" },
+    ]);
+
+    await assert.rejects(
+      execFileAsync(process.execPath, [BUILD_SCRIPT, "--input", directory]),
+      (error) => {
+        assert.match(
+          error.stderr,
+          /Forbidden child-facing combat asset selected: Props\/sword\.png/,
+        );
+        return true;
+      },
+    );
+  });
+});
+
+test("CLI rejects a forbidden auto-classified source", async () => {
+  await withTempDirectory(async (directory) => {
+    await writeTile(path.join(directory, "Enemies", "Terrain.png"));
+    await writeTestConfig(directory);
+
+    await assert.rejects(
+      execFileAsync(process.execPath, [BUILD_SCRIPT, "--input", directory]),
+      (error) => {
+        assert.match(
+          error.stderr,
+          /Forbidden child-facing combat asset selected: Enemies\/Terrain\.png/,
+        );
+        return true;
+      },
+    );
+  });
 });
 
 test("rejects sheets that do not align to the 16px grid", async () => {

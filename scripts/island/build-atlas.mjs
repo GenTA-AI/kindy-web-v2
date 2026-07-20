@@ -431,47 +431,59 @@ function resolveInside(root, relativePath, field) {
 }
 
 async function resolveSources(packRoot, configuredSources) {
+  const candidates = configuredSources
+    ? configuredSources.map((source) => ({
+        ...source,
+        absolutePath: resolveInside(packRoot, source.file, `source ${source.id}.file`),
+      }))
+    : (
+        await collectFiles(
+          packRoot,
+          (filePath) => path.extname(filePath).toLowerCase() === ".png",
+        )
+      ).map((absolutePath) => ({
+        absolutePath,
+        file: path.relative(packRoot, absolutePath).split(path.sep).join("/"),
+      }));
+
+  for (const candidate of candidates) {
+    const normalizedFile = candidate.file.replaceAll("\\", "/");
+    if (FORBIDDEN_CHILD_ASSET.test(normalizedFile)) {
+      throw new Error(`Forbidden child-facing combat asset selected: ${candidate.file}`);
+    }
+  }
+
   if (configuredSources) {
     const resolved = [];
-    for (const source of configuredSources) {
-      const normalizedFile = source.file.replaceAll("\\", "/");
-      if (FORBIDDEN_CHILD_ASSET.test(normalizedFile)) {
-        throw new Error(`Forbidden child-facing combat asset selected: ${source.file}`);
+    for (const candidate of candidates) {
+      if (!(await pathExists(candidate.absolutePath))) {
+        throw new Error(`Source PNG does not exist: ${candidate.file}`);
       }
-      const absolutePath = resolveInside(packRoot, source.file, `source ${source.id}.file`);
-      if (!(await pathExists(absolutePath))) {
-        throw new Error(`Source PNG does not exist: ${source.file}`);
+      if (path.extname(candidate.absolutePath).toLowerCase() !== ".png") {
+        throw new Error(`Source must be a PNG: ${candidate.file}`);
       }
-      if (path.extname(absolutePath).toLowerCase() !== ".png") {
-        throw new Error(`Source must be a PNG: ${source.file}`);
-      }
-      resolved.push({ ...source, absolutePath });
+      resolved.push(candidate);
     }
     return resolved;
   }
 
-  const pngs = await collectFiles(
-    packRoot,
-    (filePath) => path.extname(filePath).toLowerCase() === ".png",
-  );
-  if (pngs.length === 0) throw new Error("The pack contains no PNG files.");
+  if (candidates.length === 0) throw new Error("The pack contains no PNG files.");
   const unclassified = [];
   const seenIds = new Map();
   const sources = [];
-  for (const absolutePath of pngs) {
-    const relativePath = path.relative(packRoot, absolutePath).split(path.sep).join("/");
-    const atlas = classifyPng(relativePath);
+  for (const candidate of candidates) {
+    const atlas = classifyPng(candidate.file);
     if (!atlas) {
-      unclassified.push(relativePath);
+      unclassified.push(candidate.file);
       continue;
     }
-    const idBase = sourceIdFromPath(relativePath);
+    const idBase = sourceIdFromPath(candidate.file);
     const occurrence = (seenIds.get(idBase) ?? 0) + 1;
     seenIds.set(idBase, occurrence);
     sources.push({
-      absolutePath,
+      absolutePath: candidate.absolutePath,
       atlas,
-      file: relativePath,
+      file: candidate.file,
       frameSize: TILE_SIZE,
       id: occurrence === 1 ? idBase : `${idBase}_${occurrence}`,
       regions: null,
