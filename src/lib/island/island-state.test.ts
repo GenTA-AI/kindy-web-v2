@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import propsAtlas from '../../../public/island/tiles/props.json';
+
 import {
   EMPTY_ISLAND,
   FURNITURE,
@@ -101,4 +103,12 @@ test('serialize ↔ parse 라운드트립', () => {
 test('가구 6종·격자 3×2', () => {
   assert.equal(FURNITURE.length, 6);
   assert.equal(GRID_COLS * GRID_ROWS, 6);
+});
+
+test('가구 6종의 카탈로그 프레임 키가 props 아틀라스에 실존', () => {
+  const atlasFrames = new Set(Object.keys(propsAtlas.frames));
+
+  for (const furniture of FURNITURE) {
+    assert.ok(atlasFrames.has(furniture.emoji), `${furniture.label}: ${furniture.emoji}`);
+  }
 });

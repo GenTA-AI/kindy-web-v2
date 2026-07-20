@@ -183,22 +183,297 @@ summary:focus-visible {
 }
 
 /* ───────────────────────────────────────────────────────────────────────── */
-/* 등대섬(도트 RPG) 오버레이 — 2000년대 피처폰 RPG 텍스트박스 느낌의 도트 프레임.  */
-/* 폰트는 유지, 프레임만 각진 이중 테두리 + 하드 드롭섀도(둥근 모서리 없음).       */
+/* 등대섬(도트 RPG) 오버레이 — 팩 팔레트와 R3 토큰만 쓰는 각진 이중 프레임.       */
+/* 모든 치수는 Tailwind의 --spacing 단위를 따라 16px 타일 그리드에 맞춘다.       */
 /* ───────────────────────────────────────────────────────────────────────── */
 
-.dot-panel {
-  background: #f6efdc;
-  color: #2b2620;
-  border: 3px solid #2b2620;
-  border-radius: 0;
-  box-shadow:
-    0 0 0 3px #f6efdc,
-    0 0 0 6px #2b2620,
-    6px 6px 0 6px rgba(43, 38, 32, 0.22);
+.dot-shell {
+  --dot-edge: var(--color-ink);
+  --dot-panel: color-mix(in srgb, var(--color-cream) 92%, var(--color-gold));
+  --dot-panel-raised: var(--color-surface);
+  --dot-muted: var(--color-ink2);
+  --dot-shadow: color-mix(in srgb, var(--color-ink) 24%, transparent);
+  --dot-scrim: color-mix(in srgb, var(--color-ink) 58%, transparent);
 }
 
-.dot-frame {
-  border: 2px solid #2b2620;
+.dot-panel {
+  background: var(--dot-panel);
+  color: var(--dot-edge);
+  border: calc(var(--spacing) * 0.75) solid var(--dot-edge);
   border-radius: 0;
+  box-shadow:
+    0 0 0 calc(var(--spacing) * 0.75) var(--dot-panel),
+    0 0 0 calc(var(--spacing) * 1.5) var(--dot-edge),
+    calc(var(--spacing) * 1.5) calc(var(--spacing) * 1.5) 0 calc(var(--spacing) * 1.5) var(--dot-shadow);
+}
+
+.dot-safe-top {
+  padding-top: max(calc(var(--spacing) * 4), env(safe-area-inset-top));
+}
+
+.dot-safe-bottom {
+  padding-bottom: max(calc(var(--spacing) * 4), env(safe-area-inset-bottom));
+}
+
+.dot-hud {
+  min-height: calc(var(--spacing) * 18);
+  background: color-mix(in srgb, var(--dot-panel) 94%, var(--color-sagebg));
+}
+
+.dot-label {
+  color: var(--dot-muted);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: var(--font-weight-black);
+  letter-spacing: var(--tracking-wide);
+}
+
+.dot-icon-slot {
+  display: grid;
+  width: calc(var(--spacing) * 10);
+  height: calc(var(--spacing) * 10);
+  place-items: center;
+  overflow: hidden;
+  background: var(--color-sagebg);
+  border: calc(var(--spacing) * 0.5) solid var(--dot-edge);
+  box-shadow: inset calc(var(--spacing) * 0.5) calc(var(--spacing) * 0.5) 0 var(--color-sages);
+}
+
+.dot-icon-slot > span {
+  image-rendering: pixelated;
+}
+
+.dot-gauge {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing);
+}
+
+.dot-gauge > span {
+  height: calc(var(--spacing) * 2);
+  background: var(--color-line);
+  border: calc(var(--spacing) * 0.5) solid var(--dot-edge);
+}
+
+.dot-gauge > span[data-lit="true"] {
+  background: var(--color-gold);
+  box-shadow: inset var(--spacing) var(--spacing) 0 color-mix(in srgb, var(--color-cream) 68%, transparent);
+}
+
+.dot-counter {
+  min-width: calc(var(--spacing) * 12);
+  padding-inline: calc(var(--spacing) * 2);
+  border-inline: calc(var(--spacing) * 0.5) solid var(--color-line);
+}
+
+.dot-button {
+  border: calc(var(--spacing) * 0.5) solid var(--dot-edge);
+  border-radius: 0;
+  background: var(--dot-panel-raised);
+  color: var(--dot-edge);
+  box-shadow: inset var(--spacing) var(--spacing) 0 color-mix(in srgb, var(--color-cream) 78%, transparent);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    transform var(--default-transition-duration) var(--default-transition-timing-function),
+    background-color var(--default-transition-duration) var(--default-transition-timing-function),
+    box-shadow var(--default-transition-duration) var(--default-transition-timing-function);
+}
+
+.dot-button:focus-visible {
+  outline: calc(var(--spacing) * 0.75) solid var(--color-sages);
+  outline-offset: calc(var(--spacing) * 0.75);
+}
+
+.dot-button:active:not(:disabled) {
+  transform: translateY(calc(var(--spacing) * 0.5));
+  box-shadow: inset calc(var(--spacing) * 0.5) calc(var(--spacing) * 0.5) 0 var(--color-line);
+}
+
+.dot-button:disabled {
+  background: var(--color-mist);
+  color: var(--color-ink3);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.54;
+}
+
+.dot-button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--color-gold) 42%, var(--color-cream));
+  box-shadow:
+    inset calc(var(--spacing) * 0.75) calc(var(--spacing) * 0.75) 0 color-mix(in srgb, var(--color-gold) 38%, transparent),
+    0 0 0 calc(var(--spacing) * 0.5) var(--color-cream);
+}
+
+.dot-mode-button {
+  background: var(--color-sagebg);
+}
+
+.dot-mode-button[aria-pressed="true"] {
+  background: var(--color-sage);
+  color: var(--color-cream);
+  box-shadow: inset calc(var(--spacing) * 0.75) calc(var(--spacing) * 0.75) 0 var(--color-saged);
+}
+
+.dot-banner-layer {
+  top: max(calc(var(--spacing) * 24), calc(env(safe-area-inset-top) + var(--spacing) * 20));
+}
+
+.dot-toast {
+  max-width: calc(var(--spacing) * 80);
+  animation: dot-toast-in 280ms steps(4, end) both;
+}
+
+.dot-toolbar {
+  background: color-mix(in srgb, var(--dot-panel) 94%, var(--color-sagebg));
+}
+
+.dot-tool-button {
+  min-width: calc(var(--spacing) * 12);
+  background: color-mix(in srgb, var(--color-surface) 82%, var(--color-sagebg));
+}
+
+.dot-pack-sprite {
+  display: block;
+  flex: none;
+  image-rendering: pixelated;
+}
+
+.dot-sprite-fallback {
+  display: block;
+  max-width: calc(var(--spacing) * 18);
+  color: var(--dot-muted);
+  font-size: var(--text-xs);
+  line-height: var(--text-sm--line-height);
+  font-weight: var(--font-weight-black);
+}
+
+.dot-scrim {
+  background: var(--dot-scrim);
+}
+
+.dot-dialog {
+  max-height: calc(100svh - env(safe-area-inset-top) - var(--spacing) * 10);
+  margin-bottom: var(--spacing);
+  overflow-y: auto;
+  animation: dot-dialog-in 320ms steps(5, end) both;
+}
+
+.dot-close-button {
+  background: var(--color-cream);
+}
+
+.dot-portrait {
+  width: calc(var(--spacing) * 20);
+  height: calc(var(--spacing) * 20);
+  overflow: hidden;
+  background: var(--color-sagebg);
+  border: calc(var(--spacing) * 0.75) solid var(--dot-edge);
+  box-shadow: inset calc(var(--spacing) * 0.75) calc(var(--spacing) * 0.75) 0 var(--color-sages);
+}
+
+.dot-dialogue {
+  background: var(--dot-panel-raised);
+  border: calc(var(--spacing) * 0.5) solid var(--dot-edge);
+  box-shadow: inset calc(var(--spacing) * 0.75) calc(var(--spacing) * 0.75) 0 var(--color-line);
+}
+
+.dot-caret {
+  display: inline-block;
+  width: calc(var(--spacing) * 0.5);
+  height: 1em;
+  margin-inline-start: var(--spacing);
+  vertical-align: text-bottom;
+  background: var(--color-sage);
+  animation: dot-caret-blink 620ms steps(1, end) infinite;
+}
+
+.dot-primary-button {
+  background: var(--dot-edge);
+  color: var(--color-cream);
+  box-shadow: inset 0 calc(var(--spacing) * -0.75) 0 var(--color-saged);
+}
+
+.dot-transition {
+  background: var(--dot-edge);
+  color: var(--color-cream);
+  animation: dot-transition-in 240ms steps(4, end) both;
+}
+
+.dot-transition-content {
+  animation: dot-transition-content-in 520ms steps(6, end) both;
+}
+
+.dot-boat-slot {
+  width: calc(var(--spacing) * 24);
+  height: calc(var(--spacing) * 20);
+  background: var(--color-sagebg);
+  color: var(--dot-edge);
+  border: calc(var(--spacing) * 0.75) solid var(--color-cream);
+  box-shadow:
+    0 0 0 calc(var(--spacing) * 0.75) var(--dot-edge),
+    0 0 0 calc(var(--spacing) * 1.5) var(--color-cream);
+}
+
+.dot-boat-slot .dot-sprite-fallback {
+  color: var(--dot-edge);
+  font-size: var(--text-lg);
+}
+
+@media (hover: hover) {
+  .dot-button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-sagebg) 78%, var(--color-surface));
+  }
+
+  .dot-mode-button:hover:not(:disabled),
+  .dot-button[aria-pressed="true"]:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-gold) 52%, var(--color-cream));
+  }
+
+  .dot-mode-button[aria-pressed="true"]:hover:not(:disabled) {
+    background: var(--color-saged);
+  }
+
+  .dot-primary-button:hover:not(:disabled) {
+    background: var(--color-saged);
+  }
+}
+
+@keyframes dot-toast-in {
+  from { opacity: 0; transform: translateY(calc(var(--spacing) * -2)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dot-dialog-in {
+  from { opacity: 0; transform: translateY(calc(var(--spacing) * 6)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dot-caret-blink {
+  0%, 45% { opacity: 1; }
+  46%, 100% { opacity: 0; }
+}
+
+@keyframes dot-transition-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dot-transition-content-in {
+  from { opacity: 0; transform: translateX(calc(var(--spacing) * -4)); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot-toast,
+  .dot-dialog,
+  .dot-caret,
+  .dot-transition,
+  .dot-transition-content {
+    animation: none;
+  }
+
+  .dot-button {
+    transition: none;
+  }
 }
