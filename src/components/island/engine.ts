@@ -23,7 +23,7 @@ import {
   type WorldPoint,
 } from '@/components/island/map';
 import { IslandProps, registerPropTextures } from '@/components/island/props';
-import { renderNpcs } from '@/components/island/npc';
+import { preloadCharacters, renderNpcs } from '@/components/island/npc';
 
 export const CAMERA_ZOOM = 2;
 
@@ -99,6 +99,7 @@ export class IslandScene extends Phaser.Scene {
     this.opts = opts;
   }
 
+  preload(): void { preloadCharacters(this); } // 팩 아바타 텍스처 로더만 NPC 모듈에 위임한다.
   create(): void {
     this.cameras.main.setBackgroundColor(WORLD_BACKGROUND);
     this.buildTextures();
@@ -110,7 +111,7 @@ export class IslandScene extends Phaser.Scene {
       onCellTap: this.opts.onCellTap,
     });
     this.propsLayer.create(this.opts.initialPlaced, this.opts.initialLevel);
-    renderNpcs(this);
+    renderNpcs(this, this.opts.avatarBody, this.opts.reducedMotion, this.opts.onBottleTap);
     this.createAvatar();
     this.configureCamera();
     this.configureInput();
