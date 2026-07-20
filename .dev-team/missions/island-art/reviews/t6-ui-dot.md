@@ -31,3 +31,25 @@ Strict Mode 멱등 마커·ssr:false 유지. 상태 처리(로딩/에러/폴백)
 - 가구 6종 실프레임 매핑 + should_fix 3건 → t6 attempt 2 (handoffs/t6-ui-dot.md, effort xhigh).
 - fisherwoman·boat: 무료 팩에 부재 — docs/ASSETS.md상 Characters/UI 유료팩이 t7 교체 대상이므로
   t7-premium-upgrade로 명시 이관(태스크 파일에 반영). t6는 매핑 테이블에 키만 예약하고 폴백 유지.
+
+---
+
+# Review: t6-ui-dot (attempt 2)
+
+decision: approve
+date: 2026-07-20
+gate: validation_exit=0 scope_ok=1 high_risk=0 (lint·tsc·test 49·build) — 테스트 파일은 리드 Scope 정정 승인분
+screenshot: 리드 워크트리 빌드 검수 — HUD(등대 게이지 3분절·조각 카운터), 툴바 6종 전부
+실팩 도트 아이콘(글자 폴백 0), NPC 카드(초상 t7 예약 폴백·타이핑·배경 딤) 확인. 콘솔 에러 0.
+
+## 판정 근거 (리뷰 에이전트 attempt 2 재검토)
+- attempt 1 크리티컬 해소: 툴바는 t4의 propCatalogIconStyle + 실프레임 FURNITURE.emoji 사용,
+  단위 테스트로 6종 키 실존 고정.
+- should_fix 3건 전부 반영: inert+수동 포커스 트랩+Escape+returnFocus 복원 / AtlasSprite·하드코딩
+  경로 제거(ReservedPackSprite frame=null 폴백) / 매핑 실존 테스트.
+- attempt 1 nice_to_have 반영: reducedMotion ref화(Phaser 재부팅 회피), aria-live polite 일치.
+- fisherwoman·boat: RESERVED_PACK_FRAMES null 예약 + t7 주석 — 의도된 폴백.
+- 회귀 없음: .dot-* 한정 CSS, 기존 토큰만, 금지 요소 0, Strict Mode·ssr:false 유지, 탭 타깃 44px+.
+
+## Nice to have (비차단, t7 이후 여지)
+- polite live-region 3곳 동시 갱신 수다스러움, 카드 오픈 포커스를 제목으로, 타이핑 setInterval churn.

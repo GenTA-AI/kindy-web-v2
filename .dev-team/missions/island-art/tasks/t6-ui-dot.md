@@ -13,6 +13,11 @@ React 오버레이(HUD·NPC 카드·꾸미기 툴바)를 게임과 한 몸으로
 ## Scope
 - src/components/island/IslandClient.tsx
 - src/app/globals.css
+- src/lib/island/island-state.test.ts (attempt 2 핸드오프 허용 — 가구 프레임 실존 단위 테스트만)
+
+<!-- 2026-07-20 리드 정정: attempt 2 핸드오프가 "기존 테스트 관례 위치" 테스트 추가를
+허용했으나 Scope 미반영으로 게이트 오탐(exit 2). 핸드오프와 일치하도록 명시. -->
+
 
 ## Constraints
 - engine/map/props/npc.ts, island-state.ts 로직 수정 금지. globals.css는 .dot-* 블록만
