@@ -10,6 +10,7 @@ high_risk: 0
 - build-atlas.mjs 실행 → 산출물 검증. 타일 인덱스가 바뀌면 map-data/props/npc의 프레임 참조를 전수 갱신(빌드가 내는 index map 활용 또는 스크립트로 대조).
 - 아바타 커스터마이징 v2: kindy:world의 커스텀(몸색 등)을 팩 파츠 선택(셔츠 색·모자)으로 매핑 확장 — engine/npc의 아바타 로더가 베이스+파츠 레이어를 합성 렌더. IslandClient의 "내 캐릭터" 편집 화면도 파츠 선택형으로 확장.
 - LICENSE.md가 프리미엄 조건("commercial 허용")으로 기록되는지 확인. Enemies·Goblins·무기류·Military는 아틀라스에서 제외(ASSETS.md 금지 목록).
+- [t6 리뷰 이관] IslandClient의 스프라이트 매핑 테이블에서 null로 예약된 `fisherwoman`(NPC 초상, Characters 팩)·`boat`(출항 배 아이콘, 본팩/UI 팩) 키를 유료 아틀라스 실프레임으로 채워 폴백을 제거(reviews/t6-ui-dot.md 참조).
 - 7~10세 불변 조항 준수(탭 조작·전투 금지·큰 타깃).
 
 ## Scope

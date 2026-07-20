@@ -12,6 +12,12 @@ high_risk: 0
 
 ## Scope
 - src/components/island/props.ts
+- src/lib/island/island-state.ts (FURNITURE 카탈로그 아이콘 참조 문자열만 — BRIEF 허용 예외)
+- src/components/island/IslandClient.tsx (카탈로그 아이콘 렌더 치환만 — pixel-art 폐기)
+
+<!-- 2026-07-20 리드 정정: 최초 Scope가 자체 Do 항목("카탈로그 아이콘 포함 — island-state
+카탈로그의 아이콘 참조만 갱신") 및 Constraints의 허용 예외와 모순되게 props.ts만 나열해
+게이트가 오탐(exit 2). Do가 지시한 파일을 Scope에 명시하는 스펙 버그 수정. -->
 
 ## Constraints
 - engine.ts, map.ts, npc.ts 수정 금지, island-state.ts 로직 수정 금지(아이콘 참조 문자열만 허용)
