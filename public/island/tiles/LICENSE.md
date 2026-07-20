@@ -1,10 +1,12 @@
 # Island Tile Pack License Record
 
-No purchased pixel pack has been supplied yet, so no pack-derived PNG or JSON
-artifacts are present in this directory.
+| Field | Record |
+| --- | --- |
+| Pack name | Cute Fantasy RPG — Free tier |
+| Purchase source | https://kenmi-art.itch.io/cute-fantasy-rpg |
+| License conditions | FREE TIER = NON-COMMERCIAL ONLY (read_me.txt). 개발·시안 한정 사용. 실서비스 배포 전 유료(상용) 버전 구매·교체 필수. 재배포 금지. |
+| Purchase date | 2026-07-20 |
 
-Add the exact pack name, purchase source, license conditions, and purchase date
-to `assets-inbox/atlas.config.json`. Running
-`node scripts/island/build-atlas.mjs` will replace this placeholder with the
-generated license record alongside the four runtime atlases.
-
+The PNG and JSON files in this directory are derived from the purchased pack above.
+They may be used and redistributed only as permitted by that pack's license. This
+record is not a replacement for the original license text or proof of purchase.

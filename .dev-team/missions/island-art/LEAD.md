@@ -43,3 +43,4 @@ is broken. Every state exists: empty, loading, error, overflow, dark mode.
 - island-state.ts 로직 불변, 새 의존성 금지, IslandView의 ssr:false 경계 유지
 - 모든 인터랙션 요소는 탭 타깃 44px+ (아동), 랭킹·타이머·소멸 보상 요소 추가 금지 (docs/plan/11 §9)
 - 검증: npm run lint && npx tsc --noEmit && npm run test 전부 통과 후 종료
+- [2026-07-20 추가] 타겟 7~10세: 탭 이동 외 조작 금지, 실패 상태·전투·적 캐릭터 금지, 길은 목적지로 시각 유도, Enemies 아틀라스 항목 사용 금지

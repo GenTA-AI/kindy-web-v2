@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "pack": {
+    "name": "Cute Fantasy RPG — Free tier",
+    "purchaseUrl": "https://kenmi-art.itch.io/cute-fantasy-rpg",
+    "licenseConditions": "FREE TIER = NON-COMMERCIAL ONLY (read_me.txt). 개발·시안 한정 사용. 실서비스 배포 전 유료(상용) 버전 구매·교체 필수. 재배포 금지.",
+    "purchasedAt": "2026-07-20"
+  },
+  "sources": [
+    {
+      "id": "grass-middle",
+      "file": "Cute_Fantasy_Free/Tiles/Grass_Middle.png",
+      "atlas": "terrain"
+    },
+    {
+      "id": "beach-tile",
+      "file": "Cute_Fantasy_Free/Tiles/Beach_Tile.png",
+      "atlas": "terrain"
+    },
+    {
+      "id": "path-tile",
+      "file": "Cute_Fantasy_Free/Tiles/Path_Tile.png",
+      "atlas": "terrain"
+    },
+    {
+      "id": "path-middle",
+      "file": "Cute_Fantasy_Free/Tiles/Path_Middle.png",
+      "atlas": "terrain"
+    },
+    {
+      "id": "cliff-tile",
+      "file": "Cute_Fantasy_Free/Tiles/Cliff_Tile.png",
+      "atlas": "terrain"
+    },
+    {
+      "id": "farmland-tile",
+      "file": "Cute_Fantasy_Free/Tiles/FarmLand_Tile.png",
+      "atlas": "terrain"
+    },
+    {
+      "id": "water-tile",
+      "file": "Cute_Fantasy_Free/Tiles/Water_Tile.png",
+      "atlas": "water"
+    },
+    {
+      "id": "water-middle",
+      "file": "Cute_Fantasy_Free/Tiles/Water_Middle.png",
+      "atlas": "water"
+    },
+    {
+      "id": "oak-tree",
+      "file": "Cute_Fantasy_Free/Outdoor decoration/Oak_Tree.png",
+      "atlas": "props"
+    },
+    {
+      "id": "oak-tree-small",
+      "file": "Cute_Fantasy_Free/Outdoor decoration/Oak_Tree_Small.png",
+      "atlas": "props"
+    },
+    {
+      "id": "house-1-wood-base-blue",
+      "file": "Cute_Fantasy_Free/Outdoor decoration/House_1_Wood_Base_Blue.png",
+      "atlas": "props"
+    },
+    {
+      "id": "bridge-wood",
+      "file": "Cute_Fantasy_Free/Outdoor decoration/Bridge_Wood.png",
+      "atlas": "props"
+    },
+    {
+      "id": "fences",
+      "file": "Cute_Fantasy_Free/Outdoor decoration/Fences.png",
+      "atlas": "props"
+    },
+    {
+      "id": "chest",
+      "file": "Cute_Fantasy_Free/Outdoor decoration/Chest.png",
+      "atlas": "props"
+    },
+    {
+      "id": "outdoor-decor-free",
+      "file": "Cute_Fantasy_Free/Outdoor decoration/Outdoor_Decor_Free.png",
+      "atlas": "props"
+    },
+    {
+      "id": "player",
+      "file": "Cute_Fantasy_Free/Player/Player.png",
+      "atlas": "character"
+    },
+    {
+      "id": "pig",
+      "file": "Cute_Fantasy_Free/Animals/Pig/Pig.png",
+      "atlas": "character"
+    },
+    {
+      "id": "sheep",
+      "file": "Cute_Fantasy_Free/Animals/Sheep/Sheep.png",
+      "atlas": "character"
+    },
+    {
+      "id": "chicken",
+      "file": "Cute_Fantasy_Free/Animals/Chicken/Chicken.png",
+      "atlas": "character"
+    },
+    {
+      "id": "cow",
+      "file": "Cute_Fantasy_Free/Animals/Cow/Cow.png",
+      "atlas": "character"
+    }
+  ]
+}
