@@ -4,12 +4,12 @@
 
 - t1-engine-split: merged (20eafeb) — 엔진 모듈 분리
 - t2-asset-pipeline: merged (12ba333) — 아틀라스 빌드 파이프라인 + 무료 티어 산출물(2cf737a)
-- t3-map-design: running (attempt 1 재디스패치 — 크래시 고아 복구, 베이스 2f06082)
-- t4-props-ambience: running (attempt 1 재디스패치 — 크래시 고아 복구, 베이스 2f06082)
-- t5-avatar-npc: running (attempt 1, 베이스 2f06082)
-- t6-ui-dot: request_changes → attempt 2 대기 (슬롯 나는 즉시 xhigh 디스패치, handoffs/t6-ui-dot.md)
-  — 가구 매핑 실프레임 고정 + 포커스 트랩 + props.png 폴백 제거 + 매핑 단위 테스트.
-  fisherwoman·boat는 t7로 이관(무료 팩 부재).
+- t3-map-design: done·게이트 통과 — 리뷰 에이전트 진행 중(계약 export·충돌행렬·프레임 실존 검증)
+- t4-props-ambience: merged (022102b) — 스코프 오탐은 리드 스펙 정정, 프레임 14종 실존 대조,
+  단독 스크린샷 OK. should_fix(좌표 하드코딩 중복·dedup)는 t7 이관
+- t5-avatar-npc: merged (cd0e7aa) — 팩 파생 characters.png(라이선스 승계 명기), 사절 NPC 렌더 확인
+- t6-ui-dot: attempt 2 running (xhigh, 베이스 = t4·t5 머지 후) — 가구 아이콘은 t4로 기해결,
+  HUD·카드·전환 마감 + 포커스 트랩 + 매핑 실존 테스트. fisherwoman·boat는 t7 이관(null 예약)
 - t7-premium-upgrade: pending (deps: t3 t4 t5 t6) — 유료 Kenmi 번들 교체 + 아바타 파츠
 
 ## 메모
