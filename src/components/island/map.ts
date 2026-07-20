@@ -1,54 +1,42 @@
 import type Phaser from 'phaser';
+import { PAL, type Pal, type Pix } from '@/components/island/pixel-art';
 import {
-  PAL,
-  TILE,
-  tileGrass,
-  tilePath,
-  tileSand,
-  tileSea,
-  type Pal,
-  type Pix,
-} from '@/components/island/pixel-art';
+  AVATAR_START,
+  CLIFF_FRAME_DATA,
+  COLLISION_DATA,
+  MAP_COLS,
+  MAP_ROWS,
+  MAP_TILE_SIZE,
+  SCENERY_DATA,
+  TERRAIN_DATA,
+  TERRAIN_FRAME_DATA,
+  WATER_FRAME,
+  WATER_RIPPLES,
+  isWalkableTile,
+  tileAt,
+  type TerrainTile,
+} from '@/components/island/map-data';
 
-export const MAP_COLS = 60;
-export const MAP_ROWS = 80;
-export const WORLD_WIDTH = MAP_COLS * TILE;
-export const WORLD_HEIGHT = MAP_ROWS * TILE;
+export { AVATAR_START, MAP_COLS, MAP_ROWS, TERRAIN_DATA, tileAt, type TerrainTile };
+
+export const WORLD_WIDTH = MAP_COLS * MAP_TILE_SIZE;
+export const WORLD_HEIGHT = MAP_ROWS * MAP_TILE_SIZE;
+// 씬 로딩 중에만 보이는 기존 테마 토큰. 실제 월드는 팩 물 타일이 전부 덮는다.
 export const WORLD_BACKGROUND = PAL.C;
 
-export const AVATAR_START = { col: 30, row: 53 } as const;
-
-const ISLE = { cx: 29.5, cy: 39.5, rx: 27, ry: 37 } as const;
-const BEACH_START_ROW = 58;
-const PATH_COLUMN = 30;
-const PATH_START_ROW = 42;
-const PATH_END_ROW = 59;
-
-export type TerrainTile = 'sea' | 'sand' | 'grass' | 'path';
+const TERRAIN_TEXTURE_KEY = 'island-terrain-pack';
+const WATER_TEXTURE_KEY = 'island-water-pack';
+const SCENERY_TEXTURE_KEY = 'island-scenery-pack';
+const TERRAIN_IMAGE_URL = '/island/tiles/terrain.png';
+const WATER_IMAGE_URL = '/island/tiles/water.png';
+const SCENERY_IMAGE_URL = '/island/tiles/props.png';
+const SCENERY_ATLAS_URL = '/island/tiles/props.json';
 
 export type PixelTextureFactory = (scene: Phaser.Scene, key: string, pix: Pix, pal: Pal) => void;
 
-function baseTileAt(col: number, row: number): Exclude<TerrainTile, 'path'> {
-  if (col < 0 || col >= MAP_COLS || row < 0 || row >= MAP_ROWS) return 'sea';
-  const distance = ((col - ISLE.cx) / ISLE.rx) ** 2 + ((row - ISLE.cy) / ISLE.ry) ** 2;
-  if (distance > 1) return 'sea';
-  return row >= BEACH_START_ROW ? 'sand' : 'grass';
-}
-
-export function tileAt(col: number, row: number): TerrainTile {
-  const base = baseTileAt(col, row);
-  const onPath = col === PATH_COLUMN && row >= PATH_START_ROW && row <= PATH_END_ROW;
-  return base === 'grass' && onPath ? 'path' : base;
-}
-
-/** 정본 지형 행렬. 후속 태스크는 렌더러와 독립적으로 이 데이터만 교체할 수 있다. */
-export const TERRAIN_DATA: readonly (readonly TerrainTile[])[] = Array.from({ length: MAP_ROWS }, (_, row) =>
-  Array.from({ length: MAP_COLS }, (_, col) => tileAt(col, row)),
-);
-
 export function isWalkableWorld(x: number, y: number): boolean {
   if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return false;
-  return tileAt(Math.floor(x / TILE), Math.floor(y / TILE)) !== 'sea';
+  return isWalkableTile(Math.floor(x / MAP_TILE_SIZE), Math.floor(y / MAP_TILE_SIZE));
 }
 
 export interface WorldPoint {
@@ -58,56 +46,131 @@ export interface WorldPoint {
 
 export function clampWorldPoint(point: WorldPoint): WorldPoint {
   return {
-    x: Math.min(WORLD_WIDTH - TILE / 2, Math.max(TILE / 2, point.x)),
-    y: Math.min(WORLD_HEIGHT - TILE / 2, Math.max(TILE, point.y)),
+    x: Math.min(WORLD_WIDTH - MAP_TILE_SIZE / 2, Math.max(MAP_TILE_SIZE / 2, point.x)),
+    y: Math.min(WORLD_HEIGHT - MAP_TILE_SIZE / 2, Math.max(MAP_TILE_SIZE, point.y)),
   };
 }
 
+/**
+ * 기존 엔진의 텍스처 등록 훅을 유지하면서 지형만 팩 파일 로딩으로 전환한다.
+ * makeTexture는 props/avatar의 단계적 이관이 끝날 때까지 타입 계약상 남겨 둔다.
+ */
 export function registerMapTextures(scene: Phaser.Scene, makeTexture: PixelTextureFactory): void {
-  makeTexture(scene, 'tile-grass', tileGrass(), PAL);
-  makeTexture(scene, 'tile-sand', tileSand(), PAL);
-  makeTexture(scene, 'tile-sea-0', tileSea(0), PAL);
-  makeTexture(scene, 'tile-sea-1', tileSea(1), PAL);
-  makeTexture(scene, 'tile-path', tilePath(), PAL);
+  void makeTexture;
+  if (!scene.textures.exists(TERRAIN_TEXTURE_KEY)) scene.load.image(TERRAIN_TEXTURE_KEY, TERRAIN_IMAGE_URL);
+  if (!scene.textures.exists(WATER_TEXTURE_KEY)) scene.load.image(WATER_TEXTURE_KEY, WATER_IMAGE_URL);
+  if (!scene.textures.exists(SCENERY_TEXTURE_KEY)) {
+    scene.load.atlas(SCENERY_TEXTURE_KEY, SCENERY_IMAGE_URL, SCENERY_ATLAS_URL);
+  }
 }
 
-const TILE_INDEX = {
-  sea0: 0,
-  sea1: 1,
-  grass: 2,
-  sand: 3,
-  path: 4,
-} as const;
+function mutableTileData(data: readonly (readonly number[])[]): number[][] {
+  return data.map((row) => [...row]);
+}
+
+function createPackLayer(
+  scene: Phaser.Scene,
+  data: readonly (readonly number[])[],
+  textureKey: string,
+  tilesetName: string,
+  depth: number,
+): Phaser.Tilemaps.TilemapLayer {
+  const map = scene.make.tilemap({
+    data: mutableTileData(data),
+    tileWidth: MAP_TILE_SIZE,
+    tileHeight: MAP_TILE_SIZE,
+  });
+  const tileset = map.addTilesetImage(
+    tilesetName,
+    textureKey,
+    MAP_TILE_SIZE,
+    MAP_TILE_SIZE,
+    0,
+    0,
+    0,
+  );
+  if (!tileset) throw new Error(`등대섬 ${tilesetName} 타일셋을 만들지 못했습니다.`);
+  const layer = map.createLayer(0, tileset, 0, 0);
+  if (!layer) throw new Error(`등대섬 ${tilesetName} 레이어를 만들지 못했습니다.`);
+  return layer.setDepth(depth);
+}
+
+function createOceanData(): number[][] {
+  return Array.from({ length: MAP_ROWS }, () => Array<number>(MAP_COLS).fill(WATER_FRAME.middle));
+}
+
+function createRippleData(phase: 0 | 1): number[][] {
+  const data = Array.from({ length: MAP_ROWS }, () => Array<number>(MAP_COLS).fill(-1));
+  for (const ripple of WATER_RIPPLES) {
+    const frame = WATER_FRAME.ripples[(ripple.variant + phase) % WATER_FRAME.ripples.length];
+    data[ripple.row][ripple.col] = frame;
+  }
+  return data;
+}
+
+function renderScenery(scene: Phaser.Scene): void {
+  for (const tile of SCENERY_DATA) {
+    const image = scene.add.image(
+      (tile.col + 0.5) * MAP_TILE_SIZE,
+      (tile.row + 0.5) * MAP_TILE_SIZE,
+      SCENERY_TEXTURE_KEY,
+      tile.frame,
+    );
+    image.setOrigin(0.5).setDepth(tile.ground ? 0.45 : tile.depthRow * MAP_TILE_SIZE);
+  }
+}
 
 export interface TerrainLayer {
   setSeaFrame(frame: 0 | 1): void;
 }
 
 export function createTerrain(scene: Phaser.Scene): TerrainLayer {
-  const data = TERRAIN_DATA.map((row) =>
-    row.map((tile) => (tile === 'sea' ? TILE_INDEX.sea0 : TILE_INDEX[tile])),
-  );
-  const map = scene.make.tilemap({ data, tileWidth: TILE, tileHeight: TILE });
-  const definitions = [
-    ['sea-0', 'tile-sea-0', TILE_INDEX.sea0],
-    ['sea-1', 'tile-sea-1', TILE_INDEX.sea1],
-    ['grass', 'tile-grass', TILE_INDEX.grass],
-    ['sand', 'tile-sand', TILE_INDEX.sand],
-    ['path', 'tile-path', TILE_INDEX.path],
-  ] as const;
-  const tilesets = definitions.map(([name, key, gid]) => map.addTilesetImage(name, key, TILE, TILE, 0, 0, gid));
-  if (tilesets.some((tileset) => tileset === null)) throw new Error('등대섬 타일셋을 만들지 못했습니다.');
-
-  const layer = map.createLayer(0, tilesets as Phaser.Tilemaps.Tileset[], 0, 0);
-  if (!layer) throw new Error('등대섬 지형 레이어를 만들지 못했습니다.');
-  layer.setDepth(0);
-
   let currentFrame: 0 | 1 = 0;
+  let rippleLayer: Phaser.Tilemaps.TilemapLayer | undefined;
+  let built = false;
+
+  const buildTerrain = () => {
+    if (built) return;
+    if (
+      !scene.textures.exists(TERRAIN_TEXTURE_KEY) ||
+      !scene.textures.exists(WATER_TEXTURE_KEY) ||
+      !scene.textures.exists(SCENERY_TEXTURE_KEY)
+    ) {
+      return;
+    }
+    built = true;
+
+    createPackLayer(scene, createOceanData(), WATER_TEXTURE_KEY, 'water-base', 0);
+    rippleLayer = createPackLayer(
+      scene,
+      createRippleData(currentFrame),
+      WATER_TEXTURE_KEY,
+      'water-ripples',
+      0.1,
+    );
+    createPackLayer(scene, TERRAIN_FRAME_DATA, TERRAIN_TEXTURE_KEY, 'terrain-surface', 0.2);
+    createPackLayer(scene, CLIFF_FRAME_DATA, TERRAIN_TEXTURE_KEY, 'terrain-cliffs', 0.3);
+    renderScenery(scene);
+  };
+
+  buildTerrain();
+  if (!built) {
+    scene.load.once('complete', buildTerrain);
+    if (!scene.load.isLoading()) scene.load.start();
+  }
+
   return {
     setSeaFrame(frame) {
       if (frame === currentFrame) return;
-      layer.replaceByIndex(currentFrame === 0 ? TILE_INDEX.sea0 : TILE_INDEX.sea1, frame === 0 ? TILE_INDEX.sea0 : TILE_INDEX.sea1);
       currentFrame = frame;
+      if (!rippleLayer) return;
+      for (const ripple of WATER_RIPPLES) {
+        const index = WATER_FRAME.ripples[(ripple.variant + currentFrame) % WATER_FRAME.ripples.length];
+        rippleLayer.putTileAt(index, ripple.col, ripple.row, false);
+      }
     },
   };
 }
+
+// 정적 충돌 행렬도 공개해 데이터/엔진 계약을 한눈에 추적할 수 있게 한다.
+export { COLLISION_DATA };
