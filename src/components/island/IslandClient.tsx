@@ -19,7 +19,7 @@ import {
   type IslandSave,
 } from '@/lib/island/island-state';
 import { createIslandGame, type IslandGameHandle } from '@/components/island/island-game';
-import { furnitureDataUrl } from '@/components/island/pixel-art';
+import { propCatalogIconStyle } from '@/components/island/props';
 
 /**
  * 등대섬 클라이언트 (docs/plan/11 I1) — Phaser 씬 부팅 + 글라스 오버레이 UI.
@@ -163,13 +163,7 @@ export default function IslandClient() {
                     selected === f.id ? 'bg-gold/40' : 'bg-white/60'
                   }`}
                 >
-                  {/* 게임 내와 동일한 도트 스프라이트(정수 확대, 스무딩 없음) */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={furnitureDataUrl(f.id)}
-                    alt={f.label}
-                    className="h-9 w-9 [image-rendering:pixelated]"
-                  />
+                  <span aria-hidden style={propCatalogIconStyle(f.emoji)} />
                 </button>
               ))}
             </div>

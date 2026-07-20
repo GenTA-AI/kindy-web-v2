@@ -30,14 +30,14 @@ export interface Furniture {
   tile: string;
 }
 
-// 가구 6종 — 프리셋 이모지 스프라이트. 성별 중립 구성.
+// 가구 6종 — 아이콘 문자열은 public/island/tiles/props 아틀라스의 프레임을 참조한다.
 export const FURNITURE: readonly Furniture[] = [
-  { id: 'sofa', label: '소파', emoji: '🛋️', tile: '#EAD9BE' },
-  { id: 'plant', label: '화분', emoji: '🪴', tile: '#DDE8DE' },
-  { id: 'chair', label: '의자', emoji: '🪑', tile: '#F1E4CB' },
-  { id: 'books', label: '책장', emoji: '📚', tile: '#E7D8C0' },
-  { id: 'flowers', label: '꽃밭', emoji: '🌷', tile: '#F6DCE6' },
-  { id: 'lamp', label: '등불', emoji: '🪔', tile: '#F3E7C4' },
+  { id: 'sofa', label: '소파', emoji: 'bridge-wood__r002_c004', tile: '#EAD9BE' },
+  { id: 'plant', label: '화분', emoji: 'outdoor-decor-free__r008_c002', tile: '#DDE8DE' },
+  { id: 'chair', label: '의자', emoji: 'outdoor-decor-free__r002_c000', tile: '#F1E4CB' },
+  { id: 'books', label: '책장', emoji: 'outdoor-decor-free__r000_c004', tile: '#E7D8C0' },
+  { id: 'flowers', label: '꽃밭', emoji: 'outdoor-decor-free__r011_c000', tile: '#F6DCE6' },
+  { id: 'lamp', label: '등불', emoji: 'outdoor-decor-free__r004_c004', tile: '#F3E7C4' },
 ];
 
 export interface PlacedItem {
