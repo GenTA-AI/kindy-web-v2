@@ -18,10 +18,20 @@ high_risk: 0
 
 ## Scope
 - assets-inbox/atlas.config.json
+- assets-inbox/README.md (팩 사용 문서만)
+- scripts/island/build-atlas.mjs (신규 아틀라스 2종·차단 목록 지원 — Do가 요구)
+- scripts/island/build-atlas.test.mjs
 - public/island/tiles/
 - NEW: public/island/tiles/ui.png
 - src/components/island/
 - src/app/globals.css
+- src/lib/island/island-state.ts (Constraints 허용 예외 — 필드 추가·아이콘 참조만)
+- src/lib/island/island-state.test.ts
+
+<!-- 2026-07-20 리드 정정: Do("build-atlas.mjs 실행·NEW 아틀라스")·Constraints("island-state.ts
+추가만 허용")가 전제한 파일들이 Scope에 누락돼 게이트 오탐(exit 2). 미션 3번째 동일 패턴 —
+리트로에 기록할 것: Scope는 Do·Constraints가 암시하는 파일을 전부 명시해야 한다. -->
+
 
 ## Constraints
 - island-state.ts 스키마 필드 삭제 금지(추가만 허용), IslandClient 루프 로직 유지, 새 의존성 금지
