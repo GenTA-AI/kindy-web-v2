@@ -1,7 +1,7 @@
 /**
  * 등대섬 Web Audio 사운드스케이프.
  *
- * 외부 음원 파일 없이 런타임에서 파도·새·짧은 상호작용음을 합성한다.
+ * 파도·새·짧은 상호작용음은 런타임에서 합성하고, 읽어주기는 사전 렌더링 에셋만 재생한다.
  * AudioContext는 반드시 unlock()을 호출한 첫 사용자 제스처 안에서만 만든다.
  */
 
@@ -45,9 +45,14 @@ interface IslandAudioOptions {
 export interface IslandAudioController {
   destroy(): void;
   play(key: IslandSfxKey): void;
+  playReadAloud(
+    src: string,
+    onSettled: (result: 'ended' | 'error' | 'stopped') => void,
+  ): Promise<void>;
   setMuted(muted: boolean): void;
   setPaused(paused: boolean): void;
   setReducedMotion(reducedMotion: boolean): void;
+  stopReadAloud(): void;
   unlock(): void;
 }
 
@@ -63,6 +68,8 @@ class IslandAudio implements IslandAudioController {
   private ambienceTimer: number | null = null;
   private ambienceCycle = 0;
   private readonly pendingSfx = new Set<IslandSfxKey>();
+  private readAloud: HTMLAudioElement | null = null;
+  private readAloudSettled: ((result: 'ended' | 'error' | 'stopped') => void) | null = null;
   private lastMoveAt = 0;
   private muted: boolean;
   private reducedMotion: boolean;
@@ -114,11 +121,43 @@ class IslandAudio implements IslandAudioController {
     this.playNow(key);
   }
 
+  async playReadAloud(
+    src: string,
+    onSettled: (result: 'ended' | 'error' | 'stopped') => void,
+  ): Promise<void> {
+    if (this.destroyed || this.muted || this.paused || !this.unlocked) {
+      throw new Error('읽어주기 재생 전에 사용자 제스처와 소리 활성화가 필요합니다.');
+    }
+
+    this.stopReadAloud();
+    const audio = new Audio(src);
+    audio.preload = 'auto';
+    audio.volume = 0.92;
+    audio.onended = () => this.releaseReadAloud(audio, 'ended');
+    audio.onerror = () => this.releaseReadAloud(audio, 'error');
+    this.readAloud = audio;
+    this.readAloudSettled = onSettled;
+    this.applyAmbienceVolume();
+
+    try {
+      await audio.play();
+    } catch (error) {
+      this.releaseReadAloud(audio, 'error');
+      throw error;
+    }
+  }
+
+  stopReadAloud(): void {
+    if (!this.readAloud) return;
+    this.releaseReadAloud(this.readAloud, 'stopped');
+  }
+
   setMuted(muted: boolean): void {
     this.muted = muted;
     if (muted) {
       this.pendingSfx.clear();
       this.stopAmbience();
+      this.stopReadAloud();
     }
     this.applyMasterVolume();
     this.applyAmbienceVolume();
@@ -134,7 +173,10 @@ class IslandAudio implements IslandAudioController {
 
   setPaused(paused: boolean): void {
     this.paused = paused;
-    if (paused) this.stopAmbience();
+    if (paused) {
+      this.stopAmbience();
+      this.stopReadAloud();
+    }
     else this.startAmbience();
     this.applyMasterVolume();
     this.applyAmbienceVolume();
@@ -144,6 +186,7 @@ class IslandAudio implements IslandAudioController {
     if (this.destroyed) return;
     this.destroyed = true;
     this.stopAmbience();
+    this.stopReadAloud();
     const context = this.context;
     this.context = null;
     this.master = null;
@@ -189,7 +232,11 @@ class IslandAudio implements IslandAudioController {
 
   private applyAmbienceVolume(): void {
     if (!this.context || !this.ambienceBus) return;
-    const volume = this.muted || this.paused || this.reducedMotion ? 0 : 0.82;
+    const volume = this.muted || this.paused || this.reducedMotion
+      ? 0
+      : this.readAloud
+        ? 0.12
+        : 0.82;
     this.ambienceBus.gain.cancelScheduledValues(this.context.currentTime);
     this.ambienceBus.gain.setTargetAtTime(volume, this.context.currentTime, 0.08);
   }
@@ -217,6 +264,23 @@ class IslandAudio implements IslandAudioController {
     if (this.ambienceTimer === null) return;
     window.clearInterval(this.ambienceTimer);
     this.ambienceTimer = null;
+  }
+
+  private releaseReadAloud(
+    audio: HTMLAudioElement,
+    result: 'ended' | 'error' | 'stopped',
+  ): void {
+    if (this.readAloud !== audio) return;
+    const onSettled = this.readAloudSettled;
+    audio.onended = null;
+    audio.onerror = null;
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    this.readAloud = null;
+    this.readAloudSettled = null;
+    this.applyAmbienceVolume();
+    onSettled?.(result);
   }
 
   private createNoise(duration: number): AudioBufferSourceNode | null {

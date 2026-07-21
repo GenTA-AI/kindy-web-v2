@@ -20,6 +20,39 @@ const NPC_PROP_ATLAS = 'island-props-npc';
 const NPC_PROP_IMAGE_URL = '/island/tiles/props.png';
 const NPC_PROP_JSON_URL = '/island/tiles/props.json';
 
+export const NPC_DIALOGUE =
+  '점으로 그린 강가로 놀러 오지 않을래? 재미있는 이야기가 기다리고 있어.';
+export const DECORATE_GUIDANCE = '마음에 드는 가구를 고르고, 반짝이는 칸을 톡 눌러요.';
+
+export const ISLAND_READ_ALOUD_KEYS = [
+  'island-letter-read-aloud-npc',
+  'island-decorate-read-aloud-npc',
+] as const;
+
+export type IslandReadAloudKey = (typeof ISLAND_READ_ALOUD_KEYS)[number];
+
+interface IslandReadAloudAsset {
+  label: string;
+  src: string;
+  transcript: string;
+}
+
+/** 라이브 TTS 대신 버튼 제스처에서만 재생하는 사전 렌더링 음성 실키다. */
+export const ISLAND_READ_ALOUD_ASSETS: Readonly<
+  Record<IslandReadAloudKey, IslandReadAloudAsset>
+> = {
+  'island-letter-read-aloud-npc': {
+    label: '편지',
+    src: '/island/audio/npc-letter-ko.mp3',
+    transcript: NPC_DIALOGUE,
+  },
+  'island-decorate-read-aloud-npc': {
+    label: '꾸미기 안내',
+    src: '/island/audio/decorate-guide-ko.mp3',
+    transcript: DECORATE_GUIDANCE,
+  },
+};
+
 const PACK_TILE = 16;
 const AVATAR_FRAME_SIZE = 64;
 const FISHER_FRAME_SIZE = 64;

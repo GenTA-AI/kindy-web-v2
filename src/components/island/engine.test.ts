@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import test from 'node:test';
 
 import { COLLISION_DATA, MAP_COLS, MAP_ROWS, MAP_TILE_SIZE, isWalkableTile } from './map-data';
@@ -78,6 +78,32 @@ test('등대섬 오디오 키는 실제 런타임 정의와 라이선스 장부�
   for (const key of ISLAND_AUDIO_KEYS) {
     assert.match(key, /-island-audio$/, `${key}: 모듈 접미사`);
     assert.ok(license.includes(`\`${key}\``), `${key}: LICENSE.md 장부`);
+  }
+});
+
+test('읽어주기 키는 사전 렌더링된 실제 MP3와 라이선스 장부를 가리킨다', () => {
+  const license = readFileSync(
+    new URL('../../../public/island/audio/LICENSE.md', import.meta.url),
+    'utf8',
+  );
+  const npcSource = readFileSync(new URL('./npc.ts', import.meta.url), 'utf8');
+  const assetKeys = Array.from(new Set(
+    (npcSource.match(/'island-[a-z-]+-read-aloud-npc'/g) ?? []).map((key) => key.slice(1, -1)),
+  ));
+  const assetPaths = (npcSource.match(/'\/island\/audio\/[a-z-]+\.mp3'/g) ?? [])
+    .map((src) => src.slice(1, -1));
+
+  assert.equal(assetKeys.length, 2, '읽어주기 실키 2개');
+  assert.equal(assetPaths.length, assetKeys.length, '키별 MP3 경로');
+  for (const [index, key] of assetKeys.entries()) {
+    const src = assetPaths[index];
+    const file = new URL(`../../../public${src}`, import.meta.url);
+    assert.match(key, /-npc$/, `${key}: 모듈 접미사`);
+    assert.match(src, /^\/island\/audio\/[a-z-]+\.mp3$/, `${key}: public MP3 경로`);
+    assert.ok(existsSync(file), `${key}: 실제 오디오 파일`);
+    assert.ok(statSync(file).size > 10_000, `${key}: 비어 있지 않은 MP3`);
+    assert.ok(license.includes(`\`${key}\``), `${key}: LICENSE.md 장부`);
+    assert.ok(license.includes(`\`${src.split('/').at(-1)}\``), `${key}: 파일 장부`);
   }
 });
 

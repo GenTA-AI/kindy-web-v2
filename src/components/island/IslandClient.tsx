@@ -40,6 +40,12 @@ import {
   createIslandAudio,
   type IslandAudioController,
 } from '@/components/island/island-audio';
+import {
+  DECORATE_GUIDANCE,
+  ISLAND_READ_ALOUD_ASSETS,
+  NPC_DIALOGUE,
+  type IslandReadAloudKey,
+} from '@/components/island/npc';
 
 /**
  * 등대섬 클라이언트 (docs/plan/11 I1) — Phaser 씬 + 팩 팔레트 기반 도트 HUD.
@@ -48,7 +54,6 @@ import {
  * dynamic ssr:false 경계 안에서만 로드된다(IslandView).
  */
 
-const NPC_DIALOGUE = '점으로 그린 강가로 놀러 오지 않을래? 재미있는 이야기가 기다리고 있어.';
 const LIGHTHOUSE_GAUGE_STEPS = 3;
 const TYPING_INTERVAL_MS = 34;
 const TRANSITION_MS = 620;
@@ -201,6 +206,66 @@ function ToolbarGuideIcon({ state }: { state: 'choose' | 'empty' | 'loading' | '
   );
 }
 
+type ReadAloudStatus = 'error' | 'idle' | 'loading' | 'playing';
+
+function ReadAloudIcon({ status }: { status: ReadAloudStatus }) {
+  return (
+    <svg aria-hidden="true" className="dot-read-aloud-symbol" viewBox="0 0 64 64" fill="none">
+      {status === 'loading' ? (
+        <>
+          <rect x="10" y="29" width="7" height="7" fill="currentColor" stroke="none" />
+          <rect x="28" y="29" width="7" height="7" fill="currentColor" stroke="none" />
+          <rect x="46" y="29" width="7" height="7" fill="currentColor" stroke="none" />
+        </>
+      ) : status === 'error' ? (
+        <>
+          <path d="M48 24a19 19 0 1 0 1 15" />
+          <path d="M48 10v14H34" />
+        </>
+      ) : (
+        <>
+          <path d="M10 25h12l13-11v36L22 39H10V25Z" />
+          <path d="M43 25c4 4 4 10 0 14" />
+          {status === 'playing' && <path d="M50 18c8 8 8 20 0 28" />}
+        </>
+      )}
+    </svg>
+  );
+}
+
+interface ReadAloudButtonProps {
+  audioKey: IslandReadAloudKey;
+  disabled: boolean;
+  onPress: (key: IslandReadAloudKey) => void;
+  status: ReadAloudStatus;
+}
+
+function ReadAloudButton({ audioKey, disabled, onPress, status }: ReadAloudButtonProps) {
+  const subject = ISLAND_READ_ALOUD_ASSETS[audioKey].label;
+  const label = disabled
+    ? `소리를 켜면 ${subject}를 들을 수 있어요`
+    : status === 'loading'
+      ? `${subject} 소리 준비 중`
+      : status === 'playing'
+        ? `${subject} 듣기 멈추기`
+        : status === 'error'
+          ? `${subject} 다시 들어보기`
+          : `${subject} 들어보기`;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onPress(audioKey)}
+      aria-label={label}
+      aria-pressed={status === 'playing'}
+      disabled={disabled}
+      className="dot-button dot-read-aloud-button grid shrink-0 place-items-center"
+    >
+      <ReadAloudIcon status={status} />
+    </button>
+  );
+}
+
 export default function IslandClient() {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -215,6 +280,7 @@ export default function IslandClient() {
   const transitionTimeoutRef = useRef<number | null>(null);
   const transitioningRef = useRef(false);
   const audioRef = useRef<IslandAudioController | null>(null);
+  const readAloudRequestRef = useRef(0);
 
   const [save, setSave] = useState<IslandSave | null>(null);
   const [mode, setMode] = useState<'explore' | 'decorate'>('explore');
@@ -229,6 +295,43 @@ export default function IslandClient() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [muted, setMuted] = useState(true);
+  const [readAloud, setReadAloud] = useState<{
+    key: IslandReadAloudKey | null;
+    status: ReadAloudStatus;
+  }>({ key: null, status: 'idle' });
+
+  const stopReadAloud = useCallback(() => {
+    readAloudRequestRef.current += 1;
+    audioRef.current?.stopReadAloud();
+    setReadAloud({ key: null, status: 'idle' });
+  }, []);
+
+  const toggleReadAloud = useCallback((key: IslandReadAloudKey) => {
+    if (muted) return;
+    if (readAloud.key === key && (readAloud.status === 'loading' || readAloud.status === 'playing')) {
+      stopReadAloud();
+      return;
+    }
+
+    const audio = audioRef.current;
+    const request = readAloudRequestRef.current + 1;
+    readAloudRequestRef.current = request;
+    setReadAloud({ key, status: 'loading' });
+    if (!audio) {
+      setReadAloud({ key, status: 'error' });
+      return;
+    }
+
+    void audio.playReadAloud(ISLAND_READ_ALOUD_ASSETS[key].src, (result) => {
+      if (readAloudRequestRef.current !== request) return;
+      readAloudRequestRef.current += 1;
+      setReadAloud(result === 'error' ? { key, status: 'error' } : { key: null, status: 'idle' });
+    }).then(() => {
+      if (readAloudRequestRef.current === request) setReadAloud({ key, status: 'playing' });
+    }).catch(() => {
+      if (readAloudRequestRef.current === request) setReadAloud({ key, status: 'error' });
+    });
+  }, [muted, readAloud, stopReadAloud]);
 
   const dismissOnboarding = useCallback(() => {
     if (!showOnboarding) return;
@@ -241,13 +344,15 @@ export default function IslandClient() {
   }, [showOnboarding]);
 
   const openNpc = useCallback(() => {
+    stopReadAloud();
     audioRef.current?.play('island-letter-sfx-island-audio');
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setDialogueLength(reducedMotionRef.current ? NPC_DIALOGUE.length : 0);
     setNpcOpen(true);
-  }, []);
+  }, [stopReadAloud]);
 
   const closeNpc = useCallback(() => {
+    stopReadAloud();
     setNpcOpen(false);
     window.requestAnimationFrame(() => {
       const target = returnFocusRef.current;
@@ -257,12 +362,13 @@ export default function IslandClient() {
       }
       containerRef.current?.focus();
     });
-  }, []);
+  }, [stopReadAloud]);
 
   const openAvatar = useCallback(() => {
+    stopReadAloud();
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setAvatarOpen(true);
-  }, []);
+  }, [stopReadAloud]);
 
   const closeAvatar = useCallback(() => {
     setAvatarOpen(false);
@@ -304,6 +410,7 @@ export default function IslandClient() {
     return () => {
       window.clearTimeout(preferenceTimer);
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      readAloudRequestRef.current += 1;
       audio.destroy();
       if (audioRef.current === audio) audioRef.current = null;
     };
@@ -512,6 +619,7 @@ export default function IslandClient() {
   const startStory = useCallback(() => {
     if (transitioningRef.current || !save) return;
     transitioningRef.current = true;
+    stopReadAloud();
 
     const next = withBottleOpened(save, SEURAT_BOTTLE_ID);
     writeIsland(next);
@@ -523,7 +631,7 @@ export default function IslandClient() {
     transitionTimeoutRef.current = window.setTimeout(() => {
       router.push(`/lesson/${SEURAT_LESSON_ID}`);
     }, delay);
-  }, [router, save]);
+  }, [router, save, stopReadAloud]);
 
   const applyAvatar = useCallback((next: AvatarConfig) => {
     saveAvatar(next);
@@ -538,6 +646,7 @@ export default function IslandClient() {
 
   const toggleMode = () => {
     if (!save || isTransitioning) return;
+    stopReadAloud();
     if (mode === 'decorate') {
       setSelected(null);
       setMode('explore');
@@ -553,6 +662,7 @@ export default function IslandClient() {
 
   const toggleSound = () => {
     const nextMuted = !muted;
+    if (nextMuted) stopReadAloud();
     audioRef.current?.unlock();
     audioRef.current?.setMuted(nextMuted);
     setMuted(nextMuted);
@@ -573,7 +683,7 @@ export default function IslandClient() {
       ? '이야기를 만나면 꾸밀 조각이 와요'
       : selectedFurniture
         ? `${selectedFurniture.label}을 골랐어요. 반짝이는 칸을 톡 눌러요`
-        : '마음에 드는 가구를 골라요';
+        : DECORATE_GUIDANCE;
   const toolbarState = !save ? 'loading' : pieces === 0 ? 'empty' : selectedFurniture ? 'place' : 'choose';
   const avatarButtonLabel = !avatar || avatarAtlasStatus === 'loading'
     ? '옷 그림 준비 중'
@@ -581,6 +691,12 @@ export default function IslandClient() {
       ? '옷 그림 다시 준비하기'
       : '내 캐릭터 꾸미기';
   const modeButtonLabel = mode === 'decorate' ? '꾸미기 마치기' : '내 오두막 꾸미기';
+  const letterReadAloudStatus = readAloud.key === 'island-letter-read-aloud-npc'
+    ? readAloud.status
+    : 'idle';
+  const decorateReadAloudStatus = readAloud.key === 'island-decorate-read-aloud-npc'
+    ? readAloud.status
+    : 'idle';
 
   return (
     <main
@@ -614,6 +730,9 @@ export default function IslandClient() {
         .dot-toolbar-guide {
           display: grid;
           min-height: calc(var(--spacing) * 14);
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: calc(var(--spacing) * 3);
+          padding: calc(var(--spacing) * 3);
           place-items: center;
           border: calc(var(--spacing) * 0.5) solid var(--color-line);
           background: color-mix(in srgb, var(--color-surface) 82%, var(--color-sagebg));
@@ -631,6 +750,21 @@ export default function IslandClient() {
 
         .dot-tool-button {
           min-height: calc(var(--spacing) * 30);
+        }
+
+        .dot-read-aloud-button {
+          width: calc(var(--spacing) * 30);
+          height: calc(var(--spacing) * 30);
+          padding: calc(var(--spacing) * 5);
+        }
+
+        .dot-read-aloud-symbol {
+          width: calc(var(--spacing) * 18);
+          height: calc(var(--spacing) * 18);
+          stroke: currentColor;
+          stroke-width: 5;
+          stroke-linecap: square;
+          stroke-linejoin: miter;
         }
 
         .dot-banner-layer {
@@ -813,6 +947,12 @@ export default function IslandClient() {
               >
                 <ToolbarGuideIcon state={toolbarState} />
                 <span className="sr-only">{toolbarMessage}</span>
+                <ReadAloudButton
+                  audioKey="island-decorate-read-aloud-npc"
+                  disabled={muted || !save || pieces <= 0 || isTransitioning}
+                  onPress={toggleReadAloud}
+                  status={decorateReadAloudStatus}
+                />
               </div>
               <div className="dot-tool-grid grid grid-cols-3 gap-2">
                 {FURNITURE.map((furniture) => {
@@ -874,9 +1014,17 @@ export default function IslandClient() {
               </div>
             </div>
 
-            <div className="dot-dialogue mt-4 min-h-24 p-4 text-base font-bold leading-relaxed text-ink2" aria-hidden>
-              “{NPC_DIALOGUE.slice(0, dialogueLength)}
-              {dialogueLength < NPC_DIALOGUE.length && <span className="dot-caret" />}”
+            <div className="mt-4 flex items-stretch gap-3">
+              <div className="dot-dialogue min-h-24 min-w-0 flex-1 p-4 text-base font-bold leading-relaxed text-ink2" aria-hidden>
+                “{NPC_DIALOGUE.slice(0, dialogueLength)}
+                {dialogueLength < NPC_DIALOGUE.length && <span className="dot-caret" />}”
+              </div>
+              <ReadAloudButton
+                audioKey="island-letter-read-aloud-npc"
+                disabled={muted || isTransitioning}
+                onPress={toggleReadAloud}
+                status={letterReadAloudStatus}
+              />
             </div>
             <p id="npc-dialogue-full" className="sr-only">
               {NPC_DIALOGUE}

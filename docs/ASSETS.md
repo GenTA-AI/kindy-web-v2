@@ -35,6 +35,10 @@
 - 파도·바닷새 앰비언스와 이동·편지·조각 배치·등대 점등 SFX는
   `src/components/island/island-audio.ts`의 Web Audio 합성 정의로 자체 생성한다. 외부 녹음·생성형 음원
   파일 및 신규 npm 패키지를 사용하지 않는다.
+- 편지·꾸미기 읽어주기는 Google Translate 한국어 음성을 2026-07-21에 사전
+  렌더링한 `public/island/audio/npc-letter-ko.mp3`, `decorate-guide-ko.mp3`를 사용한다.
+  라이브 TTS는 없으며 상세 원본·취득·수정 기록은 `public/island/audio/LICENSE.md`가 정본이다.
 - 실키·용도·출처 장부는 `public/island/audio/LICENSE.md`에 기록한다.
 - **무료 티어 에셋은 비상업 개발·시안에만 사용 가능하다. 실배포 전 상용 라이선스가 확인된 유료
-  에셋으로 교체하고 장부를 갱신해야 한다.** 현재 런타임 합성 오디오에는 무료 티어 음원이 포함되지 않는다.
+  에셋으로 교체하고 장부를 갱신해야 한다.** 읽어주기 MP3는 비상업 개발·시안 전용이며,
+  실배포 전 자체 녹음 또는 유료 에셋으로 교체한다.
