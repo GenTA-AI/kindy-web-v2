@@ -48,6 +48,7 @@ const LIGHTHOUSE_GAUGE_STEPS = 3;
 const TYPING_INTERVAL_MS = 34;
 const TRANSITION_MS = 620;
 const REDUCED_TRANSITION_MS = 160;
+const ONBOARDING_STORAGE_KEY = 'kindy:island-onboarded';
 const LIGHTHOUSE_ICON_FRAME = FURNITURE.find((furniture) => furniture.id === 'lamp')?.emoji;
 const PACK_TILE = 16;
 const AVATAR_PARTS_IMAGE_URL = '/island/tiles/avatar-parts.png';
@@ -145,6 +146,17 @@ export default function IslandClient() {
   const [dialogueLength, setDialogueLength] = useState(0);
   const [banner, setBanner] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  const dismissOnboarding = useCallback(() => {
+    if (!showOnboarding) return;
+    setShowOnboarding(false);
+    try {
+      window.localStorage.setItem(ONBOARDING_STORAGE_KEY, '1');
+    } catch {
+      // 저장소가 막혀도 현재 방문의 힌트는 첫 탭에 사라진다.
+    }
+  }, [showOnboarding]);
 
   const openNpc = useCallback(() => {
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -190,6 +202,18 @@ export default function IslandClient() {
     updatePreference();
     query.addEventListener('change', updatePreference);
     return () => query.removeEventListener('change', updatePreference);
+  }, []);
+
+  // 별도 키만 읽어 island-state 정규화·스키마와 온보딩 연출을 분리한다.
+  useEffect(() => {
+    const onboardingTimer = window.setTimeout(() => {
+      try {
+        setShowOnboarding(window.localStorage.getItem(ONBOARDING_STORAGE_KEY) !== '1');
+      } catch {
+        setShowOnboarding(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(onboardingTimer);
   }, []);
 
   useEffect(() => {
@@ -426,7 +450,58 @@ export default function IslandClient() {
         : '마음에 드는 가구를 골라요';
 
   return (
-    <main className="dot-shell relative h-[100svh] w-full overflow-hidden bg-sagebg text-ink [word-break:keep-all]">
+    <main
+      className="dot-shell relative h-[100svh] w-full overflow-hidden bg-sagebg text-ink [word-break:keep-all]"
+      onPointerDownCapture={dismissOnboarding}
+    >
+      <style>{`
+        .dot-onboarding-hint {
+          display: flex;
+          align-items: center;
+          gap: calc(var(--spacing) * 2);
+          transform: translate(-50%, -50%);
+          animation: dot-onboarding-tap 2800ms var(--default-transition-timing-function) both;
+        }
+
+        .dot-onboarding-hand {
+          font-size: calc(var(--spacing) * 12);
+          line-height: 1;
+          filter: drop-shadow(var(--spacing) var(--spacing) 0 var(--dot-shadow));
+        }
+
+        .dot-onboarding-pop {
+          padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+          border: calc(var(--spacing) * 0.5) solid var(--dot-edge);
+          background: var(--dot-panel);
+          box-shadow: var(--spacing) var(--spacing) 0 var(--dot-shadow);
+          color: var(--dot-edge);
+          font-size: var(--text-lg);
+          line-height: var(--text-lg--line-height);
+          font-weight: var(--font-weight-black);
+        }
+
+        @keyframes dot-onboarding-tap {
+          0%, 18% {
+            transform: translate(-50%, -50%) translateY(0) scale(1);
+          }
+          72% {
+            transform: translate(-50%, -50%) translateY(min(28svh, calc(var(--spacing) * 64))) scale(1);
+          }
+          80% {
+            transform: translate(-50%, -50%) translateY(min(28svh, calc(var(--spacing) * 64))) scale(0.88);
+          }
+          90%, 100% {
+            transform: translate(-50%, -50%) translateY(min(28svh, calc(var(--spacing) * 64))) scale(1);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .dot-onboarding-hint {
+            animation: none;
+            transform: translate(-50%, -50%) translateY(min(20svh, calc(var(--spacing) * 44)));
+          }
+        }
+      `}</style>
       <div
         className="absolute inset-0"
         inert={isBlocked ? true : undefined}
@@ -489,6 +564,16 @@ export default function IslandClient() {
             <p className="dot-panel dot-toast px-4 py-3 text-center text-sm font-black" role="status" aria-live="polite">
               {banner}
             </p>
+          </div>
+        )}
+
+        {showOnboarding && !isBlocked && mode === 'explore' && (
+          <div
+            className="dot-onboarding-hint pointer-events-none absolute left-1/2 top-1/2 z-30"
+            aria-hidden="true"
+          >
+            <span className="dot-onboarding-hand" aria-hidden="true">☝️</span>
+            <span className="dot-onboarding-pop" aria-hidden="true">톡!</span>
           </div>
         )}
 
