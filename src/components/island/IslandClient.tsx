@@ -126,6 +126,81 @@ function AvatarPreview({ avatar, scale = 2 }: { avatar: AvatarConfig; scale?: nu
   );
 }
 
+function WardrobeStatusIcon({ status }: { status: 'error' | 'loading' }) {
+  return (
+    <svg aria-hidden="true" className="dot-hud-symbol" viewBox="0 0 64 64" fill="none">
+      <path d="M25 17c0-5 3-8 7-8s7 3 7 7c0 4-3 6-7 8" />
+      <path d="M32 24 10 42v7h44v-7L32 24Z" />
+      {status === 'loading' ? (
+        <>
+          <rect x="18" y="53" width="5" height="5" fill="currentColor" stroke="none" />
+          <rect x="30" y="53" width="5" height="5" fill="currentColor" stroke="none" />
+          <rect x="42" y="53" width="5" height="5" fill="currentColor" stroke="none" />
+        </>
+      ) : (
+        <>
+          <path d="M43 35a12 12 0 0 1 4 9" />
+          <path d="m43 43 4 4 4-4" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function ModeIcon({ mode }: { mode: 'decorate' | 'explore' }) {
+  return (
+    <svg aria-hidden="true" className="dot-hud-symbol dot-mode-symbol" viewBox="0 0 64 64" fill="none">
+      {mode === 'decorate' ? (
+        <>
+          <path d="M10 34 25 49 55 16" />
+          <path d="M13 14h12M13 22h7" />
+        </>
+      ) : (
+        <>
+          <path d="m14 43 7 7 28-28-7-7-28 28Z" />
+          <path d="m37 20 7 7M11 53l10-3-7-7-3 10Z" />
+          <path d="M15 14v10M10 19h10M48 39v12M42 45h12" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function ToolbarGuideIcon({ state }: { state: 'choose' | 'empty' | 'loading' | 'place' }) {
+  return (
+    <svg aria-hidden="true" className="dot-guide-symbol" viewBox="0 0 96 48" fill="none">
+      {state === 'loading' && (
+        <>
+          <path d="M20 34V18l12-9 12 9v16H20Z" />
+          <rect x="54" y="21" width="6" height="6" fill="currentColor" stroke="none" />
+          <rect x="66" y="21" width="6" height="6" fill="currentColor" stroke="none" />
+          <rect x="78" y="21" width="6" height="6" fill="currentColor" stroke="none" />
+        </>
+      )}
+      {state === 'empty' && (
+        <>
+          <path d="m35 8 8 7-5 6 8 14-7 7H21l-7-7 8-14-5-6 8-7h10Z" />
+          <path d="M56 12v12M50 18h12M74 26v12M68 32h12" />
+        </>
+      )}
+      {state === 'choose' && (
+        <>
+          <path d="M12 35V20h20v15M18 20v-8h8v8M40 35V14h20v21M48 14V8h5v6M68 35V22h16v13" />
+          <path d="M8 40h80" />
+          <path d="M76 8v8M72 12h8" />
+        </>
+      )}
+      {state === 'place' && (
+        <>
+          <path d="M12 11h34v26H12zM29 11v26M12 24h34" />
+          <path d="M69 14v18M60 23h18" />
+          <path d="M58 38c0-7 5-12 12-12s12 5 12 12" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export default function IslandClient() {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -499,6 +574,13 @@ export default function IslandClient() {
       : selectedFurniture
         ? `${selectedFurniture.label}을 골랐어요. 반짝이는 칸을 톡 눌러요`
         : '마음에 드는 가구를 골라요';
+  const toolbarState = !save ? 'loading' : pieces === 0 ? 'empty' : selectedFurniture ? 'place' : 'choose';
+  const avatarButtonLabel = !avatar || avatarAtlasStatus === 'loading'
+    ? '옷 그림 준비 중'
+    : avatarAtlasStatus === 'error'
+      ? '옷 그림 다시 준비하기'
+      : '내 캐릭터 꾸미기';
+  const modeButtonLabel = mode === 'decorate' ? '꾸미기 마치기' : '내 오두막 꾸미기';
 
   return (
     <main
@@ -506,6 +588,55 @@ export default function IslandClient() {
       onPointerDownCapture={handleFirstGesture}
     >
       <style>{`
+        .dot-hud-status {
+          min-width: 0;
+        }
+
+        .dot-hud-action {
+          width: calc(var(--spacing) * 30);
+          height: calc(var(--spacing) * 30);
+          padding: calc(var(--spacing) * 2);
+        }
+
+        .dot-hud-symbol {
+          width: calc(var(--spacing) * 16);
+          height: calc(var(--spacing) * 16);
+          stroke: currentColor;
+          stroke-width: 4;
+          stroke-linecap: square;
+          stroke-linejoin: miter;
+        }
+
+        .dot-mode-symbol {
+          stroke-width: 5;
+        }
+
+        .dot-toolbar-guide {
+          display: grid;
+          min-height: calc(var(--spacing) * 14);
+          place-items: center;
+          border: calc(var(--spacing) * 0.5) solid var(--color-line);
+          background: color-mix(in srgb, var(--color-surface) 82%, var(--color-sagebg));
+        }
+
+        .dot-guide-symbol {
+          width: calc(var(--spacing) * 24);
+          height: calc(var(--spacing) * 12);
+          color: var(--dot-muted);
+          stroke: currentColor;
+          stroke-width: 3;
+          stroke-linecap: square;
+          stroke-linejoin: miter;
+        }
+
+        .dot-tool-button {
+          min-height: calc(var(--spacing) * 30);
+        }
+
+        .dot-banner-layer {
+          top: max(calc(var(--spacing) * 38), calc(env(safe-area-inset-top) + var(--spacing) * 34));
+        }
+
         .dot-onboarding-hint {
           display: flex;
           align-items: center;
@@ -552,6 +683,28 @@ export default function IslandClient() {
             transform: translate(-50%, -50%) translateY(min(20svh, calc(var(--spacing) * 44)));
           }
         }
+
+        @media (max-width: 439px) {
+          .dot-hud {
+            flex-wrap: wrap;
+          }
+
+          .dot-hud-status {
+            flex-basis: 100%;
+          }
+
+          .dot-hud-action {
+            width: calc(50% - var(--spacing));
+          }
+
+          .dot-tool-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .dot-banner-layer {
+            top: max(calc(var(--spacing) * 54), calc(env(safe-area-inset-top) + var(--spacing) * 50));
+          }
+        }
       `}</style>
       <div
         className="absolute inset-0"
@@ -567,50 +720,55 @@ export default function IslandClient() {
 
         <header className="dot-safe-top pointer-events-none absolute inset-x-0 top-0 z-20 mx-auto w-full max-w-md px-3">
           <div className="dot-panel dot-hud pointer-events-auto flex items-center gap-2 p-2">
-            <section className="flex min-w-0 flex-1 items-center gap-2" aria-label={`등대 불빛 ${lightLevel}단계`}>
-              <span className="dot-icon-slot shrink-0" aria-hidden>
-                {LIGHTHOUSE_ICON_FRAME ? <span style={propCatalogIconStyle(LIGHTHOUSE_ICON_FRAME)} /> : <span>불빛</span>}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="dot-label truncate">등대 불빛</p>
-                <div className="dot-gauge mt-1" aria-hidden>
-                  {Array.from({ length: LIGHTHOUSE_GAUGE_STEPS }, (_, index) => (
-                    <span key={index} data-lit={index < lightLevel} />
-                  ))}
+            <div className="dot-hud-status flex flex-1 items-center gap-2">
+              <section className="flex min-w-0 flex-1 items-center gap-2" aria-label={`등대 불빛 ${lightLevel}단계`}>
+                <span className="dot-icon-slot shrink-0" aria-hidden>
+                  {LIGHTHOUSE_ICON_FRAME ? <span style={propCatalogIconStyle(LIGHTHOUSE_ICON_FRAME)} /> : <span>불빛</span>}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="dot-label truncate">등대 불빛</p>
+                  <div className="dot-gauge mt-1" aria-hidden>
+                    {Array.from({ length: LIGHTHOUSE_GAUGE_STEPS }, (_, index) => (
+                      <span key={index} data-lit={index < lightLevel} />
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs font-black" aria-live="polite">
+                    {save ? `${lightLevel}단계` : '불러오는 중'}
+                  </p>
                 </div>
-                <p className="mt-1 text-xs font-black" aria-live="polite">
-                  {save ? `${lightLevel}단계` : '불러오는 중'}
-                </p>
-              </div>
-            </section>
+              </section>
 
-            <div className="dot-counter shrink-0 text-center" aria-label={`이야기 조각 ${pieces}개`}>
-              <span className="dot-label block">조각</span>
-              <strong className="block text-xl leading-none" aria-live="polite">
-                {save ? pieces : '—'}
-              </strong>
+              <div className="dot-counter shrink-0 text-center" aria-label={`이야기 조각 ${pieces}개`}>
+                <span className="dot-label block">조각</span>
+                <strong className="block text-xl leading-none" aria-live="polite">
+                  {save ? pieces : '—'}
+                </strong>
+              </div>
             </div>
 
             <button
               type="button"
               onClick={openAvatar}
               disabled={!avatar || avatarAtlasStatus === 'loading' || isTransitioning}
-              className="dot-button dot-avatar-button min-h-14 shrink-0 px-2 text-xs font-black"
-              aria-label="내 캐릭터 꾸미기"
+              className="dot-button dot-avatar-button dot-hud-action grid shrink-0 place-items-center"
+              aria-label={avatarButtonLabel}
             >
               {avatar && avatarAtlasStatus === 'ready' ? (
                 <AvatarPreview avatar={avatar} scale={1} />
-              ) : avatarAtlasStatus === 'error' ? '옷 오류' : '옷 준비 중'}
+              ) : (
+                <WardrobeStatusIcon status={avatarAtlasStatus === 'error' ? 'error' : 'loading'} />
+              )}
             </button>
 
             <button
               type="button"
               onClick={toggleMode}
+              aria-label={modeButtonLabel}
               aria-pressed={mode === 'decorate'}
               disabled={!save || isTransitioning}
-              className="dot-button dot-mode-button min-h-14 shrink-0 px-3 text-sm font-black"
+              className="dot-button dot-mode-button dot-hud-action grid shrink-0 place-items-center"
             >
-              {mode === 'decorate' ? '완료' : '꾸미기'}
+              <ModeIcon mode={mode} />
             </button>
           </div>
           <button
@@ -648,16 +806,18 @@ export default function IslandClient() {
             aria-labelledby="decorate-title"
           >
             <div className="dot-panel dot-toolbar p-3">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 id="decorate-title" className="text-base font-black">
-                  내 오두막 꾸미기
-                </h2>
-                <p className="dot-label shrink-0">조각 하나로 하나</p>
+              <h2 id="decorate-title" className="sr-only">내 오두막 꾸미기</h2>
+              <div
+                id="decorate-help"
+                className="dot-toolbar-guide mb-3"
+                role="status"
+                aria-label={toolbarMessage}
+                aria-live="polite"
+              >
+                <ToolbarGuideIcon state={toolbarState} />
+                <span className="sr-only">{toolbarMessage}</span>
               </div>
-              <p id="decorate-help" className="mb-3 text-sm font-bold text-ink2" aria-live="polite">
-                {toolbarMessage}
-              </p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="dot-tool-grid grid grid-cols-3 gap-2">
                 {FURNITURE.map((furniture) => {
                   return (
                     <button
