@@ -14,6 +14,12 @@ NPC 편지 카드와 꾸미기 안내에 큰 '들어보기' 스피커 버튼(사
 ## Scope
 - src/components/island/npc.ts
 - public/island/audio/LICENSE.md
+- src/components/island/IslandClient.tsx
+- src/components/island/island-audio.ts
+- src/components/island/engine.test.ts
+- docs/ASSETS.md
+- public/island/audio/decorate-guide-ko.mp3
+- public/island/audio/npc-letter-ko.mp3
 
 ## Constraints
 - island-state.ts 로직·스키마 불변(연출·안내·오디오·DOM 계층으로만).
