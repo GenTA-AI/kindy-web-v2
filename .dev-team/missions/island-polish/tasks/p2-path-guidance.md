@@ -13,6 +13,10 @@ src/components/island/props.ts + IslandClient.tsx: 현재 목표(미개봉=표�
 
 ## Scope
 - src/components/island/props.ts
+- src/components/island/IslandClient.tsx
+- src/components/island/engine.ts
+- src/components/island/island-game.ts
+- src/components/island/engine.test.ts
 
 ## Constraints
 - island-state.ts 로직·스키마 불변(연출·안내·오디오·DOM 계층으로만).

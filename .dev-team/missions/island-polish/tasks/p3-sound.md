@@ -13,6 +13,7 @@ high_risk: 0
 
 ## Scope
 - src/components/island/island-audio.ts
+- src/components/island/IslandClient.tsx
 - public/island/audio/LICENSE.md
 
 ## Constraints
