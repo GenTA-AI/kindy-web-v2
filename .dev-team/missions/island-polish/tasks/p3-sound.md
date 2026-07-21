@@ -15,6 +15,8 @@ high_risk: 0
 - src/components/island/island-audio.ts
 - src/components/island/IslandClient.tsx
 - public/island/audio/LICENSE.md
+- docs/ASSETS.md
+- src/components/island/engine.test.ts
 
 ## Constraints
 - island-state.ts 로직·스키마 불변(연출·안내·오디오·DOM 계층으로만).
