@@ -25,7 +25,7 @@ import {
   type IslandSave,
 } from '@/lib/island/island-state';
 import { createIslandGame, type IslandGameHandle } from '@/components/island/island-game';
-import { propCatalogIconStyle } from '@/components/island/props';
+import { guidanceTargetForSave, propCatalogIconStyle } from '@/components/island/props';
 import { atlasFrameName, atlasFrameStyle, type IslandAtlasName } from '@/components/island/atlas-frames';
 import {
   PACK_HATS,
@@ -255,6 +255,7 @@ export default function IslandClient() {
       avatar: worldAvatar,
       initialPlaced: island.placed,
       initialLevel: lighthouseLevel(island),
+      initialGuidanceTarget: guidanceTargetForSave(island),
       reducedMotion: prefersReducedMotion(),
       onBottleTap: openNpc,
       onCellTap: (gx, gy) => cellTapRef.current(gx, gy),
@@ -304,6 +305,7 @@ export default function IslandClient() {
     if (!save) return;
     handleRef.current?.renderPlaced(save.placed);
     handleRef.current?.setLighthouse(lighthouseLevel(save));
+    handleRef.current?.setGuidanceTarget(guidanceTargetForSave(save));
   }, [save]);
 
   // 배너 자동 사라짐. 보상 자체는 저장되어 사라지지 않는다.

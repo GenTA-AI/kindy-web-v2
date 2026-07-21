@@ -14,7 +14,7 @@ import {
   resolveTapFeedback,
   type TerrainLayer,
 } from '@/components/island/map';
-import { IslandProps, registerPropTextures } from '@/components/island/props';
+import { IslandProps, registerPropTextures, type IslandGuidanceTarget } from '@/components/island/props';
 import { preloadCharacters, registerAvatarTextures, renderNpcs } from '@/components/island/npc';
 
 export const CAMERA_ZOOM = 2;
@@ -37,6 +37,7 @@ export interface IslandEngineOptions {
   avatar: AvatarConfig | null;
   initialPlaced: PlacedItem[];
   initialLevel: number;
+  initialGuidanceTarget: IslandGuidanceTarget;
   reducedMotion: boolean;
   onBottleTap: (bottleId: string) => void;
   onCellTap: (gx: number, gy: number) => void;
@@ -69,6 +70,10 @@ export class IslandScene extends Phaser.Scene {
 
     this.propsLayer = new IslandProps(this, {
       reducedMotion: this.opts.reducedMotion,
+      guidanceTarget: this.opts.initialGuidanceTarget,
+      getGuidanceOrigin: () => this.avatar
+        ? { x: this.avatar.x, y: this.avatar.y }
+        : { x: AVATAR_START.col * TILE, y: AVATAR_START.row * TILE },
       onBottleTap: this.opts.onBottleTap,
       onCellTap: this.opts.onCellTap,
     });
@@ -226,6 +231,7 @@ export class IslandScene extends Phaser.Scene {
       this.avatar.setPosition(destination.x, destination.y).setDepth(destination.y);
       this.avatar.setTexture(this.idleTexture());
       this.avatar.setFlipX(this.facing === 'left');
+      this.propsLayer?.updateGuidanceOrigin(this.avatar.x, this.avatar.y);
       return;
     }
 
@@ -243,11 +249,16 @@ export class IslandScene extends Phaser.Scene {
       y: destination.y,
       duration: Math.max(120, (distance / WALK_SPEED) * 1000),
       ease: 'Linear',
-      onUpdate: () => this.avatar?.setDepth(this.avatar.y),
+      onUpdate: () => {
+        if (!this.avatar) return;
+        this.avatar.setDepth(this.avatar.y);
+        this.propsLayer?.updateGuidanceOrigin(this.avatar.x, this.avatar.y);
+      },
       onComplete: () => {
         if (!this.avatar) return;
         this.avatar.anims.stop();
         this.avatar.setTexture(this.idleTexture());
+        this.propsLayer?.updateGuidanceOrigin(this.avatar.x, this.avatar.y);
       },
     });
   }
@@ -262,6 +273,10 @@ export class IslandScene extends Phaser.Scene {
 
   setLighthouse(level: number): void {
     this.propsLayer?.setLighthouse(level);
+  }
+
+  setGuidanceTarget(target: IslandGuidanceTarget): void {
+    this.propsLayer?.setGuidanceTarget(target);
   }
 
   setAvatar(avatar: AvatarConfig): void {

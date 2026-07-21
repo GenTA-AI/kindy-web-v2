@@ -6,6 +6,7 @@ import {
 import { WORLD_BACKGROUND } from '@/components/island/map';
 import type { PlacedItem } from '@/lib/island/island-state';
 import type { AvatarConfig } from '@/lib/world/world-state';
+import type { IslandGuidanceTarget } from '@/components/island/props';
 
 /**
  * 등대섬의 클라이언트 전용 조립 엔트리. 씬 구현은 책임별 모듈에 두고
@@ -20,6 +21,7 @@ export interface IslandGameHandle {
   celebrate(): void;
   setAvatar(avatar: AvatarConfig): void;
   setLighthouse(level: number): void;
+  setGuidanceTarget(target: IslandGuidanceTarget): void;
 }
 
 export function createIslandGame(parent: HTMLElement, opts: IslandGameOptions): IslandGameHandle {
@@ -46,5 +48,6 @@ export function createIslandGame(parent: HTMLElement, opts: IslandGameOptions): 
     celebrate: () => scene.celebrate(),
     setAvatar: (avatar) => scene.setAvatar(avatar),
     setLighthouse: (level) => scene.setLighthouse(level),
+    setGuidanceTarget: (target) => scene.setGuidanceTarget(target),
   };
 }

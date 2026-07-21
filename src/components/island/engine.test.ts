@@ -8,6 +8,8 @@ import {
   resolveTapFeedback,
   type WorldPoint,
 } from './map';
+import { guidanceTargetForSave } from './props';
+import { EMPTY_ISLAND, SEURAT_BOTTLE_ID } from '../../lib/island/island-state';
 
 interface GridPoint {
   col: number;
@@ -61,6 +63,18 @@ function seededRandom(seed: number): () => number {
     return (state >>> 0) / 0x1_0000_0000;
   };
 }
+
+test('저장 상태에서 표류병 → 오두막 격자 순서로 다음 시각 목표를 고른다', () => {
+  assert.equal(guidanceTargetForSave(EMPTY_ISLAND), 'bottle');
+  assert.equal(
+    guidanceTargetForSave({ ...EMPTY_ISLAND, bottlesOpened: [SEURAT_BOTTLE_ID], pieces: 2 }),
+    'cabin',
+  );
+  assert.equal(
+    guidanceTargetForSave({ ...EMPTY_ISLAND, bottlesOpened: [SEURAT_BOTTLE_ID] }),
+    null,
+  );
+});
 
 test('실충돌행렬: 밭 북측 울타리와 절벽 경계에 탈출 가능한 충돌 칸이 있다', () => {
   const farmFence = blockedBoundaryCells({ left: 27, right: 31, top: 38, bottom: 42 });

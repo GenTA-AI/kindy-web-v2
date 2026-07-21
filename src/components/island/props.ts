@@ -1,5 +1,12 @@
 import type Phaser from 'phaser';
-import { FURNITURE, GRID_COLS, GRID_ROWS, SEURAT_BOTTLE_ID, type PlacedItem } from '@/lib/island/island-state';
+import {
+  FURNITURE,
+  GRID_COLS,
+  GRID_ROWS,
+  SEURAT_BOTTLE_ID,
+  type IslandSave,
+  type PlacedItem,
+} from '@/lib/island/island-state';
 import { PAL } from '@/components/island/pixel-art';
 import { atlasFrameName, atlasFrameStyle } from '@/components/island/atlas-frames';
 import { TILE, WORLD_HEIGHT, WORLD_WIDTH } from '@/components/island/map';
@@ -11,6 +18,10 @@ const PROP_ATLAS_JSON_URL = '/island/tiles/props.json';
 const WATER_ATLAS_URL = '/island/tiles/water.png';
 const WATER_ATLAS_JSON_URL = '/island/tiles/water.json';
 const CATALOG_ICON_SCALE = 2;
+const GUIDANCE_IDLE_DELAY_MS = 7_000;
+const GUIDANCE_STEP_GAP = TILE * 1.35;
+const GUIDANCE_MAX_DISTANCE = TILE * 7;
+const GUIDANCE_REBUILD_DISTANCE = TILE * 1.5;
 
 const LIGHTHOUSE = { col: 36, row: 23 } as const;
 const CABIN = { col: 26, row: 37 } as const;
@@ -22,6 +33,9 @@ const WHITE = Number.parseInt(PAL.W.slice(1), 16);
 const LAMP_YELLOW = Number.parseInt(PAL.Y.slice(1), 16);
 const LIGHT_GLOW = LAMP_YELLOW;
 const CELEBRATION_FLASH = LAMP_YELLOW;
+const GUIDANCE_GOLD = LAMP_YELLOW;
+const GUIDANCE_CREAM = Number.parseInt(PAL.L.slice(1), 16);
+const GUIDANCE_EDGE = Number.parseInt(PAL.q.slice(1), 16);
 
 const TREE_POSITIONS = [
   { col: 17, row: 31, small: false },
@@ -49,8 +63,19 @@ const SPARKLE_FRAME = 'placeable-decoration__r000_c005';
 const LIGHTHOUSE_LAMP_FRAME = 'lantern__r000_c000';
 const BUTTERFLY_FRAMES = [0, 1, 2, 3].map((row) => atlasFrameName('butterfly', row, 0));
 
+export type IslandGuidanceTarget = 'bottle' | 'cabin' | null;
+
+/** 저장 스키마를 늘리지 않고 지금 바로 할 수 있는 다음 행동만 고른다. */
+export function guidanceTargetForSave(save: IslandSave): IslandGuidanceTarget {
+  if (!save.bottlesOpened.includes(SEURAT_BOTTLE_ID)) return 'bottle';
+  if (save.pieces > 0) return 'cabin';
+  return null;
+}
+
 export interface IslandPropsOptions {
   reducedMotion: boolean;
+  guidanceTarget: IslandGuidanceTarget;
+  getGuidanceOrigin: () => { x: number; y: number } | null;
   onBottleTap: (bottleId: string) => void;
   onCellTap: (gx: number, gy: number) => void;
 }
@@ -118,12 +143,19 @@ export class IslandProps {
   private pendingPlaced: PlacedItem[] = [];
   private pendingLevel = 0;
   private pendingCelebration = false;
+  private guidanceTarget: IslandGuidanceTarget;
+  private guidancePath?: Phaser.GameObjects.Container;
+  private guidanceBeacon?: Phaser.GameObjects.Container;
+  private guidanceIdleTimer?: Phaser.Time.TimerEvent;
+  private guidancePulseShown = false;
+  private guidanceOrigin?: { x: number; y: number };
   private mode: 'explore' | 'decorate' = 'explore';
   private built = false;
 
   constructor(scene: Phaser.Scene, opts: IslandPropsOptions) {
     this.scene = scene;
     this.opts = opts;
+    this.guidanceTarget = opts.guidanceTarget;
   }
 
   create(initialPlaced: PlacedItem[], initialLevel: number): void {
@@ -154,6 +186,8 @@ export class IslandProps {
     this.renderPlaced(this.pendingPlaced);
     this.drawBottle();
     this.drawButterflies();
+    this.drawGuidance();
+    this.scene.input.on('pointerdown', this.noteGuidanceActivity, this);
     this.setMode(this.mode);
     this.setLighthouse(this.pendingLevel);
     if (this.pendingCelebration) {
@@ -299,6 +333,183 @@ export class IslandProps {
     this.scene.add.image(x, y, PROP_ATLAS, BOTTLE_FRAME).setOrigin(0.5, 0.8).setDepth(y);
     const hit = this.scene.add.zone(x, y - 4, 24, 24).setDepth(y + 2).setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => this.opts.onBottleTap(SEURAT_BOTTLE_ID));
+  }
+
+  private guidanceDestination(): { x: number; y: number } | null {
+    if (this.guidanceTarget === 'bottle') {
+      return { x: BOTTLE.col * TILE, y: BOTTLE.row * TILE - TILE * 0.35 };
+    }
+    if (this.guidanceTarget === 'cabin') {
+      return {
+        x: (GRID_ORIGIN.col + GRID_COLS / 2) * TILE,
+        y: (GRID_ORIGIN.row + GRID_ROWS / 2) * TILE,
+      };
+    }
+    return null;
+  }
+
+  private clearGuidancePath(): void {
+    if (!this.guidancePath) return;
+    this.scene.tweens.killTweensOf([this.guidancePath, ...this.guidancePath.getAll()]);
+    this.guidancePath.destroy(true);
+    this.guidancePath = undefined;
+  }
+
+  private clearGuidance(): void {
+    this.guidanceIdleTimer?.remove(false);
+    this.guidanceIdleTimer = undefined;
+    this.clearGuidancePath();
+    if (this.guidanceBeacon) {
+      this.scene.tweens.killTweensOf([this.guidanceBeacon, ...this.guidanceBeacon.getAll()]);
+      this.guidanceBeacon.destroy(true);
+      this.guidanceBeacon = undefined;
+    }
+    this.guidanceOrigin = undefined;
+  }
+
+  private makeFootprint(x: number, y: number, angle: number, index: number): Phaser.GameObjects.Graphics {
+    const footprint = this.scene.add.graphics({ x, y });
+    footprint.fillStyle(index % 2 === 0 ? GUIDANCE_GOLD : GUIDANCE_CREAM, 0.88);
+    footprint.fillEllipse(-TILE * 0.12, 0, TILE * 0.2, TILE * 0.32);
+    footprint.fillCircle(TILE * 0.04, -TILE * 0.14, TILE * 0.07);
+    footprint.setRotation(angle + (index % 2 === 0 ? -0.08 : 0.08));
+    return footprint;
+  }
+
+  private rebuildGuidancePath(origin: { x: number; y: number }, destination: { x: number; y: number }): void {
+    this.clearGuidancePath();
+    this.guidanceOrigin = origin;
+
+    const dx = destination.x - origin.x;
+    const dy = destination.y - origin.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance < TILE) return;
+
+    const angle = Math.atan2(dy, dx);
+    const visibleDistance = Math.min(distance - TILE * 0.45, GUIDANCE_MAX_DISTANCE);
+    const stepCount = Math.max(2, Math.floor(visibleDistance / GUIDANCE_STEP_GAP));
+    const children: Phaser.GameObjects.GameObject[] = [];
+
+    for (let index = 0; index < stepCount; index += 1) {
+      const along = Math.min(visibleDistance, TILE * 0.9 + index * GUIDANCE_STEP_GAP);
+      const side = (index % 2 === 0 ? -1 : 1) * TILE * 0.13;
+      const x = origin.x + Math.cos(angle) * along - Math.sin(angle) * side;
+      const y = origin.y + Math.sin(angle) * along + Math.cos(angle) * side;
+      const footprint = this.makeFootprint(x, y, angle, index);
+      children.push(footprint);
+
+      if (!this.opts.reducedMotion) {
+        footprint.setAlpha(0.45);
+        this.scene.tweens.add({
+          targets: footprint,
+          alpha: 1,
+          duration: 620,
+          delay: index * 150,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.inOut',
+        });
+      }
+    }
+
+    const arrowDistance = Math.min(distance - TILE * 0.25, visibleDistance + TILE * 0.5);
+    const arrowX = origin.x + Math.cos(angle) * arrowDistance;
+    const arrowY = origin.y + Math.sin(angle) * arrowDistance;
+    const arrow = this.scene.add.graphics({ x: arrowX, y: arrowY });
+    arrow.fillStyle(GUIDANCE_GOLD, 0.96);
+    arrow.lineStyle(TILE * 0.08, GUIDANCE_EDGE, 0.9);
+    arrow.fillTriangle(TILE * 0.48, 0, -TILE * 0.36, -TILE * 0.34, -TILE * 0.36, TILE * 0.34);
+    arrow.strokeTriangle(TILE * 0.48, 0, -TILE * 0.36, -TILE * 0.34, -TILE * 0.36, TILE * 0.34);
+    arrow.setRotation(angle);
+    children.push(arrow);
+
+    const path = this.scene.add.container(0, 0, children).setDepth(origin.y - 1);
+    this.guidancePath = path;
+    if (!this.opts.reducedMotion) {
+      this.scene.tweens.add({
+        targets: arrow,
+        x: arrowX + Math.cos(angle) * TILE * 0.28,
+        y: arrowY + Math.sin(angle) * TILE * 0.28,
+        duration: 540,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut',
+      });
+    }
+  }
+
+  private drawGuidance(): void {
+    this.clearGuidance();
+    const destination = this.guidanceDestination();
+    const origin = this.opts.getGuidanceOrigin();
+    if (!destination || !origin) return;
+
+    const ring = this.scene.add.graphics();
+    ring.lineStyle(TILE * 0.14, GUIDANCE_GOLD, 0.9);
+    ring.strokeCircle(0, 0, TILE * 0.9);
+    ring.lineStyle(TILE * 0.07, GUIDANCE_CREAM, 0.82);
+    ring.strokeCircle(0, 0, TILE * 1.18);
+    const sparkle = this.scene.add.image(0, -TILE * 1.25, PROP_ATLAS, SPARKLE_FRAME);
+    this.guidanceBeacon = this.scene.add
+      .container(destination.x, destination.y, [ring, sparkle])
+      .setDepth(destination.y + 2);
+
+    if (!this.opts.reducedMotion) {
+      this.scene.tweens.add({
+        targets: sparkle,
+        alpha: { from: 0.35, to: 1 },
+        angle: { from: -12, to: 12 },
+        duration: 760,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.inOut',
+      });
+    }
+
+    this.rebuildGuidancePath(origin, destination);
+    this.scheduleGuidancePulse();
+  }
+
+  private scheduleGuidancePulse(): void {
+    this.guidanceIdleTimer?.remove(false);
+    this.guidanceIdleTimer = undefined;
+    if (this.opts.reducedMotion || this.guidancePulseShown || !this.guidanceBeacon) return;
+    this.guidanceIdleTimer = this.scene.time.delayedCall(GUIDANCE_IDLE_DELAY_MS, () => {
+      this.guidancePulseShown = true;
+      const targets = [this.guidanceBeacon, this.guidancePath].filter(
+        (target): target is Phaser.GameObjects.Container => Boolean(target?.active),
+      );
+      this.scene.tweens.add({
+        targets,
+        scale: 1.22,
+        alpha: 1,
+        duration: 360,
+        yoyo: true,
+        ease: 'Sine.inOut',
+      });
+    });
+  }
+
+  private noteGuidanceActivity(): void {
+    if (!this.guidanceTarget || this.guidancePulseShown) return;
+    this.scheduleGuidancePulse();
+  }
+
+  updateGuidanceOrigin(x: number, y: number): void {
+    const destination = this.guidanceDestination();
+    if (!this.built || !destination) return;
+    if (this.guidanceOrigin && Math.hypot(x - this.guidanceOrigin.x, y - this.guidanceOrigin.y) < GUIDANCE_REBUILD_DISTANCE) {
+      return;
+    }
+    this.rebuildGuidancePath({ x, y }, destination);
+    this.scheduleGuidancePulse();
+  }
+
+  setGuidanceTarget(target: IslandGuidanceTarget): void {
+    if (target === this.guidanceTarget) return;
+    this.guidanceTarget = target;
+    this.guidancePulseShown = false;
+    if (this.built) this.drawGuidance();
   }
 
   setMode(mode: 'explore' | 'decorate'): void {
