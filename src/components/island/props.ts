@@ -22,6 +22,10 @@ const GUIDANCE_IDLE_DELAY_MS = 7_000;
 const GUIDANCE_STEP_GAP = TILE * 1.35;
 const GUIDANCE_MAX_DISTANCE = TILE * 7;
 const GUIDANCE_REBUILD_DISTANCE = TILE * 1.5;
+const REWARD_BURST_SPARKS = 8;
+const REWARD_BURST_DURATION_MS = 620;
+const PLACED_POP_DURATION_MS = 460;
+const HUD_COUNTER_DURATION_MS = 520;
 
 const LIGHTHOUSE = { col: 36, row: 23 } as const;
 const CABIN = { col: 26, row: 37 } as const;
@@ -140,6 +144,8 @@ export class IslandProps {
   private gridOutline?: Phaser.GameObjects.Container;
   private gridZone?: Phaser.GameObjects.Zone;
   private placedItems: Phaser.GameObjects.Container[] = [];
+  private placedItemKeys = new Set<string>();
+  private hasRenderedPlaced = false;
   private pendingPlaced: PlacedItem[] = [];
   private pendingLevel = 0;
   private pendingCelebration = false;
@@ -330,9 +336,65 @@ export class IslandProps {
         ease: 'Sine.inOut',
       });
     }
-    this.scene.add.image(x, y, PROP_ATLAS, BOTTLE_FRAME).setOrigin(0.5, 0.8).setDepth(y);
+    const bottle = this.scene.add.image(x, y, PROP_ATLAS, BOTTLE_FRAME).setOrigin(0.5, 0.8).setDepth(y);
     const hit = this.scene.add.zone(x, y - 4, 24, 24).setDepth(y + 2).setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', () => this.opts.onBottleTap(SEURAT_BOTTLE_ID));
+    hit.on('pointerdown', () => {
+      if (!this.opts.reducedMotion) {
+        this.scene.tweens.killTweensOf(bottle);
+        this.scene.tweens.add({
+          targets: bottle,
+          scaleX: { from: 0.76, to: 1 },
+          scaleY: { from: 0.76, to: 1 },
+          angle: { from: -8, to: 0 },
+          duration: PLACED_POP_DURATION_MS,
+          ease: 'Back.out',
+        });
+        this.burstSparkles(x, y - TILE * 0.45, TILE * 2.2, y + 3);
+      }
+      this.opts.onBottleTap(SEURAT_BOTTLE_ID);
+    });
+  }
+
+  private burstSparkles(x: number, y: number, radius: number, depth: number): void {
+    if (this.opts.reducedMotion) return;
+    for (let index = 0; index < REWARD_BURST_SPARKS; index += 1) {
+      const angle = (index / REWARD_BURST_SPARKS) * Math.PI * 2;
+      const spark = this.scene.add
+        .image(x, y, PROP_ATLAS, SPARKLE_FRAME)
+        .setDepth(depth)
+        .setScale(0.65);
+      this.scene.tweens.add({
+        targets: spark,
+        x: x + Math.cos(angle) * radius,
+        y: y + Math.sin(angle) * radius,
+        scale: { from: 0.65, to: 1.15 },
+        alpha: { from: 1, to: 0 },
+        duration: REWARD_BURST_DURATION_MS,
+        ease: 'Cubic.out',
+        onComplete: () => spark.destroy(),
+      });
+    }
+  }
+
+  private animateHudCounter(direction: 'increase' | 'decrease'): void {
+    if (this.opts.reducedMotion) return;
+    const counter = this.scene.game.canvas.closest('.dot-shell')?.querySelector<HTMLElement>('.dot-counter');
+    if (!counter) return;
+    counter.getAnimations().forEach((animation) => animation.cancel());
+    const middle = direction === 'increase'
+      ? { transform: 'translateY(-12%) scale(1.24)' }
+      : { transform: 'translateY(10%) scale(0.82)' };
+    counter.animate(
+      [
+        { transform: 'translateY(0) scale(1)' },
+        middle,
+        { transform: 'translateY(0) scale(1)' },
+      ],
+      {
+        duration: HUD_COUNTER_DURATION_MS,
+        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      },
+    );
   }
 
   private guidanceDestination(): { x: number; y: number } | null {
@@ -522,13 +584,17 @@ export class IslandProps {
   renderPlaced(items: PlacedItem[]): void {
     this.pendingPlaced = items;
     if (!this.built) return;
+    const nextKeys = new Set(items.map(({ item, x, y }) => `${item}:${x}:${y}`));
+    const newKeys = this.hasRenderedPlaced
+      ? new Set([...nextKeys].filter((key) => !this.placedItemKeys.has(key)))
+      : new Set<string>();
     this.placedItems.forEach((item) => item.destroy());
     this.placedItems = items.map(({ item, x: gx, y: gy }) => {
       const { x, y } = cellToWorld(gx, gy);
       const furniture = FURNITURE.find(({ id }) => id === item);
       if (!furniture) return this.scene.add.container(x, y + 5);
       const { stamp } = furniture;
-      return addFrameGrid(
+      const placed = addFrameGrid(
         this.scene,
         x,
         y + 5,
@@ -538,7 +604,27 @@ export class IslandProps {
         stamp.rows,
         stamp.columns,
       );
+      if (newKeys.has(`${item}:${gx}:${gy}`) && !this.opts.reducedMotion) {
+        placed.setScale(0.52).setAlpha(0.35);
+        this.scene.tweens.add({
+          targets: placed,
+          scale: 1,
+          alpha: 1,
+          duration: PLACED_POP_DURATION_MS,
+          ease: 'Back.out',
+        });
+        this.burstSparkles(
+          x,
+          y - (stamp.rows * TILE) / 2,
+          Math.max(stamp.rows, stamp.columns) * TILE * 0.72,
+          y + 6,
+        );
+      }
+      return placed;
     });
+    this.placedItemKeys = nextKeys;
+    this.hasRenderedPlaced = true;
+    if (newKeys.size > 0) this.animateHudCounter('decrease');
   }
 
   setLighthouse(level: number): void {
@@ -569,6 +655,7 @@ export class IslandProps {
     }
     this.setLighthouse(1);
     if (this.opts.reducedMotion) return;
+    this.scene.time.delayedCall(0, () => this.animateHudCounter('increase'));
     const flash = this.scene.add
       .rectangle(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, WORLD_WIDTH, WORLD_HEIGHT, CELEBRATION_FLASH, 0)
       .setDepth(WORLD_HEIGHT + 20);
