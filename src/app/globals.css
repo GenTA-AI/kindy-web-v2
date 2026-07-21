@@ -389,6 +389,11 @@ summary:focus-visible {
   background: var(--color-cream);
 }
 
+.dot-dialog-title:focus {
+  outline: calc(var(--spacing) * 0.75) solid var(--color-sages);
+  outline-offset: calc(var(--spacing) * 0.75);
+}
+
 .dot-portrait {
   width: calc(var(--spacing) * 20);
   height: calc(var(--spacing) * 20);

@@ -209,8 +209,8 @@ export default function IslandClient() {
   const reducedMotionRef = useRef(false);
   const dialogRef = useRef<HTMLElement>(null);
   const avatarDialogRef = useRef<HTMLElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const avatarCloseButtonRef = useRef<HTMLButtonElement>(null);
+  const npcTitleRef = useRef<HTMLHeadingElement>(null);
+  const avatarTitleRef = useRef<HTMLHeadingElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
   const transitioningRef = useRef(false);
@@ -439,7 +439,7 @@ export default function IslandClient() {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
-    closeButtonRef.current?.focus();
+    npcTitleRef.current?.focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -477,7 +477,7 @@ export default function IslandClient() {
     const dialog = avatarDialogRef.current;
     if (!dialog) return;
 
-    avatarCloseButtonRef.current?.focus();
+    avatarTitleRef.current?.focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -732,7 +732,7 @@ export default function IslandClient() {
                       <span key={index} data-lit={index < lightLevel} />
                     ))}
                   </div>
-                  <p className="mt-1 text-xs font-black" aria-live="polite">
+                  <p className="mt-1 text-xs font-black">
                     {save ? `${lightLevel}단계` : '불러오는 중'}
                   </p>
                 </div>
@@ -740,7 +740,7 @@ export default function IslandClient() {
 
               <div className="dot-counter shrink-0 text-center" aria-label={`이야기 조각 ${pieces}개`}>
                 <span className="dot-label block">조각</span>
-                <strong className="block text-xl leading-none" aria-live="polite">
+                <strong className="block text-xl leading-none">
                   {save ? pieces : '—'}
                 </strong>
               </div>
@@ -784,7 +784,7 @@ export default function IslandClient() {
 
         {banner && (
           <div className="dot-banner-layer pointer-events-none absolute inset-x-0 z-30 flex justify-center px-6">
-            <p className="dot-panel dot-toast px-4 py-3 text-center text-sm font-black" role="status" aria-live="polite">
+            <p className="dot-panel dot-toast px-4 py-3 text-center text-sm font-black" role="status">
               {banner}
             </p>
           </div>
@@ -810,9 +810,6 @@ export default function IslandClient() {
               <div
                 id="decorate-help"
                 className="dot-toolbar-guide mb-3"
-                role="status"
-                aria-label={toolbarMessage}
-                aria-live="polite"
               >
                 <ToolbarGuideIcon state={toolbarState} />
                 <span className="sr-only">{toolbarMessage}</span>
@@ -852,7 +849,6 @@ export default function IslandClient() {
             className="dot-panel dot-dialog relative w-full max-w-md p-5 outline-none"
           >
             <button
-              ref={closeButtonRef}
               type="button"
               onClick={closeNpc}
               aria-label="편지 닫기"
@@ -867,7 +863,12 @@ export default function IslandClient() {
               </figure>
               <div className="min-w-0 pt-1">
                 <p className="dot-label">그림 섬 · 쇠라의 강가</p>
-                <h2 id="npc-title" className="mt-1 text-xl font-black leading-snug">
+                <h2
+                  ref={npcTitleRef}
+                  id="npc-title"
+                  tabIndex={-1}
+                  className="dot-dialog-title mt-1 text-xl font-black leading-snug"
+                >
                   낚시하는 여인의 편지
                 </h2>
               </div>
@@ -905,7 +906,6 @@ export default function IslandClient() {
             className="dot-panel dot-dialog dot-avatar-dialog relative w-full max-w-md p-5 outline-none"
           >
             <button
-              ref={avatarCloseButtonRef}
               type="button"
               onClick={closeAvatar}
               aria-label="내 캐릭터 꾸미기 닫기"
@@ -920,7 +920,14 @@ export default function IslandClient() {
               </div>
               <div>
                 <p className="dot-label">팩 파츠로 골라요</p>
-                <h2 id="avatar-title" className="mt-1 text-xl font-black">내 캐릭터</h2>
+                <h2
+                  ref={avatarTitleRef}
+                  id="avatar-title"
+                  tabIndex={-1}
+                  className="dot-dialog-title mt-1 text-xl font-black"
+                >
+                  내 캐릭터
+                </h2>
                 <p id="avatar-help" className="mt-1 text-sm font-bold text-ink2">셔츠와 모자를 톡 눌러요.</p>
               </div>
             </div>
@@ -1000,7 +1007,6 @@ export default function IslandClient() {
         <div
           className="dot-transition absolute inset-0 z-50 grid place-items-center px-6 text-center"
           role="status"
-          aria-live="polite"
           aria-label="그림 섬으로 가는 중"
         >
           <div className="dot-transition-content">
