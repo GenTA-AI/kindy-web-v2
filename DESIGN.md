@@ -65,7 +65,7 @@
 |-----|---|------|
 | card | `shadow-sm` (rgba(0,0,0,0.05) 0 1px 2px) | 일반 카드 |
 | elevated | `shadow-md` | 모달, 오버레이 |
-| cta | `shadow-lg shadow-violet-200/60` | 주요 CTA 버튼 |
+| cta | `shadow-cta` (sage 틴트, 토큰 참조) | 주요 CTA 버튼 |
 | modal | `shadow-2xl` | 드로어 모달 top |
 
 ## Spacing
@@ -89,9 +89,9 @@
 
 ### 버튼
 
-**Primary:** `px-6 py-4 bg-violet-500 hover:bg-violet-600 text-white font-bold text-base rounded-2xl shadow-lg shadow-violet-200/60 active:scale-[0.98] transition`
+**Primary:** `px-6 py-4 bg-sage hover:bg-saged text-white font-bold text-base rounded-2xl shadow-cta active:scale-[0.98] transition`
 
-**Secondary:** `px-6 py-3 bg-violet-50 border border-violet-100 text-violet-600 font-bold rounded-xl hover:bg-violet-100`
+**Secondary:** `px-6 py-3 bg-sagebg border border-line text-saged font-bold rounded-xl hover:bg-sages/30`
 
 **Tertiary/link:** `text-sm text-gray-500 hover:text-gray-700 underline underline-offset-2 font-medium`
 
@@ -105,14 +105,14 @@
 
 액센트 카드 (강조):
 ```
-<div class="bg-violet-50 border border-violet-100 rounded-2xl p-4">
+<div class="bg-sagebg border border-line rounded-2xl p-4">
   ...
 </div>
 ```
 
 ### 취향 프로파일 바
 
-`h-[7px] bg-violet-50 rounded-full overflow-hidden`
+`h-[7px] bg-sagebg rounded-full overflow-hidden`
 내부: `h-full rounded-full` + `background: linear-gradient(90deg, #79A271 0%, #335A2E 100%)` (상위) 또는 `linear-gradient(90deg, #C2D5B9 0%, #79A271 100%)` (중간) 또는 `#d1d5db` (하위). R3 세이지.
 
 ## 접근성 기준
@@ -120,16 +120,16 @@
 - **최소 폰트:** 본문 14px, 한글 고려
 - **터치 타겟:** 44px × 44px minimum (py-3 이상 버튼)
 - **명도 대비:**
-  - gray-900 on white: 16.1 (AAA)
-  - violet-500 text on white: 4.7 (AA)
-  - gray-400 on white: 2.8 ❌ AA fail — meta 텍스트 전용, 핵심 정보 금지
-  - white on violet-500: 4.6 (AA)
-- **포커스 링:** `focus-within:ring-2 focus-within:ring-violet-300 focus-within:ring-offset-2`
+  - ink `#231F18` on cream/white: 13+ (AAA)
+  - sage `#46763F` text on white: ~5.2 (AA)
+  - ink3 `#8A8070` on white: ~3.0 — meta 텍스트 전용, 핵심 정보 금지
+  - white on sage `#46763F`: ~4.9 (AA)
+- **포커스 링:** `focus-within:ring-2 focus-within:ring-sages focus-within:ring-offset-2`
 - **키보드 탐색:** 모든 interactive 요소에 tab order
 
 ## AI Slop 회피 룰
 
-1. 퍼플 그라디언트는 헤더 1개에만. 배경에 범람 금지.
+1. 퍼플은 mystery 무드 액센트일 때만. 전역 배경/그라디언트 금지(베이스는 크림+세이지).
 2. 아이콘 in colored circles 반복 배치 금지 (SaaS 템플릿 티).
 3. 중앙 정렬은 감정 헤드라인/hero/CTA에만. 목록/데이터는 left align.
 4. 3-column symmetric feature grid 금지 (→ 1개 큰 스토리 카드 + FAQ).
@@ -164,6 +164,22 @@
   --ease-swift: cubic-bezier(0.16, 1, 0.3, 1);
 }
 ```
+
+## 부모 대시보드 — 차분한 도구 (2026-07-21 확정)
+
+부모(30대 아이폰 유저)와 아이는 다른 사용자다. **아이 화면은 따뜻·놀이(크림·모리), 부모 대시보드는 애플 건강/저널 레인의 조용한 도구**로 표면을 분리한다. 감성 목표("이게 우리 아이예요")는 busy한 대시보드가 아니라 **잘 짜인 인사이트 하나**로 전달.
+
+**색 재조율(핵심)**: 부모 화면은 크림이 배경을 뒤덮지 않는다. **웜 화이트를 배경으로(page `#FBFAF6`, surface 흰색), 세이지는 희소한 액센트**(활성·CTA·'집에서 한마디' 틴트)로만. 크림은 썸네일·틴트 등 드물게. 에러는 소프트 코랄 유지.
+**모리**: 부모 화면에서 히어로가 아니라 **하단 구석의 작은 존재**(≈22px, 저채도). 아이 화면에선 계속 히어로.
+**히어로 = 주간 편지**: 감정 문장 하나("이번 주, 서연이는 더 오래 바라봤어요")가 상단, 숫자는 그 아래 잔잔한 신호(애플 건강식: 라벨 + 스파크라인 + 조용한 델타, tabular-nums). 데이터 좌측 정렬, 중앙은 히어로 문장만.
+**여백**: spacious — 섹션 간 32–40px. **표면 언어 금지**: AI·진단·평가·점수·내부 C코드 노출 0(부모 라벨만: 관찰=자세히 보기, 표현=떠올려 말하기).
+**타이포**: Pretendard 유지(한글), 위계만 애플 건강처럼 크게. 정본 목업 = `scratchpad/parent-dashboard-mockup.html` (아티팩트).
+
+## 결정 로그
+| 날짜 | 결정 | 근거 |
+|------|------|------|
+| 2026-07-21 | 부모 대시보드 = 차분한 도구(애플 건강 레인), 아이 화면과 표면 분리 | /design-consultation. 대표 확정. 크림 후퇴·세이지 희소 액센트·모리 축소·주간편지 히어로 |
+| 2026-07-21 | 컴포넌트 예시 violet→sage 이관 완료 | R3 크림+세이지 토큰과 컴포넌트 예시 불일치(반쯤 이관) 정정 |
 
 ## 참조
 
