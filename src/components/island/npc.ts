@@ -16,6 +16,9 @@ const AVATAR_PARTS_JSON_URL = '/island/tiles/avatar-parts.json';
 const UI_ATLAS = 'island-ui-pack';
 const UI_IMAGE_URL = '/island/tiles/ui.png';
 const UI_JSON_URL = '/island/tiles/ui.json';
+const NPC_PROP_ATLAS = 'island-props-npc';
+const NPC_PROP_IMAGE_URL = '/island/tiles/props.png';
+const NPC_PROP_JSON_URL = '/island/tiles/props.json';
 
 const PACK_TILE = 16;
 const AVATAR_FRAME_SIZE = 64;
@@ -23,9 +26,23 @@ const FISHER_FRAME_SIZE = 64;
 const FISHER_POSITION = { col: 35, row: 62 } as const;
 const FISHER_APPROACH_RADIUS = PACK_TILE * 4;
 const CHILD_TAP_TARGET = 60;
+const FISHER_BOB_DISTANCE = 1;
+const FISHER_BOB_DURATION = 1_600;
+const FISHER_ROD_OFFSET_X = PACK_TILE * 0.375;
+const FISHER_FEET_OFFSET_Y = -PACK_TILE * 0.25;
+const FISHER_IDLE_ANIMATION = 'island-fisher-idle-npc';
 const FISHER_FRAMES = [
   atlasFrameName('fisherwoman', 0, 0),
   atlasFrameName('fisherwoman', 0, 1),
+] as const;
+const FISHER_ROD_FRAMES = [
+  atlasFrameName('outdoor-decor', 10, 8),
+  atlasFrameName('outdoor-decor', 11, 8),
+  atlasFrameName('outdoor-decor', 12, 8),
+] as const;
+const FISHER_ROCK_FRAMES = [
+  [atlasFrameName('outdoor-decor', 11, 6), atlasFrameName('outdoor-decor', 11, 7)],
+  [atlasFrameName('outdoor-decor', 12, 6), atlasFrameName('outdoor-decor', 12, 7)],
 ] as const;
 const SPEECH_FRAME = atlasFrameName('ui-icons', 1, 0);
 
@@ -77,6 +94,7 @@ export function preloadCharacters(scene: Phaser.Scene): void {
   scene.load.atlas(CHARACTER_ATLAS, CHARACTER_IMAGE_URL, CHARACTER_JSON_URL);
   scene.load.atlas(AVATAR_PARTS_ATLAS, AVATAR_PARTS_IMAGE_URL, AVATAR_PARTS_JSON_URL);
   scene.load.atlas(UI_ATLAS, UI_IMAGE_URL, UI_JSON_URL);
+  scene.load.atlas(NPC_PROP_ATLAS, NPC_PROP_IMAGE_URL, NPC_PROP_JSON_URL);
 }
 
 function findAvatar(scene: Phaser.Scene): Phaser.GameObjects.Sprite | undefined {
@@ -86,29 +104,69 @@ function findAvatar(scene: Phaser.Scene): Phaser.GameObjects.Sprite | undefined 
   );
 }
 
+function addFisherRock(scene: Phaser.Scene, x: number, y: number): Phaser.GameObjects.Container {
+  const children = FISHER_ROCK_FRAMES.flatMap((frames, row) =>
+    frames.map((frame, column) =>
+      scene.add
+        .image(-PACK_TILE + column * PACK_TILE, -PACK_TILE * 2 + row * PACK_TILE, NPC_PROP_ATLAS, frame)
+        .setOrigin(0),
+    ),
+  );
+  return scene.add.container(x, y, children).setDepth(y);
+}
+
+function addFisherRig(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+): { fisher: Phaser.GameObjects.Sprite; rig: Phaser.GameObjects.Container } {
+  const rod = FISHER_ROD_FRAMES.map((frame, row) =>
+    scene.add
+      .image(FISHER_ROD_OFFSET_X, -PACK_TILE * 3 + row * PACK_TILE, NPC_PROP_ATLAS, frame)
+      .setOrigin(0),
+  );
+  const fisher = scene.add
+    .sprite(0, FISHER_FEET_OFFSET_Y, CHARACTER_ATLAS, FISHER_FRAMES[0])
+    .setOrigin(0.5, 1);
+  const rig = scene.add.container(x, y, [...rod, fisher]).setDepth(y + 1);
+  return { fisher, rig };
+}
+
 export function renderNpcs(
   scene: Phaser.Scene,
   reducedMotion: boolean,
   onBottleTap: (bottleId: string) => void,
 ): void {
-  if (!scene.textures.exists(CHARACTER_ATLAS) || !scene.textures.exists(UI_ATLAS)) return;
+  if (
+    !scene.textures.exists(CHARACTER_ATLAS) ||
+    !scene.textures.exists(UI_ATLAS) ||
+    !scene.textures.exists(NPC_PROP_ATLAS)
+  ) return;
 
   const x = FISHER_POSITION.col * PACK_TILE;
   const y = FISHER_POSITION.row * PACK_TILE;
-  if (!scene.anims.exists('npc-fisher-idle')) {
+  if (!scene.anims.exists(FISHER_IDLE_ANIMATION)) {
     scene.anims.create({
-      key: 'npc-fisher-idle',
+      key: FISHER_IDLE_ANIMATION,
       frames: FISHER_FRAMES.map((frame) => ({ key: CHARACTER_ATLAS, frame })),
       frameRate: 2,
       repeat: -1,
     });
   }
 
-  const fisher = scene.add
-    .sprite(x, y, CHARACTER_ATLAS, FISHER_FRAMES[0])
-    .setOrigin(0.5, 1)
-    .setDepth(y);
-  if (!reducedMotion) fisher.play('npc-fisher-idle');
+  addFisherRock(scene, x, y);
+  const { fisher, rig } = addFisherRig(scene, x, y);
+  if (!reducedMotion) {
+    fisher.play(FISHER_IDLE_ANIMATION);
+    scene.tweens.add({
+      targets: rig,
+      y: y - FISHER_BOB_DISTANCE,
+      duration: FISHER_BOB_DURATION,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.inOut',
+    });
+  }
 
   const speech = scene.add
     .image(x, y - FISHER_FRAME_SIZE + 8, UI_ATLAS, SPEECH_FRAME)

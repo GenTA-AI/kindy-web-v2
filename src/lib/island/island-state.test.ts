@@ -136,6 +136,18 @@ test('유료 팩 NPC·배·아바타 파츠 매핑의 모든 프레임이 실존
   const avatarFrames = new Set(Object.keys(avatarPartsAtlas.frames));
 
   assert.ok(characterFrames.has('fisherwoman__r000_c000'));
+  assert.ok(characterFrames.has('fisherwoman__r000_c001'));
+  for (const frame of [
+    'outdoor-decor__r010_c008',
+    'outdoor-decor__r011_c008',
+    'outdoor-decor__r012_c008',
+    'outdoor-decor__r011_c006',
+    'outdoor-decor__r011_c007',
+    'outdoor-decor__r012_c006',
+    'outdoor-decor__r012_c007',
+  ]) {
+    assert.ok(propFrames.has(frame), `낚시 여인 소품: ${frame}`);
+  }
   for (let row = 0; row < 3; row += 1) {
     for (let column = 0; column < 3; column += 1) {
       assert.ok(propFrames.has(`boat__r00${row}_c00${column}`));
