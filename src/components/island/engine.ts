@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { PAL } from '@/components/island/pixel-art';
 import type { PlacedItem } from '@/lib/island/island-state';
 import type { AvatarConfig } from '@/lib/world/world-state';
 import {
@@ -10,6 +11,7 @@ import {
   createTerrain,
   findWalkableDestination,
   registerMapTextures,
+  resolveTapFeedback,
   type TerrainLayer,
 } from '@/components/island/map';
 import { IslandProps, registerPropTextures } from '@/components/island/props';
@@ -19,6 +21,16 @@ export const CAMERA_ZOOM = 2;
 
 const CAMERA_LERP = 0.12;
 const WALK_SPEED = 46;
+const FEEDBACK_DEPTH_OFFSET = 1;
+const FEEDBACK_LIFETIME_MS = 680;
+const FEEDBACK_TWEEN_MS = 220;
+const MARKER_RADIUS = TILE * 0.38;
+const MARKER_STROKE = TILE * 0.12;
+const FOOTPRINT_RADIUS = TILE * 0.1;
+
+function paletteNumber(key: keyof typeof PAL): number {
+  return Number.parseInt(PAL[key].slice(1), 16);
+}
 
 export interface IslandEngineOptions {
   /** /world 선택을 유료 팩 셔츠·모자 파츠로 매핑한다. */
@@ -38,6 +50,8 @@ export class IslandScene extends Phaser.Scene {
   private facing: 'down' | 'left' | 'right' | 'up' = 'down';
   private terrain?: TerrainLayer;
   private propsLayer?: IslandProps;
+  private tapFeedback?: Phaser.GameObjects.Container;
+  private tapFeedbackTimer?: Phaser.Time.TimerEvent;
   private seaFrame: 0 | 1 = 0;
   private avatarConfig: AvatarConfig | null;
 
@@ -123,6 +137,71 @@ export class IslandScene extends Phaser.Scene {
     return this.facing === 'up' ? 'av-up-0' : this.facing === 'down' ? 'av-down-0' : 'av-side-0';
   }
 
+  private clearTapFeedback(): void {
+    this.tapFeedbackTimer?.remove(false);
+    this.tapFeedbackTimer = undefined;
+    if (!this.tapFeedback) return;
+    this.tweens.killTweensOf(this.tapFeedback);
+    this.tapFeedback.destroy(true);
+    this.tapFeedback = undefined;
+  }
+
+  private showTapFeedback(
+    kind: 'blocked' | 'destination',
+    point: { x: number; y: number },
+  ): void {
+    this.clearTapFeedback();
+
+    const graphics = this.add.graphics();
+    const color = paletteNumber(kind === 'destination' ? 'Y' : 'q');
+    graphics.lineStyle(MARKER_STROKE, color, 0.95);
+    graphics.strokeCircle(0, 0, MARKER_RADIUS);
+
+    if (kind === 'destination') {
+      graphics.fillStyle(paletteNumber('L'), 0.92);
+      graphics.fillCircle(-MARKER_RADIUS * 0.3, MARKER_RADIUS * 0.08, FOOTPRINT_RADIUS);
+      graphics.fillCircle(MARKER_RADIUS * 0.28, -MARKER_RADIUS * 0.12, FOOTPRINT_RADIUS);
+    } else {
+      graphics.lineStyle(MARKER_STROKE, paletteNumber('W'), 0.78);
+      graphics.beginPath();
+      graphics.arc(0, MARKER_RADIUS * 0.22, MARKER_RADIUS * 0.48, Math.PI, Math.PI * 2);
+      graphics.strokePath();
+    }
+
+    const marker = this.add
+      .container(point.x, point.y, graphics)
+      .setDepth(point.y - FEEDBACK_DEPTH_OFFSET);
+    this.tapFeedback = marker;
+
+    if (this.opts.reducedMotion) {
+      this.tapFeedbackTimer = this.time.delayedCall(FEEDBACK_LIFETIME_MS, () => this.clearTapFeedback());
+      return;
+    }
+
+    marker.setScale(kind === 'destination' ? 0.68 : 0.9);
+    this.tweens.add({
+      targets: marker,
+      scale: kind === 'destination' ? 1.12 : 1,
+      y: kind === 'blocked' ? point.y - TILE * 0.18 : point.y,
+      duration: FEEDBACK_TWEEN_MS,
+      ease: kind === 'destination' ? 'Back.Out' : 'Sine.Out',
+      yoyo: kind === 'blocked',
+      onComplete: () => {
+        if (this.tapFeedback !== marker) return;
+        this.tweens.add({
+          targets: marker,
+          alpha: 0,
+          duration: FEEDBACK_TWEEN_MS,
+          delay: FEEDBACK_TWEEN_MS,
+          ease: 'Sine.In',
+          onComplete: () => {
+            if (this.tapFeedback === marker) this.clearTapFeedback();
+          },
+        });
+      },
+    });
+  }
+
   private moveAvatarTo(targetX: number, targetY: number): void {
     if (!this.avatar) return;
     this.moveTween?.stop();
@@ -131,6 +210,8 @@ export class IslandScene extends Phaser.Scene {
       { x: this.avatar.x, y: this.avatar.y },
       { x: targetX, y: targetY },
     );
+    const feedback = resolveTapFeedback({ x: targetX, y: targetY }, destination);
+    this.showTapFeedback(feedback.kind, feedback.point);
     const dx = destination.x - this.avatar.x;
     const dy = destination.y - this.avatar.y;
     const distance = Math.hypot(dx, dy);

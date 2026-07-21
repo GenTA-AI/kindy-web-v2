@@ -45,11 +45,32 @@ export interface WorldPoint {
   y: number;
 }
 
+export interface TapFeedback {
+  kind: 'blocked' | 'destination';
+  point: WorldPoint;
+}
+
 export function clampWorldPoint(point: WorldPoint): WorldPoint {
   return {
     x: Math.min(WORLD_WIDTH - MAP_TILE_SIZE / 2, Math.max(MAP_TILE_SIZE / 2, point.x)),
     y: Math.min(WORLD_HEIGHT - MAP_TILE_SIZE / 2, Math.max(MAP_TILE_SIZE, point.y)),
   };
+}
+
+function normalizedTapTarget(point: WorldPoint): WorldPoint {
+  return clampWorldPoint({ x: Math.round(point.x), y: Math.round(point.y) });
+}
+
+/**
+ * 이동 계산과 같은 정규화 좌표를 기준으로 탭 피드백의 위치와 종류를 정한다.
+ * 목적지까지 닿지 못한 경우에는 실제 탭 지점을 가리켜 장애물 탭이 무반응처럼 보이지 않게 한다.
+ */
+export function resolveTapFeedback(desired: WorldPoint, destination: WorldPoint): TapFeedback {
+  const target = normalizedTapTarget(desired);
+  const reachedTarget = Math.hypot(destination.x - target.x, destination.y - target.y) <= COLLISION_EDGE_INSET_PX;
+  return reachedTarget
+    ? { kind: 'destination', point: destination }
+    : { kind: 'blocked', point: target };
 }
 
 function nearestWalkableTileCenter(point: WorldPoint, preferred: WorldPoint): WorldPoint {
@@ -115,7 +136,7 @@ function collisionIntervalRatios(from: WorldPoint, target: WorldPoint): number[]
  * 비보행 칸에서 시작한 경우에는 첫 보행 지점까지 검사를 이어가 탈출을 허용한다.
  */
 export function findWalkableDestination(from: WorldPoint, desired: WorldPoint): WorldPoint {
-  const target = clampWorldPoint({ x: Math.round(desired.x), y: Math.round(desired.y) });
+  const target = normalizedTapTarget(desired);
   const dx = target.x - from.x;
   const dy = target.y - from.y;
   const distance = Math.hypot(dx, dy);

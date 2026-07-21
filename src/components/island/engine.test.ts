@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { COLLISION_DATA, MAP_COLS, MAP_ROWS, MAP_TILE_SIZE, isWalkableTile } from './map-data';
-import { findWalkableDestination, isWalkableWorld, type WorldPoint } from './map';
+import {
+  findWalkableDestination,
+  isWalkableWorld,
+  resolveTapFeedback,
+  type WorldPoint,
+} from './map';
 
 interface GridPoint {
   col: number;
@@ -91,6 +96,33 @@ test('장애물을 탭하면 막히기 직전 보행 지점까지 부분 이동�
   assert.equal(isWalkableWorld(destination.x, destination.y), true);
   assert.ok(destination.y > from.y, '울타리 앞까지 전진');
   assert.ok(destination.y < desired.y, '울타리를 통과하지 않음');
+  assert.deepEqual(resolveTapFeedback(desired, destination), {
+    kind: 'blocked',
+    point: desired,
+  });
+});
+
+test('보행 가능한 목적지 탭은 실제 도착점에 도착 피드백을 준다', () => {
+  const from = tileCenter({ col: 29, row: 37 });
+  const desired = tileCenter({ col: 28, row: 37 });
+  const destination = findWalkableDestination(from, desired);
+
+  assert.deepEqual(resolveTapFeedback(desired, destination), {
+    kind: 'destination',
+    point: destination,
+  });
+});
+
+test('물·절벽 탭 피드백은 보행 종료점이 아니라 누른 지점을 가리킨다', () => {
+  const from = tileCenter({ col: 29, row: 37 });
+  const blockedCell = blockedBoundaryCells({ left: 27, right: 31, top: 38, bottom: 42 })[0];
+  assert.ok(blockedCell);
+  const blockedTap = tileCenter(blockedCell);
+  const destination = findWalkableDestination(from, blockedTap);
+  const feedback = resolveTapFeedback(blockedTap, destination);
+
+  assert.equal(isWalkableWorld(feedback.point.x, feedback.point.y), false);
+  assert.deepEqual(feedback, { kind: 'blocked', point: blockedTap });
 });
 
 test('절벽 모서리를 스치는 직선 트윈도 도중에 비보행 칸을 지나지 않는다', () => {
