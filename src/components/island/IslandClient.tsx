@@ -35,6 +35,11 @@ import {
   withPackHat,
   withPackShirt,
 } from '@/components/island/avatar-parts';
+import {
+  ISLAND_AUDIO_MUTED_STORAGE_KEY,
+  createIslandAudio,
+  type IslandAudioController,
+} from '@/components/island/island-audio';
 
 /**
  * 등대섬 클라이언트 (docs/plan/11 I1) — Phaser 씬 + 팩 팔레트 기반 도트 HUD.
@@ -134,6 +139,7 @@ export default function IslandClient() {
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
   const transitioningRef = useRef(false);
+  const audioRef = useRef<IslandAudioController | null>(null);
 
   const [save, setSave] = useState<IslandSave | null>(null);
   const [mode, setMode] = useState<'explore' | 'decorate'>('explore');
@@ -147,6 +153,7 @@ export default function IslandClient() {
   const [banner, setBanner] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [muted, setMuted] = useState(true);
 
   const dismissOnboarding = useCallback(() => {
     if (!showOnboarding) return;
@@ -159,6 +166,7 @@ export default function IslandClient() {
   }, [showOnboarding]);
 
   const openNpc = useCallback(() => {
+    audioRef.current?.play('island-letter-sfx-island-audio');
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setDialogueLength(reducedMotionRef.current ? NPC_DIALOGUE.length : 0);
     setNpcOpen(true);
@@ -198,10 +206,32 @@ export default function IslandClient() {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
     const updatePreference = () => {
       reducedMotionRef.current = query.matches;
+      audioRef.current?.setReducedMotion(query.matches);
     };
     updatePreference();
     query.addEventListener('change', updatePreference);
     return () => query.removeEventListener('change', updatePreference);
+  }, []);
+
+  // 오디오는 island-state와 분리된 사용자 선호만 읽으며, 실제 AudioContext는 첫 제스처까지 만들지 않는다.
+  useEffect(() => {
+    let initialMuted = true;
+    try {
+      initialMuted = window.localStorage.getItem(ISLAND_AUDIO_MUTED_STORAGE_KEY) !== '0';
+    } catch {
+      // 저장소가 막히면 안전한 기본값(음소거)을 유지한다.
+    }
+    const audio = createIslandAudio({ muted: initialMuted, reducedMotion: reducedMotionRef.current });
+    audioRef.current = audio;
+    const preferenceTimer = window.setTimeout(() => setMuted(initialMuted), 0);
+    const onVisibilityChange = () => audio.setPaused(document.hidden);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.clearTimeout(preferenceTimer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      audio.destroy();
+      if (audioRef.current === audio) audioRef.current = null;
+    };
   }, []);
 
   // 별도 키만 읽어 island-state 정규화·스키마와 온보딩 연출을 분리한다.
@@ -262,6 +292,7 @@ export default function IslandClient() {
       onReady: () => {
         if (!celebrate) return;
         handle?.celebrate();
+        audioRef.current?.play('island-lighthouse-sfx-island-audio');
         setMode('decorate');
         setBanner('등대 불빛이 켜졌어요! 이야기 조각 3개가 왔어요.');
         const marked = withCelebrated(readIsland(), SEURAT_LESSON_ID);
@@ -291,6 +322,7 @@ export default function IslandClient() {
       if (mode !== 'decorate' || !selected || !save) return;
       const next = withPlaced(save, selected, gx, gy);
       if (next === save) return; // 조각 0 또는 이미 점유
+      audioRef.current?.play('island-place-sfx-island-audio');
       writeIsland(next);
       setSave(next);
       if (next.pieces === 0) setSelected(null);
@@ -439,6 +471,23 @@ export default function IslandClient() {
     setMode('decorate');
   };
 
+  const handleFirstGesture = () => {
+    dismissOnboarding();
+    audioRef.current?.unlock();
+  };
+
+  const toggleSound = () => {
+    const nextMuted = !muted;
+    audioRef.current?.unlock();
+    audioRef.current?.setMuted(nextMuted);
+    setMuted(nextMuted);
+    try {
+      window.localStorage.setItem(ISLAND_AUDIO_MUTED_STORAGE_KEY, nextMuted ? '1' : '0');
+    } catch {
+      // 저장소가 막혀도 현재 방문의 토글은 그대로 동작한다.
+    }
+  };
+
   const pieces = save?.pieces ?? 0;
   const lightLevel = save ? lighthouseLevel(save) : 0;
   const selectedFurniture = FURNITURE.find((furniture) => furniture.id === selected);
@@ -454,7 +503,7 @@ export default function IslandClient() {
   return (
     <main
       className="dot-shell relative h-[100svh] w-full overflow-hidden bg-sagebg text-ink [word-break:keep-all]"
-      onPointerDownCapture={dismissOnboarding}
+      onPointerDownCapture={handleFirstGesture}
     >
       <style>{`
         .dot-onboarding-hint {
@@ -509,7 +558,12 @@ export default function IslandClient() {
         inert={isBlocked ? true : undefined}
         aria-hidden={isBlocked ? true : undefined}
       >
-        <div ref={containerRef} tabIndex={-1} className="absolute inset-0 outline-none" />
+        <div
+          ref={containerRef}
+          tabIndex={-1}
+          className="absolute inset-0 outline-none"
+          onPointerDown={() => audioRef.current?.play('island-move-sfx-island-audio')}
+        />
 
         <header className="dot-safe-top pointer-events-none absolute inset-x-0 top-0 z-20 mx-auto w-full max-w-md px-3">
           <div className="dot-panel dot-hud pointer-events-auto flex items-center gap-2 p-2">
@@ -559,6 +613,15 @@ export default function IslandClient() {
               {mode === 'decorate' ? '완료' : '꾸미기'}
             </button>
           </div>
+          <button
+            type="button"
+            onClick={toggleSound}
+            aria-label={muted ? '섬 소리 켜기' : '섬 소리 끄기'}
+            aria-pressed={!muted}
+            className="dot-button pointer-events-auto ml-auto mt-3 grid size-30 place-items-center text-4xl font-black"
+          >
+            <span aria-hidden>{muted ? '🔇' : '🔊'}</span>
+          </button>
         </header>
 
         {banner && (

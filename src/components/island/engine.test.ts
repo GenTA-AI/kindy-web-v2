@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { COLLISION_DATA, MAP_COLS, MAP_ROWS, MAP_TILE_SIZE, isWalkableTile } from './map-data';
@@ -10,6 +11,7 @@ import {
 } from './map';
 import { guidanceTargetForSave } from './props';
 import { EMPTY_ISLAND, SEURAT_BOTTLE_ID } from '../../lib/island/island-state';
+import { ISLAND_AUDIO_DEFINITIONS, ISLAND_AUDIO_KEYS } from './island-audio';
 
 interface GridPoint {
   col: number;
@@ -63,6 +65,21 @@ function seededRandom(seed: number): () => number {
     return (state >>> 0) / 0x1_0000_0000;
   };
 }
+
+test('등대섬 오디오 키는 실제 런타임 정의와 라이선스 장부에 모두 존재한다', () => {
+  const license = readFileSync(
+    new URL('../../../public/island/audio/LICENSE.md', import.meta.url),
+    'utf8',
+  );
+  const runtimeKeys = Object.keys(ISLAND_AUDIO_DEFINITIONS).sort();
+
+  assert.deepEqual(runtimeKeys, [...ISLAND_AUDIO_KEYS].sort());
+  assert.equal(new Set(ISLAND_AUDIO_KEYS).size, ISLAND_AUDIO_KEYS.length, '오디오 키 중복 없음');
+  for (const key of ISLAND_AUDIO_KEYS) {
+    assert.match(key, /-island-audio$/, `${key}: 모듈 접미사`);
+    assert.ok(license.includes(`\`${key}\``), `${key}: LICENSE.md 장부`);
+  }
+});
 
 test('저장 상태에서 표류병 → 오두막 격자 순서로 다음 시각 목표를 고른다', () => {
   assert.equal(guidanceTargetForSave(EMPTY_ISLAND), 'bottle');
