@@ -6,3 +6,4 @@ payment-charge-guard:
 env-hardfail:
 rls-verify-matrix: rls-lockdown
 test-wiring: env-hardfail rls-verify-matrix
+deploy-env-lock: env-hardfail route-closure
