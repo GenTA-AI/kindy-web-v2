@@ -26,6 +26,7 @@ high_risk: 1
 - `src/lib/env-guard.ts` NEW — 순수 판정 로직(테스트 가능하게 분리)
 - `src/lib/billing-crypto.ts` isProd가 우회 플래그로 뒤집히지 않게
 - `src/lib/env-guard.test.ts` NEW — 판정 로직 테스트
+- `package.json` test 스크립트가 파일 목록이라 새 테스트 등록에 필요
 
 ## Constraints
 - **코드를 쓰기 전에 `node_modules/next/dist/docs/`에서 `instrumentation` 가이드를 읽어라.**

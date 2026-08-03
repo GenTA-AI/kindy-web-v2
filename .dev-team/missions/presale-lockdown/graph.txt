@@ -5,3 +5,4 @@ rls-lockdown:
 payment-charge-guard:
 env-hardfail:
 rls-verify-matrix: rls-lockdown
+test-wiring: env-hardfail rls-verify-matrix
