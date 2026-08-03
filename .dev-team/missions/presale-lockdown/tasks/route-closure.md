@@ -24,6 +24,7 @@ effort: high
 - `src/app/robots.ts` NEW
 - `src/app/layout.tsx` 루트 메타데이터·OG 기본값
 - `src/lib/launch-surface.ts` NEW 허용 목록과 판정 헬퍼를 여기 한 곳에
+- `src/lib/launch-surface.test.ts` NEW 아래 Deliverables 7의 단위 테스트
 - `src/app/api/kiosk/events/route.ts` 프로덕션 폐쇄
 - `src/app/api/videos/route.ts` 프로덕션 폐쇄
 - `src/app/api/attention-quiz/route.ts` 프로덕션 폐쇄

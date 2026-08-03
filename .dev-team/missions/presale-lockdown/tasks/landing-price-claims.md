@@ -23,6 +23,8 @@ effort: high
 
 ## Scope
 - `src/lib/subscription.ts` 가격 상수 — 유일한 출처로 만든다
+- `src/lib/subscription-pricing.ts` NEW 클라이언트가 안전하게 import할 leaf 모듈
+- `src/lib/subscription-pricing.test.ts` NEW 아래 Deliverables 8의 단위 테스트
 - `src/app/page.tsx` 랜딩 — ?ks 배지·이름 호명·48편
 - `src/app/subscribe/SubscribeClient.tsx` 체크아웃 화면 문구·중복 상수
 - `src/app/subscribe/page.tsx` 메타데이터 가격
