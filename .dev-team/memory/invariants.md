@@ -36,3 +36,19 @@
 19. **에셋 라이선스 게이트**: 아동용 금지 에셋(Enemies/Goblins/무기/Military) 차단은
     build-atlas.mjs 공통 경로 + 거부 테스트로 강제(t10). 신규 팩 추가 시 docs/ASSETS.md
     장부 갱신 + LICENSE.md 산출 확인이 머지 조건.
+
+## presale-lockdown 미션 (2026-08-03) — 머니·RLS 불변 조항
+20. **앱 레이어 강제는 강제가 아니다.** 브라우저는 anon 키로 PostgREST에 직접 갈 수 있다.
+    권한·결제·페이월·체험 한도는 **DB 정책**이 막아야 한다. "API 라우트에서 확인함"은 근거가 아니다.
+21. **머니 판정의 신뢰 원천**: 청구·엔타이틀먼트 결정이 사용자가 쓸 수 있는 테이블 값에 의존하면
+    반려. 신뢰 원천은 프로바이더 응답 또는 service-role 전용 행뿐. (2026-08-03 사고: `purchases.status`를
+    사용자가 'paid'로 UPDATE → 카드 청구 없이 구독 활성화.)
+22. **RLS 정책 신규 추가 시 `to authenticated` DML 금지.** owner-scoped SELECT만.
+    컨벤션 원본 = `0024_hero_world_state.sql`~`0029_hero_metrics.sql`. 기존 마이그레이션 수정 금지,
+    새 번호로만 추가.
+23. **RLS 검증은 인증 세션으로 쓰기를 시도해야 한다.** anon/service-role SELECT 카운트만 세는 검사는
+    2026-08-03에 발견된 결함 4건을 전부 못 잡았다(0029까지 생존). `scripts/verify-rls.ts`의
+    authenticated 쓰기 매트릭스를 지우거나 우회하지 말 것. PostgREST의 2xx/204는 성공 증거가 아니다 —
+    **전후 값 스냅샷으로 불변을 확인**해야 한다.
+24. **프로덕션 우회 플래그 금지**: `KINDY_LOCAL_PREVIEW=1`·`LESSON_GUEST_MODE=1`이 프로덕션에서
+    켜지면 부팅이 실패해야 한다. 특히 전자는 빌링키를 평문 저장시킨다.
