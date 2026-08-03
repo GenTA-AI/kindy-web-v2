@@ -1,0 +1,140 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import {
+  getProductionEnvironmentViolations,
+  isProductionEnvironment,
+} from './env-guard';
+import type { EnvironmentMap } from './env-guard';
+
+const CONFIGURED_SECRET = 'configured-for-test';
+
+function violationNames(environment: EnvironmentMap): string[] {
+  return getProductionEnvironmentViolations(environment).map(
+    (violation) => violation.variable,
+  );
+}
+
+test('프로덕션 판정은 배포 환경을 우선하고 우회 플래그의 영향을 받지 않는다', () => {
+  assert.equal(isProductionEnvironment({ NODE_ENV: 'production' }), true);
+  assert.equal(
+    isProductionEnvironment({
+      NODE_ENV: 'development',
+      VERCEL_ENV: 'production',
+      KINDY_LOCAL_PREVIEW: '1',
+    }),
+    true,
+  );
+  assert.equal(
+    isProductionEnvironment({
+      NODE_ENV: 'production',
+      VERCEL_ENV: 'preview',
+      KINDY_LOCAL_PREVIEW: '1',
+    }),
+    false,
+  );
+});
+
+test('프로덕션에서는 KINDY_LOCAL_PREVIEW=1을 거부한다', () => {
+  assert.deepEqual(
+    violationNames({
+      NODE_ENV: 'production',
+      KINDY_LOCAL_PREVIEW: '1',
+      BILLING_KEY_SECRET: CONFIGURED_SECRET,
+    }),
+    ['KINDY_LOCAL_PREVIEW'],
+  );
+});
+
+test('프로덕션에서는 LESSON_GUEST_MODE=1을 거부한다', () => {
+  assert.deepEqual(
+    violationNames({
+      NODE_ENV: 'production',
+      LESSON_GUEST_MODE: '1',
+      BILLING_KEY_SECRET: CONFIGURED_SECRET,
+    }),
+    ['LESSON_GUEST_MODE'],
+  );
+});
+
+test('프로덕션에서는 BILLING_KEY_SECRET 누락과 빈 값을 모두 거부한다', async (t) => {
+  for (const [name, value] of [
+    ['누락', undefined],
+    ['빈 문자열', ''],
+    ['공백', '   '],
+  ] as const) {
+    await t.test(name, () => {
+      assert.deepEqual(
+        violationNames({ NODE_ENV: 'production', BILLING_KEY_SECRET: value }),
+        ['BILLING_KEY_SECRET'],
+      );
+    });
+  }
+});
+
+test('프로덕션의 모든 위반을 한 번에 반환하고 환경변수 값은 노출하지 않는다', () => {
+  const secretValue = 'must-never-appear-in-a-violation';
+  const violations = getProductionEnvironmentViolations({
+    NODE_ENV: 'development',
+    VERCEL_ENV: 'production',
+    KINDY_LOCAL_PREVIEW: '1',
+    LESSON_GUEST_MODE: '1',
+    BILLING_KEY_SECRET: '',
+    UNRELATED_SECRET: secretValue,
+  });
+
+  assert.deepEqual(
+    violations.map((violation) => violation.variable),
+    ['KINDY_LOCAL_PREVIEW', 'LESSON_GUEST_MODE', 'BILLING_KEY_SECRET'],
+  );
+  assert.equal(JSON.stringify(violations).includes(secretValue), false);
+  for (const violation of violations) {
+    assert.match(violation.reason, /.+/);
+    assert.match(violation.remediation, /.+/);
+  }
+});
+
+test('안전한 프로덕션 설정에는 위반이 없다', () => {
+  assert.deepEqual(
+    getProductionEnvironmentViolations({
+      NODE_ENV: 'production',
+      KINDY_LOCAL_PREVIEW: '0',
+      LESSON_GUEST_MODE: '0',
+      BILLING_KEY_SECRET: CONFIGURED_SECRET,
+    }),
+    [],
+  );
+  assert.deepEqual(
+    getProductionEnvironmentViolations({
+      NODE_ENV: 'production',
+      KINDY_LOCAL_PREVIEW: 'true',
+      LESSON_GUEST_MODE: 'true',
+      BILLING_KEY_SECRET: CONFIGURED_SECRET,
+    }),
+    [],
+  );
+});
+
+test('로컬 개발과 프리뷰에서는 우회 플래그와 미설정 빌링 시크릿을 허용한다', () => {
+  for (const environment of [
+    {
+      NODE_ENV: 'development',
+      KINDY_LOCAL_PREVIEW: '1',
+      LESSON_GUEST_MODE: '1',
+    },
+    {
+      NODE_ENV: 'production',
+      VERCEL_ENV: 'preview',
+      KINDY_LOCAL_PREVIEW: '1',
+      LESSON_GUEST_MODE: '1',
+    },
+    {
+      NODE_ENV: 'production',
+      VERCEL_ENV: 'development',
+      KINDY_LOCAL_PREVIEW: '1',
+      LESSON_GUEST_MODE: '1',
+    },
+  ]) {
+    assert.deepEqual(getProductionEnvironmentViolations(environment), []);
+  }
+});

@@ -14,13 +14,14 @@
  *   프로덕션에서 secret 없이 실 빌링키를 저장하려 하면 throw (auth hard-fail 과 동일 철학).
  */
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
+import { isProductionEnvironment } from './env-guard';
 
 const ALGO = 'aes-256-gcm';
 const ENC_PREFIX = 'enc:v1:';
 const PLAIN_PREFIX = 'plain:';
 
 function isProd(): boolean {
-  return process.env.NODE_ENV === 'production' && process.env.KINDY_LOCAL_PREVIEW !== '1';
+  return isProductionEnvironment(process.env);
 }
 
 /** BILLING_KEY_SECRET → 32바이트 키. base64/hex 32바이트면 그대로, 아니면 scrypt 파생. */
