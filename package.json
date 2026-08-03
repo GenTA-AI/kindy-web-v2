@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:golden": "tsx --test src/lib/hero/world-state.golden.test.ts src/lib/hero/session-config.golden.test.ts src/lib/hero/cp-variants.golden.test.ts",
-    "test": "tsx --test src/components/island/engine.test.ts src/lib/c6/evidence.test.ts src/lib/c6/recommendation.test.ts src/lib/hero/no-camera.test.ts src/lib/world/world-state.test.ts src/lib/island/island-state.test.ts && npm run test:golden",
+    "test": "tsx --test src/components/island/engine.test.ts src/lib/c6/evidence.test.ts src/lib/c6/recommendation.test.ts src/lib/hero/no-camera.test.ts src/lib/world/world-state.test.ts src/lib/island/island-state.test.ts src/lib/payment-charge-guard.test.ts && npm run test:golden",
     "smoke:director": "tsx --env-file=.env.local scripts/smoke-director.ts",
     "smoke:refs": "tsx --env-file=.env.local scripts/smoke-refs.ts",
     "smoke:s01": "tsx --env-file=.env.local scripts/smoke-s01.ts",

@@ -7,8 +7,11 @@ import {
   getBillingKeyInfo,
   chargeBillingKey,
   cardSummaryOf,
-  mapPortOneStatusToPurchaseStatus,
+  billingKeyBelongsToCustomer,
+  resolveFirstPayment,
   PortOneApiError,
+  PortOnePaymentLookupError,
+  PortOnePaymentVerificationError,
 } from '@/lib/portone';
 import {
   SUBSCRIPTION_ORDER_NAME,
@@ -95,8 +98,8 @@ export async function POST(request: NextRequest) {
     }
     throw error;
   }
-  if (issued.customer?.id && issued.customer.id !== parentId) {
-    // 다른 사용자의 빌링키를 가로채지 못하도록 차단.
+  if (!billingKeyBelongsToCustomer(issued, parentId)) {
+    // customer.id 누락도 소유권을 증명하지 못하므로 fail-closed 한다.
     return NextResponse.json({ error: '카드 등록 정보가 로그인 사용자와 일치하지 않아요.' }, { status: 403 });
   }
 
@@ -157,66 +160,111 @@ export async function POST(request: NextRequest) {
     .eq('order_id', orderId)
     .maybeSingle();
 
-  let alreadyPaid = existingPurchase?.status === 'paid';
   if (existingPurchase && ['refunded', 'canceled'].includes(existingPurchase.status)) {
     orderId = `${orderId}_${randomUUID().slice(0, 8)}`;
-    alreadyPaid = false;
   }
 
   let payment: Awaited<ReturnType<typeof chargeBillingKey>> | null = null;
-  if (!alreadyPaid) {
-    const { error: insertError } = await supabase.from('purchases').insert({
-      parent_id: parentId,
-      bundle_type: 'subscription',
-      credits_added: 0,
-      amount_krw: SUBSCRIPTION_PRICE_KRW,
-      payment_provider: 'portone',
-      order_id: orderId,
-      status: 'pending',
-    });
+  let alreadyPaid = false;
+  let purchaseInsertError: string | null = null;
+  try {
+    const resolved = await resolveFirstPayment({
+      purchaseStatus: existingPurchase?.status,
+      orderId,
+      expectedAmount: SUBSCRIPTION_PRICE_KRW,
+      expectedCurrency: 'KRW',
+      beforeCharge: async () => {
+        const { error: insertError } = await supabase.from('purchases').insert({
+          parent_id: parentId,
+          bundle_type: 'subscription',
+          credits_added: 0,
+          amount_krw: SUBSCRIPTION_PRICE_KRW,
+          payment_provider: 'portone',
+          order_id: orderId,
+          status: 'pending',
+        });
 
-    if (insertError && !/duplicate|unique/i.test(insertError.message)) {
+        if (insertError && !/duplicate|unique/i.test(insertError.message)) {
+          purchaseInsertError = insertError.message;
+          throw new Error('purchase insert failed');
+        }
+      },
+      chargePayment: () =>
+        chargeBillingKey({
+          billingKey,
+          customerKey: parentId,
+          amount: SUBSCRIPTION_PRICE_KRW,
+          orderId,
+          orderName: SUBSCRIPTION_ORDER_NAME,
+        }),
+    });
+    alreadyPaid = resolved.alreadyPaid;
+    payment = resolved.payment;
+  } catch (error) {
+    if (purchaseInsertError) {
       return NextResponse.json(
-        { error: `결제 기록 생성에 실패했어요: ${insertError.message}` },
+        { error: `결제 기록 생성에 실패했어요: ${purchaseInsertError}` },
         { status: 500 },
       );
     }
 
-    try {
-      payment = await chargeBillingKey({
-        billingKey,
-        customerKey: parentId,
-        amount: SUBSCRIPTION_PRICE_KRW,
-        orderId,
-        orderName: SUBSCRIPTION_ORDER_NAME,
-      });
-    } catch (error) {
-      const reason = error instanceof PortOneApiError ? error.message : '결제 승인 중 오류';
-      await supabase
-        .from('purchases')
-        .update({ status: 'failed', failed_reason: reason })
-        .eq('order_id', orderId);
-
-      if (error instanceof PortOneApiError) {
-        return NextResponse.json(
-          { error: `첫 결제에 실패했어요: ${error.message}`, code: error.code },
-          { status: 402 },
-        );
-      }
-      throw error;
-    }
-
-    if (mapPortOneStatusToPurchaseStatus(payment.status) !== 'paid') {
-      await supabase
-        .from('purchases')
-        .update({ status: 'failed', failed_reason: `unexpected status ${payment.status}`, raw_response: payment })
-        .eq('order_id', orderId);
+    if (error instanceof PortOnePaymentLookupError) {
       return NextResponse.json(
-        { error: `결제가 완료되지 않았어요 (status: ${payment.status}).` },
-        { status: 402 },
+        {
+          error: '기존 결제 확인에 실패해 구독을 활성화하지 않았어요. 잠시 후 다시 시도해 주세요.',
+          code: 'payment_verification_failed',
+        },
+        { status: 502 },
       );
     }
 
+    if (error instanceof PortOnePaymentVerificationError) {
+      const mismatch = error.reason === 'payment_mismatch';
+      const { error: failureRecordError } = await supabase
+        .from('purchases')
+        .update({
+          status: 'failed',
+          failed_reason: mismatch
+            ? 'payment amount or currency mismatch'
+            : 'provider payment is not paid',
+        })
+        .eq('order_id', orderId);
+      if (failureRecordError) {
+        return NextResponse.json(
+          {
+            error: '결제 검증 실패 기록을 저장하지 못해 구독을 활성화하지 않았어요.',
+            code: 'payment_verification_record_failed',
+          },
+          { status: 500 },
+        );
+      }
+      return NextResponse.json(
+        {
+          error: mismatch
+            ? '확인된 결제의 금액 또는 통화가 구독 조건과 일치하지 않아 구독을 활성화하지 않았어요.'
+            : '결제 완료 상태를 확인할 수 없어 구독을 활성화하지 않았어요.',
+          code: mismatch ? 'payment_amount_mismatch' : 'payment_not_completed',
+        },
+        { status: 409 },
+      );
+    }
+
+    const reason = error instanceof PortOneApiError ? error.message : '결제 승인 중 오류';
+    await supabase
+      .from('purchases')
+      .update({ status: 'failed', failed_reason: reason })
+      .eq('order_id', orderId);
+
+    if (error instanceof PortOneApiError) {
+      return NextResponse.json(
+        { error: `첫 결제에 실패했어요: ${error.message}`, code: error.code },
+        { status: 402 },
+      );
+    }
+    throw error;
+  }
+
+  if (!alreadyPaid && payment) {
     await supabase
       .from('purchases')
       .update({

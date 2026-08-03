@@ -30,6 +30,7 @@ export interface PortOnePayment {
     | 'CANCELLED';
   orderName?: string;
   amount?: { total?: number };
+  currency?: string;
   paidAt?: string | null;
   requestedAt?: string;
   [key: string]: unknown;
@@ -44,6 +45,27 @@ export class PortOneApiError extends Error {
     this.name = 'PortOneApiError';
     this.status = status;
     this.code = code;
+  }
+}
+
+export class PortOnePaymentLookupError extends Error {
+  constructor(options?: ErrorOptions) {
+    super('PortOne payment lookup failed', options);
+    this.name = 'PortOnePaymentLookupError';
+  }
+}
+
+export class PortOnePaymentVerificationError extends Error {
+  readonly reason: 'payment_mismatch' | 'payment_not_paid';
+
+  constructor(reason: PortOnePaymentVerificationError['reason']) {
+    super(
+      reason === 'payment_mismatch'
+        ? 'PortOne payment amount or currency mismatch'
+        : 'PortOne payment is not paid',
+    );
+    this.name = 'PortOnePaymentVerificationError';
+    this.reason = reason;
   }
 }
 
@@ -124,6 +146,92 @@ export async function chargeBillingKey(params: {
  */
 export async function getPayment(paymentId: string): Promise<PortOnePayment> {
   return portoneFetch<PortOnePayment>(`/payments/${encodeURIComponent(paymentId)}`);
+}
+
+/**
+ * 결정적 paymentId 로 결제를 조회한다. 404만 결제 없음으로 취급하고,
+ * 네트워크 오류나 5xx 등은 검증 실패로 보존해 호출자가 fail-closed 하게 한다.
+ */
+export async function findPayment(
+  paymentId: string,
+  lookupPayment: (paymentId: string) => Promise<PortOnePayment> = getPayment,
+): Promise<PortOnePayment | null> {
+  try {
+    const payment = await lookupPayment(paymentId);
+    if (!payment || typeof payment !== 'object') {
+      throw new Error('PortOne payment lookup returned an empty response');
+    }
+    return payment;
+  } catch (error) {
+    if (error instanceof PortOneApiError && error.status === 404) {
+      return null;
+    }
+    throw new PortOnePaymentLookupError({ cause: error });
+  }
+}
+
+/** 결제 완료 상태와 주문 ID·금액·통화를 모두 대조한다. */
+export function verifyPayment(params: {
+  payment: PortOnePayment;
+  orderId: string;
+  expectedAmount: number;
+  expectedCurrency: string;
+}): void {
+  if (!params.payment || typeof params.payment !== 'object' || params.payment.status !== 'PAID') {
+    throw new PortOnePaymentVerificationError('payment_not_paid');
+  }
+  if (
+    params.payment.id !== params.orderId ||
+    params.payment.amount?.total !== params.expectedAmount ||
+    params.payment.currency !== params.expectedCurrency
+  ) {
+    throw new PortOnePaymentVerificationError('payment_mismatch');
+  }
+}
+
+/**
+ * 로컬 paid 행은 프로바이더가 같은 주문의 정상 결제를 확인한 경우에만 재사용한다.
+ * 결제가 실제로 없으면 동일 paymentId 로 청구하고, 조회 실패·모호한 응답은 예외로 닫는다.
+ */
+export async function resolveFirstPayment(params: {
+  purchaseStatus: string | null | undefined;
+  orderId: string;
+  expectedAmount: number;
+  expectedCurrency: string;
+  lookupPayment?: (paymentId: string) => Promise<PortOnePayment>;
+  beforeCharge: () => Promise<void>;
+  chargePayment: () => Promise<PortOnePayment>;
+}): Promise<{ alreadyPaid: boolean; payment: PortOnePayment }> {
+  if (params.purchaseStatus === 'paid') {
+    const existingPayment = await findPayment(params.orderId, params.lookupPayment);
+    if (existingPayment) {
+      verifyPayment({
+        payment: existingPayment,
+        orderId: params.orderId,
+        expectedAmount: params.expectedAmount,
+        expectedCurrency: params.expectedCurrency,
+      });
+      return { alreadyPaid: true, payment: existingPayment };
+    }
+  }
+
+  await params.beforeCharge();
+  const payment = await params.chargePayment();
+  verifyPayment({
+    payment,
+    orderId: params.orderId,
+    expectedAmount: params.expectedAmount,
+    expectedCurrency: params.expectedCurrency,
+  });
+  return { alreadyPaid: false, payment };
+}
+
+/** 빌링키 고객 식별자는 누락도 불일치로 처리한다. */
+export function billingKeyBelongsToCustomer(
+  info: PortOneBillingKeyInfo,
+  customerId: string,
+): boolean {
+  return info.customer?.id === customerId;
 }
 
 /** 포트원 결제 status → purchases.status 매핑. */

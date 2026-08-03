@@ -7,7 +7,10 @@ import {
   issueBillingKey,
   chargeBillingKey,
   cardSummaryOf,
+  resolveFirstPayment,
   TossApiError,
+  TossPaymentLookupError,
+  TossPaymentVerificationError,
 } from '@/lib/toss';
 import {
   SUBSCRIPTION_ORDER_NAME,
@@ -27,7 +30,7 @@ import { reportEmailFailure, sendFirstPaymentSuccessEmail } from '@/lib/mailer';
  * 토스 v2 빌링 카드 등록 successUrl 콜백(/subscribe/success)에서 호출.
  * 1) authKey → 빌링키 발급 (토스 API)
  * 2) billing_keys 저장
- * 3) 첫 달 즉시 청구 (25,000원) + purchases 기록
+ * 3) 첫 달 즉시 청구 (공유 구독 금액 상수) + purchases 기록
  * 4) subscriptions active (now → +1개월) + sync_entitlement
  *
  * body: { authKey: string, customerKey: string }
@@ -155,7 +158,7 @@ export async function POST(request: NextRequest) {
 
   // P1-3 분기 B: 유료 기간이 없으면 첫 달 청구.
   // orderId 는 (parent, 오늘) 결정적 — "청구 성공 후 활성화 실패 → 재시도 → 이중청구" 창을 막고,
-  // 이미 paid 인 오늘자 orderId 가 있으면 청구를 건너뛰고 활성화만 복구한다.
+  // 오늘자 paid 행을 프로바이더가 확인한 경우에만 청구를 건너뛰고 활성화만 복구한다.
   const todayKey = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   let orderId = `${SUBSCRIPTION_ORDER_PREFIX}first_${parentId.replace(/-/g, '')}_${todayKey}`;
 
@@ -165,68 +168,113 @@ export async function POST(request: NextRequest) {
     .eq('order_id', orderId)
     .maybeSingle();
 
-  let alreadyPaid = existingPurchase?.status === 'paid';
   if (existingPurchase && ['refunded', 'canceled'].includes(existingPurchase.status)) {
     // 같은 날 환불 후 재구독 — 결정적 orderId 가 이미 소진됐으니 새 orderId 로 정상 청구.
     orderId = `${orderId}_${randomUUID().slice(0, 8)}`;
-    alreadyPaid = false;
   }
 
   let payment: Awaited<ReturnType<typeof chargeBillingKey>> | null = null;
-  if (!alreadyPaid) {
-    const { error: insertError } = await supabase.from('purchases').insert({
-      parent_id: parentId,
-      bundle_type: 'subscription',
-      credits_added: 0,
-      amount_krw: SUBSCRIPTION_PRICE_KRW,
-      payment_provider: 'toss',
-      order_id: orderId,
-      status: 'pending',
-    });
+  let alreadyPaid = false;
+  let purchaseInsertError: string | null = null;
+  try {
+    const resolved = await resolveFirstPayment({
+      purchaseStatus: existingPurchase?.status,
+      orderId,
+      expectedAmount: SUBSCRIPTION_PRICE_KRW,
+      expectedCurrency: 'KRW',
+      beforeCharge: async () => {
+        const { error: insertError } = await supabase.from('purchases').insert({
+          parent_id: parentId,
+          bundle_type: 'subscription',
+          credits_added: 0,
+          amount_krw: SUBSCRIPTION_PRICE_KRW,
+          payment_provider: 'toss',
+          order_id: orderId,
+          status: 'pending',
+        });
 
-    // 재시도(failed/pending 기존 행)면 duplicate 는 정상 — 그 외 오류만 실패 처리.
-    if (insertError && !/duplicate|unique/i.test(insertError.message)) {
+        // 재시도(failed/pending 기존 행)면 duplicate 는 정상 — 그 외 오류만 실패 처리.
+        if (insertError && !/duplicate|unique/i.test(insertError.message)) {
+          purchaseInsertError = insertError.message;
+          throw new Error('purchase insert failed');
+        }
+      },
+      chargePayment: () =>
+        chargeBillingKey({
+          billingKey: issued.billingKey,
+          customerKey,
+          amount: SUBSCRIPTION_PRICE_KRW,
+          orderId,
+          orderName: SUBSCRIPTION_ORDER_NAME,
+        }),
+    });
+    alreadyPaid = resolved.alreadyPaid;
+    payment = resolved.payment;
+  } catch (error) {
+    if (purchaseInsertError) {
       return NextResponse.json(
-        { error: `결제 기록 생성에 실패했어요: ${insertError.message}` },
+        { error: `결제 기록 생성에 실패했어요: ${purchaseInsertError}` },
         { status: 500 },
       );
     }
 
-    try {
-      payment = await chargeBillingKey({
-        billingKey: issued.billingKey,
-        customerKey,
-        amount: SUBSCRIPTION_PRICE_KRW,
-        orderId,
-        orderName: SUBSCRIPTION_ORDER_NAME,
-      });
-    } catch (error) {
-      const reason = error instanceof TossApiError ? error.message : '결제 승인 중 오류';
-      await supabase
-        .from('purchases')
-        .update({ status: 'failed', failed_reason: reason })
-        .eq('order_id', orderId);
-
-      if (error instanceof TossApiError) {
-        return NextResponse.json(
-          { error: `첫 결제에 실패했어요: ${error.message}`, code: error.code },
-          { status: 402 },
-        );
-      }
-      throw error;
-    }
-
-    if (payment.status !== 'DONE') {
-      await supabase
-        .from('purchases')
-        .update({ status: 'failed', failed_reason: `unexpected status ${payment.status}`, raw_response: payment })
-        .eq('order_id', orderId);
+    if (error instanceof TossPaymentLookupError) {
       return NextResponse.json(
-        { error: `결제가 완료되지 않았어요 (status: ${payment.status}).` },
-        { status: 402 },
+        {
+          error: '기존 결제 확인에 실패해 구독을 활성화하지 않았어요. 잠시 후 다시 시도해 주세요.',
+          code: 'payment_verification_failed',
+        },
+        { status: 502 },
       );
     }
 
+    if (error instanceof TossPaymentVerificationError) {
+      const mismatch = error.reason === 'payment_mismatch';
+      const { error: failureRecordError } = await supabase
+        .from('purchases')
+        .update({
+          status: 'failed',
+          failed_reason: mismatch
+            ? 'payment amount or currency mismatch'
+            : 'provider payment is not paid',
+        })
+        .eq('order_id', orderId);
+      if (failureRecordError) {
+        return NextResponse.json(
+          {
+            error: '결제 검증 실패 기록을 저장하지 못해 구독을 활성화하지 않았어요.',
+            code: 'payment_verification_record_failed',
+          },
+          { status: 500 },
+        );
+      }
+      return NextResponse.json(
+        {
+          error: mismatch
+            ? '확인된 결제의 금액 또는 통화가 구독 조건과 일치하지 않아 구독을 활성화하지 않았어요.'
+            : '결제 완료 상태를 확인할 수 없어 구독을 활성화하지 않았어요.',
+          code: mismatch ? 'payment_amount_mismatch' : 'payment_not_completed',
+        },
+        { status: 409 },
+      );
+    }
+
+    const reason = error instanceof TossApiError ? error.message : '결제 승인 중 오류';
+    await supabase
+      .from('purchases')
+      .update({ status: 'failed', failed_reason: reason })
+      .eq('order_id', orderId);
+
+    if (error instanceof TossApiError) {
+      return NextResponse.json(
+        { error: `첫 결제에 실패했어요: ${error.message}`, code: error.code },
+        { status: 402 },
+      );
+    }
+    throw error;
+  }
+
+  if (!alreadyPaid && payment) {
     await supabase
       .from('purchases')
       .update({
