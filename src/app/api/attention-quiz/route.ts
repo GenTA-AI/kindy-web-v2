@@ -4,6 +4,7 @@ import { isSupabaseServiceConfigured, supabase } from '@/lib/supabase';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { LOCAL_PREVIEW_ATTENTION_QUESTIONS, LOCAL_PREVIEW_LIBRARY_VIDEO } from '@/lib/library-preview';
 import type { VideoScript } from '@/lib/video-providers/director.types';
+import { isLaunchSurfaceClosed } from '@/lib/launch-surface';
 
 function unauthorized() {
   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -44,6 +45,10 @@ interface AttentionQuestion {
 }
 
 export async function POST(request: NextRequest) {
+  if (isLaunchSurfaceClosed('/api/attention-quiz', process.env)) {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
+
   let parentId: string;
   try {
     parentId = await getCurrentParentId();

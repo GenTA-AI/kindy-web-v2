@@ -1,6 +1,13 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import AttributionTracker from './AttributionTracker';
 import { normalizeMarketingSource } from '@/lib/attribution';
+import { isLaunchSurfaceClosed } from '@/lib/launch-surface';
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -20,6 +27,10 @@ export default async function StartPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  if (isLaunchSurfaceClosed('/start', process.env)) {
+    notFound();
+  }
+
   const params = await searchParams;
   const token = firstParam(params.ks);
   const source = normalizeMarketingSource(firstParam(params.from));

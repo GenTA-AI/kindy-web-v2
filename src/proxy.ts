@@ -1,5 +1,49 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
+import { isLaunchSurfaceClosed } from '@/lib/launch-surface';
+
+const AUTH_PROTECTED_PAGE_PREFIXES = [
+  '/dashboard',
+  '/play',
+  '/player',
+  '/settings',
+  '/library',
+] as const;
+
+const AUTH_PROTECTED_API_PREFIXES = [
+  '/api/children',
+  '/api/credits',
+  '/api/purchases',
+  '/api/videos',
+  '/api/events',
+  '/api/reactions',
+  '/api/quiz',
+  '/api/attention-quiz',
+  '/api/library',
+  '/api/game',
+] as const;
+
+function matchesPathPrefix(pathname: string, prefix: string) {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function isAuthProtectedPath(pathname: string) {
+  return (
+    AUTH_PROTECTED_PAGE_PREFIXES.some((prefix) => matchesPathPrefix(pathname, prefix)) ||
+    AUTH_PROTECTED_API_PREFIXES.some((prefix) => matchesPathPrefix(pathname, prefix))
+  );
+}
+
+function launchNotFound(pathname: string) {
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
+
+  return new NextResponse(null, {
+    status: 404,
+    headers: { 'X-Robots-Tag': 'noindex, nofollow' },
+  });
+}
 
 function getSupabasePublicEnv() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -23,6 +67,18 @@ function loginRedirectUrl(request: NextRequest) {
 }
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  if (isLaunchSurfaceClosed(pathname, process.env)) {
+    return launchNotFound(pathname);
+  }
+
+  // The expanded matcher sees all pages so unknown future pages fail closed in
+  // production. Preserve the pre-existing auth gate only on its original paths.
+  if (!isAuthProtectedPath(pathname)) {
+    return NextResponse.next();
+  }
+
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     // 로컬 개발(또는 명시적 프리뷰)에서만 인증 미들웨어를 통과시킨다.
     const localPreviewAllowed =
@@ -88,6 +144,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|.*\\.[^/]+$).*)',
+    '/api/kiosk/events',
     '/dashboard/:path*',
     '/play/:path*',
     '/player/:path*',

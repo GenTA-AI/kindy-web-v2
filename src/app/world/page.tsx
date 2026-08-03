@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import WorldClient from '@/components/world/WorldClient';
+import { isLaunchSurfaceClosed } from '@/lib/launch-surface';
 
 /**
  * /world — 이야기 지도 RPG 데모 (docs/plan/10 W1 MVP).
@@ -9,8 +11,13 @@ import WorldClient from '@/components/world/WorldClient';
 export const metadata: Metadata = {
   title: '이야기 지도 — Kindy',
   description: '아바타를 만들고 지도를 탐험하며 다음 이야기를 발견하는 RPG 데모.',
+  robots: { index: false, follow: false },
 };
 
 export default function WorldPage() {
+  if (isLaunchSurfaceClosed('/world', process.env)) {
+    notFound();
+  }
+
   return <WorldClient />;
 }
