@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getSignedUrl } from '@/lib/supabase-storage';
 import { GLASS_LIGHT } from '@/components/ui/glass';
+import { SUBSCRIPTION_PRICE_KRW, formatKrw } from '@/lib/subscription-pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,7 +98,7 @@ export default async function FirstStoryPage() {
             </Link>
           )}
           <p className="mt-4 text-sm text-ink3">
-            얼리버드 특가 월 24,900원 · 기간 한정 · 첫 14일 100% 환불 보장
+            얼리버드 특가 월 {formatKrw(SUBSCRIPTION_PRICE_KRW)} · 기간 한정 · 첫 14일 100% 환불 보장
           </p>
         </div>
 

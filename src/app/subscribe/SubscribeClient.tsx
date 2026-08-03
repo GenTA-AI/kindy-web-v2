@@ -5,6 +5,11 @@ import * as PortOne from '@portone/browser-sdk/v2';
 import MoriCharacter from '@/components/MoriCharacter';
 import type { SubscriptionRow, EntitlementRow } from '@/lib/subscription-types';
 import { businessInfo, isBusinessInfoComplete } from '@/lib/business-info';
+import {
+  SUBSCRIPTION_PRICE_KRW,
+  formatKrw,
+  formatKrwWithSymbol,
+} from '@/lib/subscription-pricing';
 
 interface SubscribeClientProps {
   parentId: string;
@@ -12,9 +17,6 @@ interface SubscribeClientProps {
   initialSubscription: SubscriptionRow | null;
   initialEntitlement: EntitlementRow;
 }
-
-const PRICE_KRW = 24900;
-const krw = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 
 function formatDate(iso: string | null): string {
   if (!iso) return '-';
@@ -29,7 +31,7 @@ const BENEFITS = [
 ];
 
 const PAYMENT_NOTES = [
-  '카드를 등록하면 첫 달 25,000원이 바로 결제돼요.',
+  `카드를 등록하면 첫 달 ${formatKrw(SUBSCRIPTION_PRICE_KRW)}이 바로 결제돼요.`,
   '다음 달부터 같은 날 자동 결제돼요.',
   '해지는 이 화면에서 바로 접수되고, 현재 기간 끝까지 이용할 수 있어요.',
   '아이 플레이 화면에는 광고와 결제 버튼이 없어요.',
@@ -213,7 +215,9 @@ export default function SubscribeClient({
             Kindy 멤버십
           </div>
           <div className="mb-4 flex items-baseline gap-1.5">
-            <span className="text-3xl font-black">{krw(PRICE_KRW)}</span>
+            <span className="text-3xl font-black">
+              {formatKrwWithSymbol(SUBSCRIPTION_PRICE_KRW)}
+            </span>
             <span className="text-sm font-bold text-white/70">/ 월</span>
           </div>
           <ul className="space-y-3">
@@ -280,7 +284,9 @@ export default function SubscribeClient({
               </div>
               <div className="flex justify-between">
                 <span>월 요금</span>
-                <span className="font-bold text-ink">{krw(subscription?.price_krw ?? PRICE_KRW)}</span>
+                <span className="font-bold text-ink">
+                  {formatKrwWithSymbol(SUBSCRIPTION_PRICE_KRW)}
+                </span>
               </div>
             </div>
             {subscription?.status === 'past_due' && (
@@ -353,7 +359,8 @@ export default function SubscribeClient({
                   className="mt-0.5 h-4 w-4 shrink-0 accent-saged"
                 />
                 <span className="text-xs font-semibold leading-relaxed text-ink2">
-                  매월 {krw(PRICE_KRW)}이 등록한 카드로 <strong className="font-black text-ink">자동 결제</strong>되는
+                  매월 {formatKrwWithSymbol(SUBSCRIPTION_PRICE_KRW)}이 등록한 카드로{' '}
+                  <strong className="font-black text-ink">자동 결제</strong>되는
                   정기결제에 동의합니다.{' '}
                   {isCanceledButPremium
                     ? `남은 이용 기간에는 결제되지 않고, ${formatDate(entitlement.premium_until)}부터 자동 결제가 이어져요.`
@@ -384,8 +391,8 @@ export default function SubscribeClient({
         {/* 약관/사업자 고지 (전자상거래 표시 의무) */}
         <section className="space-y-1.5 text-[11px] font-semibold leading-relaxed text-ink3">
           <p>
-            구독 시 매월 {krw(PRICE_KRW)}이 등록된 카드로 자동 결제돼요. 해지하면 현재 결제 기간이
-            끝나는 날까지 이용할 수 있고, 다음 결제는 일어나지 않아요.
+            구독 시 매월 {formatKrwWithSymbol(SUBSCRIPTION_PRICE_KRW)}이 등록된 카드로 자동 결제돼요.
+            해지하면 현재 결제 기간이 끝나는 날까지 이용할 수 있고, 다음 결제는 일어나지 않아요.
           </p>
           <p>
             <strong className="font-black text-ink2">청약철회·환불 안내</strong> · 결제일로부터 7일 이내,

@@ -2,6 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Reveal from '@/components/landing/Reveal';
 import { GLASS_DARK, GLASS_LIGHT } from '@/components/ui/glass';
+import {
+  SUBSCRIPTION_LIST_DAILY_PRICE_KRW,
+  SUBSCRIPTION_LIST_PRICE_KRW,
+  SUBSCRIPTION_PRICE_KRW,
+  formatKrw,
+} from '@/lib/subscription-pricing';
 
 // §5-4 전환 퍼널: 랜딩 CTA는 결제·로그인이 아니라 무료 샘플 시청으로 (2026-07-13).
 const FIRST_STORY_HREF = '/first-story';
@@ -37,8 +43,8 @@ const PERSONAL_STEPS = [
   },
   {
     step: '03',
-    title: '이름을 불러주는 수업',
-    body: '영상이 아이의 이름을 부르며 시작합니다. 모두에게 같은 영상이 아니라, 우리 아이에게 맞춰 자라는 커리큘럼입니다.',
+    title: '아이의 반응에 맞춰 이어지는 수업',
+    body: '모두에게 같은 순서가 아니라, 아이가 다시 본 장면과 오래 머문 놀이를 바탕으로 다음 이야기를 제안합니다.',
   },
 ];
 
@@ -47,7 +53,11 @@ const ANCHORS = [
   { name: '미술·피아노 학원', price: '월 12~20만원', limit: '이동 필요, 그리기 기술 중심' },
   { name: '어린이 명작 전집', price: '세트당 29~41만원', limit: '일시불 부담, 아이 혼자 안 읽음' },
   { name: '예술의전당 어린이 아카데미', price: '90분 1회 62,000원', limit: '서울 집중, 예약 경쟁' },
-  { name: 'Kindy', price: '월 34,900원 · 얼리버드 24,900원', limit: '매주 새 작품, 카톡으로 도착' },
+  {
+    name: 'Kindy',
+    price: `월 ${formatKrw(SUBSCRIPTION_LIST_PRICE_KRW)} · 얼리버드 ${formatKrw(SUBSCRIPTION_PRICE_KRW)}`,
+    limit: '매주 새 작품, 카톡으로 도착',
+  },
 ];
 
 const SESSION_STEPS = [
@@ -104,20 +114,7 @@ function LoopVideo({
   );
 }
 
-type SearchParams = Record<string, string | string[] | undefined>;
-
-function hasSearchParam(params: SearchParams, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(params, key);
-}
-
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>;
-}) {
-  const params = await searchParams;
-  const showLibraryBenefit = hasSearchParam(params, 'ks');
-
+export default function Home() {
   return (
     <main className="bg-cream text-ink [word-break:keep-all]">
       {/* 글라스 스티키 네비 */}
@@ -142,11 +139,6 @@ export default async function Home({
         <Reveal className="relative z-10 mx-4 mb-8 w-full max-w-xl sm:mb-0">
           <div className={`${GLASS_DARK} px-6 py-8 text-center text-white sm:px-12 sm:py-14`}>
             <p className="text-sm font-bold text-white/80">KINDY · 우리 아이 맞춤 통합 인문 수업</p>
-            {showLibraryBenefit && (
-              <div className="mx-auto mt-4 inline-flex items-center rounded-full border border-gold/70 bg-white/15 px-4 py-1.5 text-sm font-black text-gold backdrop-blur-xl">
-                도서관 한정 월 ₩19,000
-              </div>
-            )}
             <h1 className="mt-4 text-3xl font-black leading-[1.2] tracking-normal sm:text-5xl">
               <span className="block whitespace-nowrap">읽고 느낀 것을,</span>
               <span className="block whitespace-nowrap">생각으로 만드는 힘.</span>
@@ -318,8 +310,7 @@ export default async function Home({
         </div>
         <Reveal delay={200}>
           <p className="mt-8 max-w-2xl text-pretty leading-relaxed text-ink2">
-            받은 수업은 회차별로 아이의 계정에 남아 언제든 다시 볼 수 있습니다. 여섯 달이면
-            마흔여덟 편 — 아이만의 전집 한 질이 쌓입니다.
+            받은 수업은 회차별로 아이의 계정에 남아 언제든 다시 볼 수 있습니다.
           </p>
         </Reveal>
       </section>
@@ -371,10 +362,13 @@ export default async function Home({
         <Reveal>
           <div className={`${GLASS_LIGHT} mx-auto max-w-lg px-8 py-14 text-center`}>
             <p className="text-sm font-black tracking-[0.25em] text-gold">얼리버드 특가 · 기간 한정</p>
-            <p className="mt-6 text-5xl font-black tracking-tight">월 24,900원</p>
+            <p className="mt-6 text-5xl font-black tracking-tight">
+              월 {formatKrw(SUBSCRIPTION_PRICE_KRW)}
+            </p>
             <p className="mt-2 font-bold text-ink2">평생 고정</p>
             <p className="mt-6 text-sm leading-relaxed text-ink3">
-              정가 월 34,900원 · 하루로 치면 1,163원
+              정가 월 {formatKrw(SUBSCRIPTION_LIST_PRICE_KRW)} · 하루로 치면{' '}
+              {formatKrw(SUBSCRIPTION_LIST_DAILY_PRICE_KRW)}
             </p>
             <Link
               href={FIRST_STORY_HREF}
