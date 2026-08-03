@@ -1,60 +1,49 @@
-# review: landing-price-claims
-decision: request_changes
+# review: landing-price-claims (attempt 2)
+decision: approve
 
-## 잘한 것 (유지할 것)
-- 카피 변경이 대표 결정과 정확히 일치. 이름 호명·48편만 제거하고 교수·런던·경쟁사 비교표·
-  카톡·14일 환불은 그대로 뒀다. 대체 문장도 과장 없이 실제 동작(다시 본 장면·오래 머문 놀이) 기준.
-- 체크아웃의 25,000원 → 24,900원 수정. `?ks` 19,000 배지 제거하면서 `/start?ks=` 어트리뷰션
-  배관은 안 건드림 — 지시대로.
-- **랜딩이 정적 렌더(`○ /`)로 전환**됐다. searchParams 판독이 사라진 부수효과. 좋다.
-- grep 검증 결과와 빌드 출력을 실제로 붙였다.
+이전 시도(attempt 1)의 반려 사유는 카피·가격이 아니라 **모듈 경계** 하나였다. 그것만 고쳐졌고,
+승인됐던 부분은 그대로 살아 있다.
 
-## critical — 반려 사유 (1건)
+## critical 해소 확인 — 리드가 직접 실측
 
-**클라이언트 컴포넌트가 service-role 모듈을 물게 됐다.**
-
-`src/app/subscribe/SubscribeClient.tsx`는 `'use client'`인데 `@/lib/subscription`에서
-`SUBSCRIPTION_PRICE_KRW`·`formatKrw`·`formatKrwWithSymbol`을 import한다. 그런데
-`src/lib/subscription.ts`는 service-role 클라이언트(`@/lib/supabase`)를 쓰는 서버 전용 모듈이다.
-`src/lib/supabase.ts` 자신의 헤더 주석이 명시한다 — *"클라이언트 번들에 포함되면 절대 안 됨"*.
-
-워커는 이걸 인지하고 `await import('@/lib/supabase')` 동적 import로 우회했지만, **번들에는 여전히
-들어간다.** 실측 증거 — 워크트리 빌드 산출물에서:
+**요구**: 클라이언트 번들에 service-role 모듈이 없을 것.
 
 ```
-.next/static/chunks/0nj4jp~52tx~k.js:
-  ...t.default.env.NEXT_PUBLIC_SUPABASE_URL||"", r=t.default.env.SUPABASE_SERVICE_ROLE_KEY||"" ...
+$ grep -rl "SUPABASE_SERVICE_ROLE_KEY" .next/static
+→ 매치 없음.  OK: 클라이언트 번들에 service-role 없음
 ```
 
-**실제 시크릿 값이 유출되지는 않았다**(`.env.local`의 키 값으로 static 전수 grep → 0건).
-런타임 `process.env` 조회라 브라우저에선 빈 문자열이 된다. 그래서 이건 사고가 아니라 **경계 위반**이다.
+attempt 1에서는 `.next/static/chunks/0nj4jp~52tx~k.js`에
+`t.default.env.SUPABASE_SERVICE_ROLE_KEY||""`가 박혀 있었다. 사라졌다.
 
-이 엣지는 **이번 변경이 새로 만든 것**이다. HEAD 기준으로 `@/lib/subscription`을 import하던
-`.tsx`는 서버 컴포넌트 3개뿐이었다(`lesson/[lessonId]/page.tsx`·`play/page.tsx`·`subscribe/page.tsx`).
-Codex 감사가 "server service-role 모듈을 client component가 import하는 경로 0건"을 좋은 기반으로
-꼽았던 항목이고, 이 저장소가 지켜온 불변식이다.
+## 수정의 모양도 요구한 대로다
 
-부수적으로, 서버 전용이던 모듈의 모든 DB 함수에 `await getServiceSupabase()` 한 줄씩이 붙어
-정적 import 하나로 끝나던 것이 함수마다 동적 해석으로 바뀌었다. 문제를 우회하려다 생긴 부채다.
+- **`src/lib/subscription-pricing.ts`** — import 문 **0건**. 순수 상수 + 순수 포맷터만.
+  `subscription-types.ts`가 타입을 위해 존재하는 것과 같은 자리에 가격이 놓였다.
+- **`src/lib/subscription.ts`** — `import { supabase } from '@/lib/supabase'` **정적 import 복구**.
+  attempt 1이 함수마다 붙였던 `await getServiceSupabase()` 우회가 전부 사라졌다. 서버 호출자를 위한
+  re-export만 추가돼 기존 import 경로가 안 깨진다.
+- **`SubscribeClient.tsx`**(`'use client'`) — `@/lib/subscription-pricing`에서 가져온다.
+  서버 전용 모듈을 더 이상 물지 않는다.
+- 일 환산가도 `SUBSCRIPTION_LIST_DAILY_PRICE_KRW`로 leaf에 들어가 페이지에서 산술을 안 한다.
 
-## 요구하는 수정
+## 승인됐던 부분 보존 확인
+- 제거 유지: "이름을 부르며" · "마흔여덟" · "₩19,000" → 랜딩에서 **0건**.
+- **대표 유지 결정 항목 살아 있음**: 30년 교수 커리큘럼 · 런던 · 예술의전당 비교표 → 4건 잔존.
+- 랜딩에 `searchParams` 없음 → **정적 렌더 유지**.
+- `/start?ks=` 어트리뷰션 배관 무수정.
 
-가격 상수·포맷터를 **의존성 없는 leaf 모듈로 분리**하라. 이 저장소에 이미 같은 이유로 만든
-선례가 있다 — `src/lib/subscription-types.ts`(타입만 담아 클라이언트가 안전하게 import).
-같은 패턴으로 `src/lib/subscription-pricing.ts`를 만들고, `subscription.ts`는 서버 호출자를 위해
-re-export만 하며, **동적 import 우회를 되돌려 정적 import로 복구**하라.
+## 게이트
+validation_exit=0, scope_ok=1. 테스트 파일명도 `subscription-pricing.test.ts`로 정정됐다.
 
-상세는 `handoffs/landing-price-claims.md`.
-
-## should_fix (다음 워커가 함께)
-- 테스트 파일명을 `src/lib/subscription-pricing.test.ts`로.
-
-## 리드 귀책 (워커 잘못 아님)
-- 스코프 게이트가 `src/lib/subscription.test.ts`를 out-of-scope로 잡은 것은 **내 스펙 버그**다.
-  테스트를 요구하면서 Scope에 경로를 안 적었다(불변조항 16 재발). 태스크 파일 정정 완료.
-
-## 이월 (이 태스크 밖)
+## nice_to_have / 이월
 - `supabase/migrations/0017_subscriptions.sql:40`의 `default 25000` — 기존 마이그레이션이라
-  수정 금지가 맞다. `rls-lockdown` 이후 별도 마이그레이션에서 처리하거나, 코드가 항상 명시
-  저장하므로 그대로 둔다. 리드가 판단해 후속 결정.
+  손대지 않은 것이 맞다. 두 결제 경로가 항상 가격을 명시 저장하므로 실피해는 없다.
+  후속 마이그레이션에서 정리 대상으로 이월.
 - `src/app/api/payments/toss/billing-key/route.ts:30`의 25,000원은 실행되지 않는 주석. 무해.
+
+## 컴파운드할 교훈 (리트로 반영)
+**서버 전용 모듈에서 클라이언트가 쓸 값을 export하지 말 것.** 필요하면 의존성 없는 leaf로 분리한다.
+`@/lib/supabase`(service-role)를 물고 있는 모듈은 `'use client'` 파일이 import하는 순간 번들에 들어간다 —
+동적 import로도 못 막는다. 실제 시크릿이 인라인되지 않아도 경계는 이미 깨진 것이다.
+검증법: 빌드 후 `grep -rl "SUPABASE_SERVICE_ROLE_KEY" .next/static`이 비어야 한다.
