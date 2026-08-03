@@ -28,6 +28,8 @@ if (!alreadyPaid) { ... 실제 카드 청구 ... }   // paid면 청구를 통째
 - `src/app/api/payments/toss/billing-key/route.ts` 레거시 동일 패턴
 - `src/lib/portone.ts` 조회 헬퍼가 없으면 여기 추가
 - `src/lib/toss.ts` 위와 동일
+- `src/lib/payment-charge-guard.test.ts` NEW 아래 Deliverables 4의 단위 테스트
+- `package.json` test 스크립트가 파일 목록이라 새 테스트 등록에 필요
 
 ## Constraints
 - **이미 올바른 통제를 건드리지 마라.** 웹훅 HMAC 검증, 프로바이더 재조회, AES-GCM 빌링키 암호화,
