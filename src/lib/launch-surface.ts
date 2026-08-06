@@ -1,6 +1,6 @@
 export type LaunchEnvironment = Readonly<{
   NODE_ENV?: string;
-  VERCEL_ENV?: string;
+  KINDY_DEPLOY_ENV?: string;
   KINDY_PRESALE_LOCKDOWN?: string;
 }>;
 
@@ -34,6 +34,8 @@ export const PRESALE_CLOSED_API_RULES: readonly LaunchRouteRule[] = [
  */
 export const PRESALE_ROBOTS_ALLOW = ['/$', '/first-story$', '/legal/'] as const;
 
+let previewEnvironmentLogged = false;
+
 function normalizePathname(pathname: string): string {
   if (!pathname || pathname === '/') return '/';
   const withLeadingSlash = pathname.startsWith('/') ? pathname : `/${pathname}`;
@@ -51,11 +53,21 @@ export function matchesLaunchRoute(pathname: string, rule: LaunchRouteRule): boo
 }
 
 export function isProductionLaunchEnvironment(environment: LaunchEnvironment): boolean {
-  if (environment.VERCEL_ENV !== undefined) {
-    return environment.VERCEL_ENV === 'production';
+  if (environment.NODE_ENV !== 'production') {
+    return false;
   }
 
-  return environment.NODE_ENV === 'production';
+  if (environment.KINDY_DEPLOY_ENV === 'preview') {
+    if (!previewEnvironmentLogged) {
+      console.warn(
+        '[launch-surface] Preview access is enabled because KINDY_DEPLOY_ENV="preview".',
+      );
+      previewEnvironmentLogged = true;
+    }
+    return false;
+  }
+
+  return true;
 }
 
 export function isPresaleLockdownEnabled(environment: LaunchEnvironment): boolean {

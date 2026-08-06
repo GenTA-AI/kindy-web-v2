@@ -65,19 +65,63 @@ test('production closes scoped APIs while leaving unrelated operational APIs unc
   }
 });
 
-test('local development and Vercel preview remain open', () => {
+test('explicit preview emits one non-secret reason log per module instance', (t) => {
+  const messages: string[] = [];
+  t.mock.method(console, 'warn', (message: string) => {
+    messages.push(message);
+  });
+
+  const preview = {
+    NODE_ENV: 'production',
+    KINDY_DEPLOY_ENV: 'preview',
+  } as const;
+
+  assert.equal(isProductionLaunchEnvironment(preview), false);
+  assert.equal(isProductionLaunchEnvironment(preview), false);
+  assert.deepEqual(messages, [
+    '[launch-surface] Preview access is enabled because KINDY_DEPLOY_ENV="preview".',
+  ]);
+});
+
+test('local development and an explicitly labeled Kindy preview remain open', () => {
   assert.equal(isLaunchSurfaceClosed('/demo/kiosk', development), false);
   assert.equal(
     isLaunchSurfaceClosed('/dashboard', {
       NODE_ENV: 'production',
-      VERCEL_ENV: 'preview',
+      KINDY_DEPLOY_ENV: 'preview',
     }),
     false,
   );
   assert.equal(
-    isProductionLaunchEnvironment({ NODE_ENV: 'production', VERCEL_ENV: 'development' }),
+    isProductionLaunchEnvironment({
+      NODE_ENV: 'production',
+      KINDY_DEPLOY_ENV: 'preview',
+    }),
     false,
   );
+});
+
+test('production defaults to locked when KINDY_DEPLOY_ENV is missing or invalid', () => {
+  for (const value of [undefined, '', 'preveiw', 'development', 'Preview']) {
+    assert.equal(
+      isProductionLaunchEnvironment({
+        NODE_ENV: 'production',
+        KINDY_DEPLOY_ENV: value,
+      }),
+      true,
+      `KINDY_DEPLOY_ENV=${JSON.stringify(value)}`,
+    );
+  }
+});
+
+test('legacy VERCEL_ENV can no longer unlock a production image', () => {
+  const legacyVercelPreview = {
+    NODE_ENV: 'production',
+    VERCEL_ENV: 'preview',
+  } as const;
+
+  assert.equal(isProductionLaunchEnvironment(legacyVercelPreview), true);
+  assert.equal(isLaunchSurfaceClosed('/dashboard', legacyVercelPreview), true);
 });
 
 test('production is always locked and the opt-in switch can exercise lockdown elsewhere', () => {

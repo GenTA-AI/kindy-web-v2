@@ -19,7 +19,8 @@ export function isProductionEnvironment(environment: EnvironmentMap): boolean {
 
 /**
  * Return every unsafe production setting without reading process.env directly.
- * Preview and local environments intentionally keep their existing bypasses.
+ * Local development and explicitly labeled Kindy previews keep their bypasses;
+ * production images with missing or invalid deploy labels fail closed.
  */
 export function getProductionEnvironmentViolations(
   environment: EnvironmentMap,

@@ -15,23 +15,44 @@ function violationNames(environment: EnvironmentMap): string[] {
   );
 }
 
-test('프로덕션 판정은 배포 환경을 우선하고 우회 플래그의 영향을 받지 않는다', () => {
+test('배포 환경 변수가 없는 production은 잠그고 development는 연다', () => {
   assert.equal(isProductionEnvironment({ NODE_ENV: 'production' }), true);
+  assert.equal(isProductionEnvironment({ NODE_ENV: 'development' }), false);
+});
+
+test('명시적인 KINDY_DEPLOY_ENV=preview만 production 이미지를 연다', () => {
   assert.equal(
     isProductionEnvironment({
-      NODE_ENV: 'development',
-      VERCEL_ENV: 'production',
+      NODE_ENV: 'production',
+      KINDY_DEPLOY_ENV: 'preview',
       KINDY_LOCAL_PREVIEW: '1',
     }),
-    true,
+    false,
   );
+});
+
+test('알 수 없는 값, 오타, 빈 문자열은 production 이미지를 잠근다', () => {
+  for (const value of ['', 'preveiw', 'development', 'Preview']) {
+    const environment = {
+      NODE_ENV: 'production',
+      KINDY_DEPLOY_ENV: value,
+      KINDY_LOCAL_PREVIEW: '1',
+      BILLING_KEY_SECRET: CONFIGURED_SECRET,
+    };
+
+    assert.equal(isProductionEnvironment(environment), true, value);
+    assert.deepEqual(violationNames(environment), ['KINDY_LOCAL_PREVIEW'], value);
+  }
+});
+
+test('예전 VERCEL_ENV=preview는 production 잠금을 풀지 못한다', () => {
   assert.equal(
     isProductionEnvironment({
       NODE_ENV: 'production',
       VERCEL_ENV: 'preview',
       KINDY_LOCAL_PREVIEW: '1',
     }),
-    false,
+    true,
   );
 });
 
@@ -75,8 +96,8 @@ test('프로덕션에서는 BILLING_KEY_SECRET 누락과 빈 값을 모두 거�
 test('프로덕션의 모든 위반을 한 번에 반환하고 환경변수 값은 노출하지 않는다', () => {
   const secretValue = 'must-never-appear-in-a-violation';
   const violations = getProductionEnvironmentViolations({
-    NODE_ENV: 'development',
-    VERCEL_ENV: 'production',
+    NODE_ENV: 'production',
+    KINDY_DEPLOY_ENV: 'production',
     KINDY_LOCAL_PREVIEW: '1',
     LESSON_GUEST_MODE: '1',
     BILLING_KEY_SECRET: '',
@@ -124,13 +145,7 @@ test('로컬 개발과 프리뷰에서는 우회 플래그와 미설정 빌링 �
     },
     {
       NODE_ENV: 'production',
-      VERCEL_ENV: 'preview',
-      KINDY_LOCAL_PREVIEW: '1',
-      LESSON_GUEST_MODE: '1',
-    },
-    {
-      NODE_ENV: 'production',
-      VERCEL_ENV: 'development',
+      KINDY_DEPLOY_ENV: 'preview',
       KINDY_LOCAL_PREVIEW: '1',
       LESSON_GUEST_MODE: '1',
     },

@@ -81,6 +81,32 @@ BIZ 6종 중 하나라도 비면 결제 CTA가 잠긴다.
 
 `INNGEST_DEV`는 로컬 전용 env다 — 프로덕션에는 존재하면 안 되며 `scripts/deploy-cloud-run.sh`가 제거한다. 전체 목록·설명은 `.env.local.example` 참조.
 
+**배포 환경 잠금(Cloud Run 런타임 env)** — `KINDY_DEPLOY_ENV`는 같은 이미지를 어느 서비스가 실행하는지 서버 시작 때 판별한다. `NEXT_PUBLIC_` 값이나 Cloud Build substitution이 아니며, 정확히 `preview`일 때만 프리뷰가 열린다. 미설정·빈 값·오타·그 밖의 값은 모두 프로덕션으로 간주해 잠근다. 로컬 `npm run dev`(`NODE_ENV !== 'production'`)는 이 값과 무관하게 열린다.
+
+| Cloud Run 런타임 env | 프리뷰 서비스 (`kindy-landing-preview`) | 프로덕션 서비스 (`kindy`) |
+|---|---|---|
+| `KINDY_DEPLOY_ENV` | `preview` (필수) | `production` (명시 권장, 미설정이어도 잠김) |
+| `KINDY_LOCAL_PREVIEW` | `1` (현재 Supabase 없는 프리뷰 폴백) | `0` 또는 미설정 |
+| `LESSON_GUEST_MODE` | `1` (무로그인 레슨 검수 서비스에서만) | `0` 또는 미설정 |
+| `BILLING_KEY_SECRET` | 부팅에는 선택; 결제 경로 검수 시 프리뷰 전용 키 사용 | `kindy-billing-key-secret:latest`를 Secret Manager로 반드시 주입 |
+
+서비스별 설정(리드가 사람 게이트에서 실행):
+
+```bash
+gcloud run services update kindy-landing-preview \
+  --region=asia-northeast3 \
+  --update-env-vars=KINDY_DEPLOY_ENV=preview,KINDY_LOCAL_PREVIEW=1,LESSON_GUEST_MODE=1 \
+  --remove-env-vars=VERCEL_ENV
+
+gcloud run services update kindy \
+  --region=asia-northeast3 \
+  --update-env-vars=KINDY_DEPLOY_ENV=production,KINDY_LOCAL_PREVIEW=0,LESSON_GUEST_MODE=0 \
+  --update-secrets=BILLING_KEY_SECRET=kindy-billing-key-secret:latest \
+  --remove-env-vars=VERCEL_ENV
+```
+
+프리뷰 부팅 로그에는 `KINDY_DEPLOY_ENV="preview"` 때문에 열렸다는 경고가 한 줄 남는다. 이 값 자체는 고정된 비시크릿 판별자이며, 다른 환경변수 값은 로그에 출력하지 않는다.
+
 ---
 
 ## 3. Toss 웹훅 URL 등록 (미등록 시 환불이 엔타이틀에 반영 안 됨)
