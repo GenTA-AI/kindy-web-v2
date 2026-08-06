@@ -52,3 +52,26 @@
     **전후 값 스냅샷으로 불변을 확인**해야 한다.
 24. **프로덕션 우회 플래그 금지**: `KINDY_LOCAL_PREVIEW=1`·`LESSON_GUEST_MODE=1`이 프로덕션에서
     켜지면 부팅이 실패해야 한다. 특히 전자는 빌링키를 평문 저장시킨다.
+
+## presale-lockdown 리트로 컴파운드 (2026-08-06)
+25. **머지 후 통합 검증 전에 루트에서 `npm ci`.** 머지는 `package.json`/lockfile만 옮기고
+    메인 트리 `node_modules`는 그대로다. 이번에 Next 16.2.12로 올린 뒤 통합 검증이 전부 초록이었는데
+    실제 설치본은 16.2.3이었다 — **거짓 초록불**. 의존성 매니페스트를 건드린 태스크가 있으면
+    `npm ci` → 재검증이 순서다. (17의 의존성 판)
+26. **정적 프리렌더(`○`) 페이지의 런타임 env 가드는 빌드 타임에 얼어붙는다.** `/island`·`/world`·
+    `/start`·`/demo/*`·`/sample/library`의 `notFound()` 가드는 빌드 시점 env로 평가돼 404가 굳는다.
+    같은 이미지를 프리뷰로 띄워도 안 열린다(실측). 미들웨어 가드(동적)와 동작이 갈린다.
+    **런타임에 반응해야 하는 페이지 가드는 `force-dynamic`이거나 미들웨어여야 한다.**
+27. **테스트를 요구하는 태스크는 Scope에 테스트 파일 경로 + `package.json`을 반드시 넣는다.**
+    이 저장소의 `npm test`는 파일 목록 하드코딩이라 등록에 `package.json` 수정이 필수다.
+    빠뜨리면 스코프 게이트 오탐이 나고, 더 나쁘게는 **등록 안 된 테스트가 고아로 머지되어
+    CI에서 영영 안 돈다**(이번에 2건 발생). 불변조항 16의 구체판 — 오탐 4회 전부 리드 스펙 버그.
+28. **서버 전용 모듈에서 클라이언트가 쓸 값을 export하지 마라.** `@/lib/supabase`(service-role)를
+    물고 있는 모듈을 `'use client'` 파일이 import하면 번들에 들어간다 — **동적 import로도 못 막는다.**
+    실제 시크릿이 인라인되지 않아도 경계는 깨진 것이다. 해법은 우회가 아니라 의존성 없는 leaf 분리
+    (`subscription-types.ts`·`subscription-pricing.ts` 패턴).
+    검증: 빌드 후 `grep -rl "SUPABASE_SERVICE_ROLE_KEY" .next/static`이 비어야 한다.
+29. **검증 스크립트에는 positive control이 있어야 한다.** "공격이 막혔다"를 증명하려면 먼저
+    "공격자가 실제로 인증된 상태였다"를 증명해야 한다. 인증이 안 붙으면 전부 anon으로 나가
+    모든 항목이 PASS한다 — 가장 위험한 거짓 초록불. `verify-rls.ts`의 authenticated positive
+    control(자기 child 정확히 1행 + 남의 child 0행, 실패 시 run abort)을 지우지 말 것.
