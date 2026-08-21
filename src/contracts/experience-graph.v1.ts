@@ -16,7 +16,20 @@ const IdSchema = z
 
 const ReleaseVersionSchema = z
   .string()
-  .regex(/^\d+\.\d+\.\d+$/, "releaseVersion must be semantic x.y.z");
+  .regex(
+    /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/,
+    "releaseVersion must be canonical semantic x.y.z",
+  )
+  .refine(
+    (value) => value.split(".").every(isSafeReleaseVersionComponent),
+    "releaseVersion component exceeds JavaScript safe integer range",
+  );
+
+function isSafeReleaseVersionComponent(value: string): boolean {
+  return value.length < 16 || (
+    value.length === 16 && value <= String(Number.MAX_SAFE_INTEGER)
+  );
+}
 
 export const SafetyTagSchema = z.enum([
   "age:5-6",
@@ -98,7 +111,11 @@ export const CinematicNodeSchema = z
   .object({
     ...NodeCommonShape,
     type: z.literal("cinematic"),
+    title: z.string().min(1).max(80),
+    description: z.string().min(1).max(240),
     mediaId: IdSchema,
+    posterMediaId: IdSchema,
+    subtitleMediaId: IdSchema,
     autoplay: z.literal(false),
     subtitlesDefaultOn: z.literal(true),
     canReplay: z.literal(true),
@@ -361,11 +378,23 @@ export const EvidenceClaimSchema = z
   })
   .strict();
 
+export const ExperiencePresentationSchema = z
+  .object({
+    title: z.string().min(1).max(60),
+    subtitle: z.string().min(1).max(100),
+    summary: z.string().min(1).max(240),
+    coverMediaId: IdSchema,
+    coverAltText: z.string().min(1).max(240),
+    primaryCharacterId: IdSchema,
+  })
+  .strict();
+
 const ExperienceGraphShapeSchema = z
   .object({
     schemaVersion: z.literal(EXPERIENCE_GRAPH_SCHEMA_VERSION),
     experienceId: IdSchema,
     releaseVersion: ReleaseVersionSchema,
+    presentation: ExperiencePresentationSchema,
     chatGraph: ChatGraphSchema,
     playerGraph: PlayerGraphSchema,
     mediaManifest: MediaManifestSchema,
@@ -504,11 +533,56 @@ function collectContractProblems(graph: ExperienceGraphShape): ContractProblem[]
     });
   }
 
+  const primaryCharacter = characters.get(graph.presentation.primaryCharacterId);
+  if (primaryCharacter === undefined) {
+    problems.push({
+      path: ["presentation", "primaryCharacterId"],
+      message: `primary character ${graph.presentation.primaryCharacterId} does not exist`,
+    });
+  } else {
+    if (primaryCharacter.id === graph.playerGraph.protagonistCharacterId) {
+      problems.push({
+        path: ["presentation", "primaryCharacterId"],
+        message: "primary character must not be the child protagonist",
+      });
+    }
+    if (primaryCharacter.avatarMediaId === undefined) {
+      problems.push({
+        path: ["presentation", "primaryCharacterId"],
+        message: `primary character ${primaryCharacter.id} must have an avatar`,
+      });
+    }
+  }
+
+  const cover = assets.get(graph.presentation.coverMediaId);
+  if (cover?.kind !== "image") {
+    problems.push({
+      path: ["presentation", "coverMediaId"],
+      message: `cover media ${graph.presentation.coverMediaId} is not an approved image asset`,
+    });
+  } else if (cover.width === undefined || cover.height === undefined) {
+    problems.push({
+      path: ["presentation", "coverMediaId"],
+      message: `cover media ${graph.presentation.coverMediaId} requires image dimensions`,
+    });
+  }
+
   graph.playerGraph.characters.forEach((character, index) => {
-    if (character.avatarMediaId !== undefined && !assets.has(character.avatarMediaId)) {
+    if (character.avatarMediaId === undefined) return;
+    const avatar = assets.get(character.avatarMediaId);
+    if (avatar?.kind !== "avatar") {
       problems.push({
         path: ["playerGraph", "characters", index, "avatarMediaId"],
-        message: `avatar media ${character.avatarMediaId} is not allowlisted`,
+        message: `avatar media ${character.avatarMediaId} is not an approved avatar asset`,
+      });
+    } else if (
+      avatar.width === undefined ||
+      avatar.height === undefined ||
+      avatar.width !== avatar.height
+    ) {
+      problems.push({
+        path: ["playerGraph", "characters", index, "avatarMediaId"],
+        message: `avatar media ${character.avatarMediaId} must have square dimensions`,
       });
     }
   });
@@ -629,11 +703,45 @@ function collectContractProblems(graph: ExperienceGraphShape): ContractProblem[]
     }
 
     if (node.type === "cinematic") {
-      const media = assets.get(node.mediaId);
-      if (media?.kind !== "video") {
+      const video = assets.get(node.mediaId);
+      if (video?.kind !== "video") {
         problems.push({
           path: ["chatGraph", "nodes", index, "mediaId"],
           message: `cinematic media ${node.mediaId} is not an approved video asset`,
+        });
+      } else {
+        if (!hasNineBySixteenDimensions(video)) {
+          problems.push({
+            path: ["chatGraph", "nodes", index, "mediaId"],
+            message: `cinematic media ${node.mediaId} requires exact 9:16 dimensions`,
+          });
+        }
+        if (video.durationMs === undefined) {
+          problems.push({
+            path: ["chatGraph", "nodes", index, "mediaId"],
+            message: `cinematic media ${node.mediaId} requires durationMs`,
+          });
+        }
+      }
+
+      const poster = assets.get(node.posterMediaId);
+      if (poster?.kind !== "image") {
+        problems.push({
+          path: ["chatGraph", "nodes", index, "posterMediaId"],
+          message: `cinematic poster ${node.posterMediaId} is not an approved image asset`,
+        });
+      } else if (!hasNineBySixteenDimensions(poster)) {
+        problems.push({
+          path: ["chatGraph", "nodes", index, "posterMediaId"],
+          message: `cinematic poster ${node.posterMediaId} requires exact 9:16 dimensions`,
+        });
+      }
+
+      const subtitle = assets.get(node.subtitleMediaId);
+      if (subtitle?.kind !== "subtitle" || subtitle.mimeType !== "text/vtt") {
+        problems.push({
+          path: ["chatGraph", "nodes", index, "subtitleMediaId"],
+          message: `cinematic subtitle ${node.subtitleMediaId} must be an approved text/vtt subtitle asset`,
         });
       }
     }
@@ -718,8 +826,68 @@ function collectContractProblems(graph: ExperienceGraphShape): ContractProblem[]
     addMissingClaimProblems(problems, game.evidenceClaimIds, claims, ["gameGraph", "games", index, "evidenceClaimIds"]);
   });
 
+  addTemplateTokenProblems(problems, graph, []);
   addGraphTopologyProblems(problems, graph, nodes);
   return problems;
+}
+
+function hasNineBySixteenDimensions(
+  asset: z.infer<typeof MediaAssetSchema>,
+): boolean {
+  return (
+    asset.width !== undefined &&
+    asset.height !== undefined &&
+    asset.width * 16 === asset.height * 9
+  );
+}
+
+function addTemplateTokenProblems(
+  problems: ContractProblem[],
+  value: unknown,
+  path: Array<string | number>,
+): void {
+  if (typeof value === "string") {
+    const tokenPattern = /\{\{[^{}]*\}\}|\{\{|\}\}/gu;
+    for (const match of value.matchAll(tokenPattern)) {
+      const token = match[0];
+      if (token !== "{{child_name}}") {
+        problems.push({
+          path,
+          message: token === "{{" || token === "}}"
+            ? "template token delimiters must form {{child_name}}"
+            : `unknown template token: ${token}`,
+        });
+        continue;
+      }
+
+      const tokenIndex = match.index ?? 0;
+      const before = [...value.slice(0, tokenIndex)];
+      const previous = before[before.length - 1];
+      const next = [...value.slice(tokenIndex + token.length)][0];
+      if (isTemplateWordCharacter(previous) || isTemplateWordCharacter(next)) {
+        problems.push({
+          path,
+          message: "template token {{child_name}} must be separated from letters, numbers, or _",
+        });
+      }
+    }
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => addTemplateTokenProblems(problems, item, [...path, index]));
+    return;
+  }
+
+  if (value !== null && typeof value === "object") {
+    for (const [key, item] of Object.entries(value)) {
+      addTemplateTokenProblems(problems, item, [...path, key]);
+    }
+  }
+}
+
+function isTemplateWordCharacter(value: string | undefined): boolean {
+  return value !== undefined && /[\p{L}\p{N}_]/u.test(value);
 }
 
 function addGraphTopologyProblems(

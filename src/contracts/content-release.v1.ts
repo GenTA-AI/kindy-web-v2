@@ -23,7 +23,17 @@ const SemanticVersionSchema = z
   .regex(
     /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/,
     "releaseVersion must be canonical semantic x.y.z",
+  )
+  .refine(
+    (value) => value.split(".").every(isSafeSemanticVersionComponent),
+    "releaseVersion component exceeds JavaScript safe integer range",
   );
+
+function isSafeSemanticVersionComponent(value: string): boolean {
+  return value.length < 16 || (
+    value.length === 16 && value <= String(Number.MAX_SAFE_INTEGER)
+  );
+}
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 

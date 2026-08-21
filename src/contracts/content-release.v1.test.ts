@@ -20,9 +20,10 @@ import {
 } from "./content-release.v1";
 import { validContentReleaseUnsignedFixture } from "./fixtures/content-release.v1.fixtures";
 import { validExperienceGraphFixture } from "./fixtures/experience-graph.v1.fixtures";
-import { parseExperienceGraph } from "./experience-graph.v1";
+import { parseExperienceGraph, type ExperienceGraph } from "./experience-graph.v1";
 import {
   ContentReleaseVerificationError,
+  sha256Bytes,
   sha256Canonical,
   verifyContentRelease,
   type TrustedReleaseKey,
@@ -57,6 +58,19 @@ test("ContentRelease v1 binds all artifacts, reviewer roles, and the G5 release 
   );
 });
 
+test("the shared release pins the canonical presentation graph and its complete media set", () => {
+  const release = parseContentReleaseUnsigned(validContentReleaseUnsignedFixture);
+  const graph = parseExperienceGraph(validExperienceGraphFixture);
+  const graphBytes = Buffer.from(canonicalizeReleaseJson(graph), "utf8");
+
+  assert.equal(sha256Canonical(graph), release.graph.sha256);
+  assert.equal(graphBytes.byteLength, release.graph.sizeBytes);
+  assert.deepEqual(
+    release.assets.map((asset) => asset.assetId),
+    graph.mediaManifest.assets.map((asset) => asset.id),
+  );
+});
+
 test("rejects stale approvals, missing roles, duplicate reviewers, and unsafe numbers", () => {
   const staleArtifact = cloneUnsigned();
   staleArtifact.approvals[0].subjectSha256 = "f".repeat(64);
@@ -77,7 +91,12 @@ test("rejects stale approvals, missing roles, duplicate reviewers, and unsafe nu
 });
 
 test("rejects non-canonical time, version, storage, and kind-specific media metadata", () => {
-  for (const releaseVersion of ["01.0.0", "1.00.0", "1.0.01"]) {
+  for (const releaseVersion of [
+    "01.0.0",
+    "1.00.0",
+    "1.0.01",
+    "9007199254740992.0.0",
+  ]) {
     const input = { ...cloneUnsigned(), releaseVersion };
     assert.equal(ContentReleaseUnsignedSchema.safeParse(input).success, false);
   }
@@ -190,22 +209,30 @@ test("rejects a wrong pin, untrusted key, revoked key, or byte mismatch", () => 
   assertVerificationCode(revoked, "key_not_trusted");
 
   const graphMismatch = validVerificationInput(signed, keys.publicKey);
-  graphMismatch.observedGraph.sizeBytes += 1;
+  const changedGraph = buildActualGraph();
+  changedGraph.presentation.title = `${changedGraph.presentation.title}!`;
+  graphMismatch.experienceGraphBytes = canonicalBytes(changedGraph);
   assertVerificationCode(graphMismatch, "graph_bytes_mismatch");
 
   const assetMismatch = validVerificationInput(signed, keys.publicKey);
-  assetMismatch.observedAssetsById["media.river-light"].sizeBytes += 1;
+  const changedAsset = Buffer.from(assetMismatch.assetBytesById["media.river-light"]);
+  changedAsset[0] ^= 0xff;
+  assetMismatch.assetBytesById = {
+    ...assetMismatch.assetBytesById,
+    "media.river-light": changedAsset,
+  };
   assertVerificationCode(assetMismatch, "asset_bytes_mismatch");
 });
 
 test("rejects a graph whose signed media declarations drift from the release", () => {
   const keys = generateKeyPairSync("ed25519");
-  const signed = signFixture(cloneUnsigned(), keys.privateKey);
-  const input = validVerificationInput(signed, keys.publicKey);
-  const graph = structuredClone(parseExperienceGraph(validExperienceGraphFixture));
+  const unsigned = cloneUnsigned();
+  const graph = synchronizeUnsignedWithActualBytes(unsigned);
   graph.mediaManifest.assets[1].storageKey =
     "releases/world.seurat-river/1.0.0/replaced.mp4";
-  input.experienceGraph = graph;
+  bindGraphAndApprovals(unsigned, graph);
+  const signed = signPreparedFixture(unsigned, keys.privateKey);
+  const input = validVerificationInput(signed, keys.publicKey, graph);
 
   assertVerificationCode(input, "asset_manifest_mismatch");
 });
@@ -215,6 +242,14 @@ function cloneUnsigned(): ContentReleaseUnsigned {
 }
 
 function signFixture(unsigned: ContentReleaseUnsigned, privateKey: KeyObject): ContentRelease {
+  synchronizeUnsignedWithActualBytes(unsigned);
+  return signPreparedFixture(unsigned, privateKey);
+}
+
+function signPreparedFixture(
+  unsigned: ContentReleaseUnsigned,
+  privateKey: KeyObject,
+): ContentRelease {
   const manifestSha256 = sha256Canonical(getContentReleaseManifestPayload(unsigned));
   const signature = {
     algorithm: "ed25519" as const,
@@ -244,6 +279,7 @@ function signFixture(unsigned: ContentReleaseUnsigned, privateKey: KeyObject): C
 function validVerificationInput(
   release: ContentRelease,
   publicKey: KeyObject,
+  graph: ExperienceGraph = buildActualGraph(),
 ): VerifyContentReleaseInput {
   const trustedKey: TrustedReleaseKey = {
     keyId: release.signature.keyId,
@@ -253,16 +289,12 @@ function validVerificationInput(
     validUntil: "2026-08-21T00:00:00.000Z",
   };
   return {
-    manifest: release,
-    experienceGraph: structuredClone(validExperienceGraphFixture),
-    observedGraph: {
-      sha256: release.graph.sha256,
-      sizeBytes: release.graph.sizeBytes,
-    },
-    observedAssetsById: Object.fromEntries(
+    manifestBytes: canonicalBytes(release),
+    experienceGraphBytes: canonicalBytes(graph),
+    assetBytesById: Object.fromEntries(
       release.assets.map((asset) => [
         asset.assetId,
-        { sha256: asset.sha256, sizeBytes: asset.sizeBytes },
+        testAssetBytes(asset.assetId),
       ]),
     ),
     expectedRelease: {
@@ -274,6 +306,61 @@ function validVerificationInput(
     trustedKey,
     verificationTime: VERIFIED_AT,
   };
+}
+
+function synchronizeUnsignedWithActualBytes(
+  unsigned: ContentReleaseUnsigned,
+): ExperienceGraph {
+  const graph = buildActualGraph();
+  for (const asset of unsigned.assets) {
+    const actual = testAssetBytes(asset.assetId);
+    asset.sha256 = sha256Bytes(actual);
+    asset.sizeBytes = actual.byteLength;
+  }
+  bindGraphAndApprovals(unsigned, graph);
+  return graph;
+}
+
+function buildActualGraph(): ExperienceGraph {
+  const graph = structuredClone(parseExperienceGraph(validExperienceGraphFixture));
+  for (const asset of graph.mediaManifest.assets) {
+    asset.sha256 = sha256Bytes(testAssetBytes(asset.id));
+  }
+  return graph;
+}
+
+function bindGraphAndApprovals(
+  unsigned: ContentReleaseUnsigned,
+  graph: ExperienceGraph,
+): void {
+  const graphBytes = canonicalBytes(graph);
+  unsigned.graph.sha256 = sha256Bytes(graphBytes);
+  unsigned.graph.sizeBytes = graphBytes.byteLength;
+  const artifact = unsigned.artifacts.find(
+    (candidate) => candidate.artifactId === unsigned.graph.artifactId,
+  );
+  assert.ok(artifact);
+  artifact.sha256 = unsigned.graph.sha256;
+  artifact.sizeBytes = unsigned.graph.sizeBytes;
+  for (const approval of unsigned.approvals) {
+    if (approval.gate === "G2") approval.subjectSha256 = unsigned.graph.sha256;
+  }
+  unsigned.approvalScopeSha256 = sha256Canonical(
+    getContentReleaseApprovalScopePayload(unsigned),
+  );
+  for (const approval of unsigned.approvals) {
+    if (approval.gate === "G5") {
+      approval.subjectSha256 = unsigned.approvalScopeSha256;
+    }
+  }
+}
+
+function testAssetBytes(assetId: string): Uint8Array {
+  return Buffer.from(`actual-release-asset:${assetId}`, "utf8");
+}
+
+function canonicalBytes(value: unknown): Uint8Array {
+  return Buffer.from(canonicalizeReleaseJson(value), "utf8");
 }
 
 function assertProblems(input: unknown, messages: readonly string[]): void {

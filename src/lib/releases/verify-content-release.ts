@@ -43,10 +43,9 @@ export class ContentReleaseVerificationError extends Error {
 }
 
 export type VerifyContentReleaseInput = {
-  manifest: unknown;
-  experienceGraph: unknown;
-  observedGraph: ObservedReleaseObject;
-  observedAssetsById: Readonly<Record<string, ObservedReleaseObject>>;
+  manifestBytes: Uint8Array;
+  experienceGraphBytes: Uint8Array;
+  assetBytesById: Readonly<Record<string, Uint8Array>>;
   expectedRelease: Pick<
     ContentRelease,
     "releaseId" | "experienceId" | "releaseVersion" | "channel"
@@ -55,10 +54,10 @@ export type VerifyContentReleaseInput = {
   verificationTime?: string;
 };
 
-export type ObservedReleaseObject = {
-  sha256: string;
-  sizeBytes: number;
-};
+export type VerifyContentReleaseGraphInput = Omit<
+  VerifyContentReleaseInput,
+  "assetBytesById"
+>;
 
 export type TrustedReleaseKey = {
   keyId: string;
@@ -70,6 +69,13 @@ export type TrustedReleaseKey = {
 };
 
 const verifiedContentReleaseBrand = Symbol("VerifiedContentRelease");
+const verifiedContentReleaseGraphBrand = Symbol("VerifiedContentReleaseGraph");
+
+export type VerifiedContentReleaseGraph = {
+  release: ContentRelease;
+  experienceGraph: ExperienceGraph;
+  readonly [verifiedContentReleaseGraphBrand]: true;
+};
 
 export type VerifiedContentRelease = {
   release: ContentRelease;
@@ -78,14 +84,36 @@ export type VerifiedContentRelease = {
 };
 
 /**
- * Fail-closed runtime verification for an immutable release bundle.
- * Callers must compute observed hashes from downloaded bytes, not metadata.
+ * Fail-closed ingest verification for a complete immutable release bundle.
+ * The verifier accepts actual bytes only and computes every hash and byte count
+ * internally; caller-supplied object metadata cannot produce the verified brand.
  */
 export function verifyContentRelease(
   input: VerifyContentReleaseInput,
 ): VerifiedContentRelease {
-  const release = parseManifest(input.manifest);
-  const experienceGraph = parseGraph(input.experienceGraph);
+  const verified = verifyContentReleaseGraph(input);
+  assertActualAssetBytes(verified.release, input.assetBytesById);
+
+  return {
+    release: verified.release,
+    experienceGraph: verified.experienceGraph,
+    [verifiedContentReleaseBrand]: true,
+  };
+}
+
+/**
+ * Runtime verification for the signed manifest and the exact graph bytes.
+ *
+ * This does not attest media bytes. The registry may only admit a release
+ * after `verifyContentRelease` has checked the complete immutable bundle;
+ * runtime calls then re-check the manifest signature and graph bytes before
+ * resolving authored chat transitions.
+ */
+export function verifyContentReleaseGraph(
+  input: VerifyContentReleaseGraphInput,
+): VerifiedContentReleaseGraph {
+  const release = parseManifestBytes(input.manifestBytes);
+  const experienceGraph = parseGraphBytes(input.experienceGraphBytes);
 
   const expectedApprovalScopeHash = sha256Canonical(
     getContentReleaseApprovalScopePayload(release),
@@ -118,10 +146,7 @@ export function verifyContentRelease(
     throw new ContentReleaseVerificationError("signature_invalid");
   }
 
-  if (
-    !equalSha256(input.observedGraph.sha256, release.graph.sha256) ||
-    input.observedGraph.sizeBytes !== release.graph.sizeBytes
-  ) {
+  if (!matchesActualBytes(input.experienceGraphBytes, release.graph)) {
     throw new ContentReleaseVerificationError("graph_bytes_mismatch");
   }
   if (
@@ -132,12 +157,11 @@ export function verifyContentRelease(
   }
 
   assertAssetManifestMatches(release, experienceGraph);
-  assertObservedAssetBytes(release, input.observedAssetsById);
 
   return {
     release,
     experienceGraph,
-    [verifiedContentReleaseBrand]: true,
+    [verifiedContentReleaseGraphBrand]: true,
   };
 }
 
@@ -147,22 +171,38 @@ export function sha256Canonical(value: unknown): string {
     .digest("hex");
 }
 
-function parseManifest(input: unknown): ContentRelease {
+export function sha256Bytes(value: Uint8Array): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function parseManifestBytes(input: Uint8Array): ContentRelease {
   try {
-    return parseContentRelease(input);
+    return parseContentRelease(parseCanonicalJsonBytes(input));
   } catch (cause) {
     throw new ContentReleaseVerificationError("invalid_manifest", { cause });
   }
 }
 
-function parseGraph(input: unknown): ExperienceGraph {
+function parseGraphBytes(input: Uint8Array): ExperienceGraph {
   try {
-    return parseExperienceGraph(input);
+    return parseExperienceGraph(parseCanonicalJsonBytes(input));
   } catch (cause) {
     throw new ContentReleaseVerificationError("invalid_experience_graph", {
       cause,
     });
   }
+}
+
+function parseCanonicalJsonBytes(input: Uint8Array): unknown {
+  if (!(input instanceof Uint8Array) || input.byteLength < 1) {
+    throw new Error("release object bytes are required");
+  }
+  const text = new TextDecoder("utf-8", { fatal: true }).decode(input);
+  const parsed: unknown = JSON.parse(text);
+  if (canonicalizeReleaseJson(parsed) !== text) {
+    throw new Error("release object must use canonical JSON bytes");
+  }
+  return parsed;
 }
 
 function normalizeEd25519PublicKey(
@@ -253,29 +293,35 @@ function assertAssetManifestMatches(
   }
 }
 
-function assertObservedAssetBytes(
+function assertActualAssetBytes(
   release: ContentRelease,
-  observed: Readonly<Record<string, ObservedReleaseObject>>,
+  actualBytesById: Readonly<Record<string, Uint8Array>>,
 ): void {
   const expectedIds = release.assets.map((asset) => asset.assetId).sort();
-  const observedIds = Object.keys(observed).sort();
+  const actualIds = Object.keys(actualBytesById).sort();
   if (
-    expectedIds.length !== observedIds.length ||
-    expectedIds.some((assetId, index) => assetId !== observedIds[index])
+    expectedIds.length !== actualIds.length ||
+    expectedIds.some((assetId, index) => assetId !== actualIds[index])
   ) {
     throw new ContentReleaseVerificationError("asset_bytes_mismatch");
   }
 
   for (const asset of release.assets) {
-    const actual = observed[asset.assetId];
-    if (
-      actual === undefined ||
-      !equalSha256(actual.sha256, asset.sha256) ||
-      actual.sizeBytes !== asset.sizeBytes
-    ) {
+    const actual = actualBytesById[asset.assetId];
+    if (!(actual instanceof Uint8Array) || !matchesActualBytes(actual, asset)) {
       throw new ContentReleaseVerificationError("asset_bytes_mismatch");
     }
   }
+}
+
+function matchesActualBytes(
+  actual: Uint8Array,
+  expected: { sha256: string; sizeBytes: number },
+): boolean {
+  return (
+    actual.byteLength === expected.sizeBytes &&
+    equalSha256(sha256Bytes(actual), expected.sha256)
+  );
 }
 
 function getOptionalNumber(

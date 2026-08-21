@@ -1,8 +1,10 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
-import { isLaunchSurfaceClosed } from '@/lib/launch-surface';
+import { getLaunchMode, isLaunchSurfaceClosed } from '@/lib/launch-surface';
 
 const AUTH_PROTECTED_PAGE_PREFIXES = [
+  '/onboarding',
+  '/chats',
   '/dashboard',
   '/play',
   '/player',
@@ -11,6 +13,7 @@ const AUTH_PROTECTED_PAGE_PREFIXES = [
 ] as const;
 
 const AUTH_PROTECTED_API_PREFIXES = [
+  '/api/chat',
   '/api/children',
   '/api/credits',
   '/api/purchases',
@@ -27,7 +30,7 @@ function matchesPathPrefix(pathname: string, prefix: string) {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
-function isAuthProtectedPath(pathname: string) {
+export function isAuthProtectedPath(pathname: string) {
   return (
     AUTH_PROTECTED_PAGE_PREFIXES.some((prefix) => matchesPathPrefix(pathname, prefix)) ||
     AUTH_PROTECTED_API_PREFIXES.some((prefix) => matchesPathPrefix(pathname, prefix))
@@ -35,7 +38,7 @@ function isAuthProtectedPath(pathname: string) {
 }
 
 function launchNotFound(pathname: string) {
-  if (pathname.startsWith('/api/')) {
+  if (pathname === '/api' || pathname.startsWith('/api/')) {
     return NextResponse.json({ error: 'Not Found' }, { status: 404 });
   }
 
@@ -56,13 +59,37 @@ function getSupabasePublicEnv() {
   return { supabaseUrl, supabaseAnonKey };
 }
 
-function loginRedirectUrl(request: NextRequest) {
+export function loginRedirectUrl(request: NextRequest) {
   const url = request.nextUrl.clone();
   const next = `${request.nextUrl.pathname}${request.nextUrl.search}`;
 
   url.pathname = '/auth/login';
   url.search = '';
   url.searchParams.set('next', next);
+  return url;
+}
+
+export function getBearerToken(request: NextRequest): string | null {
+  const authorization = request.headers.get('authorization') ?? '';
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : null;
+}
+
+export function acceptsBearerAuth(pathname: string): boolean {
+  return matchesPathPrefix(pathname, '/api/chat');
+}
+
+function protectedPilotOnboardingUrl(request: NextRequest) {
+  if (
+    request.nextUrl.pathname !== '/onboarding' ||
+    request.nextUrl.searchParams.has('next') ||
+    getLaunchMode(process.env) !== 'protected_chat_pilot'
+  ) {
+    return null;
+  }
+
+  const url = request.nextUrl.clone();
+  url.searchParams.set('next', '/chats');
   return url;
 }
 
@@ -73,8 +100,13 @@ export async function proxy(request: NextRequest) {
     return launchNotFound(pathname);
   }
 
-  // The expanded matcher sees all pages so unknown future pages fail closed in
-  // production. Preserve the pre-existing auth gate only on its original paths.
+  const onboardingUrl = protectedPilotOnboardingUrl(request);
+  if (onboardingUrl) {
+    return NextResponse.redirect(onboardingUrl);
+  }
+
+  // The expanded matcher sees all pages and APIs so unknown future routes fail
+  // closed in protected launch modes. Auth remains independent of launch scope.
   if (!isAuthProtectedPath(pathname)) {
     return NextResponse.next();
   }
@@ -127,9 +159,16 @@ export async function proxy(request: NextRequest) {
     },
   });
 
+  // Cookie-authenticated web requests and Bearer-authenticated mobile/API
+  // requests share the same protected surface. Validate either credential with
+  // Supabase here, then repeat the check in the Route Handler as defense in
+  // depth. Never optimistically pass an unverified Authorization header.
+  const bearerToken = acceptsBearerAuth(pathname) ? getBearerToken(request) : null;
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = bearerToken
+    ? await supabase.auth.getUser(bearerToken)
+    : await supabase.auth.getUser();
 
   if (!user) {
     if (request.nextUrl.pathname.startsWith('/api/')) {
@@ -145,12 +184,8 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|.*\\.[^/]+$).*)',
-    '/api/kiosk/events',
-    '/dashboard/:path*',
-    '/play/:path*',
-    '/player/:path*',
-    '/settings/:path*',
-    '/library/:path*',
-    '/api/(children|credits|purchases|videos|events|reactions|quiz|attention-quiz|library|game)/:path*',
+    '/onboarding/:path*',
+    '/chats/:path*',
+    '/api/:path*',
   ],
 };

@@ -10,7 +10,7 @@
 
 `latest` 태그나 `gcr.io`를 직접 배포하지 않는다. `scripts/gcp-release.sh`만 정본이다. 이 하네스는 프로젝트·리전·서비스를 고정하고, dirty worktree를 거부하며, `git-<40자 SHA>-pay<0|1>` 불변 태그를 서울 Artifact Registry에 한 번 빌드한다. 프리뷰와 프로덕션은 **같은 `sha256` 다이제스트**를 쓴다.
 
-최초 1회(필수 API, immutable-tag 저장소, 전용 runtime service account, Secret Manager IAM):
+최초 1회(필수 API, immutable-tag 저장소, 프리뷰·운영 분리 runtime service account, Secret Manager IAM):
 
 ```bash
 gcloud auth login
@@ -31,7 +31,7 @@ KINDY_PAYMENTS_ENABLED=0 bash scripts/gcp-release.sh build
 # 마지막 세 줄의 KINDY_RELEASE_SHA, KINDY_PAYMENTS_ENABLED,
 # KINDY_IMAGE_DIGEST_URI를 복사한다.
 
-# 2. 프리뷰 배포 + /api/health/live, /api/health/ready 스모크
+# 2. 프리뷰 0% candidate tag 배포 + direct health smoke 후에만 100% 전환
 bash scripts/gcp-release.sh deploy-preview \
   'asia-northeast3-docker.pkg.dev/kindy-493701/kindy-containers/kindy-web@sha256:<64-hex>' \
   '<40-char-git-sha>'
@@ -44,11 +44,47 @@ bash scripts/gcp-release.sh promote \
   '<40-char-git-sha>'
 ```
 
+기본 노출면은 프리뷰 `open_preview`, 프로덕션 `production_presale`다. 인증된
+스토리 채팅 파일럿은 매 배포 명령에서 아래처럼 **명시적으로** 선택한다. DB
+마이그레이션과 signed content release 코드는 준비돼도 현재 runtime은 반드시
+`0`이다. `1`은 immutable object/DB identity 외부 게이트가 닫힐 때까지 하네스가
+Cloud Run 호출 전에 거절한다.
+
+```bash
+# 보호된 UI/auth/API 경계만 프리뷰 검증(runtime은 닫힘)
+KINDY_LAUNCH_MODE=protected_chat_pilot \
+STORY_CHAT_RUNTIME_ENABLED=0 \
+STORY_CONTENT_RELEASE_BUCKET=content-releases \
+STORY_CONTENT_RELEASE_CHANNEL=staging \
+bash scripts/gcp-release.sh deploy-preview '<IMAGE@sha256:DIGEST>' '<SOURCE_SHA>'
+```
+
+허용 조합은 `preview/open_preview`, `preview/protected_chat_pilot`,
+`production/production_presale`, `production/protected_chat_pilot`뿐이다. 오타나
+교차 조합은 Cloud Run 호출 전에 실패한다. `STORY_CHAT_RUNTIME_ENABLED`는 현재
+정확히 `0`만 받으며, 자유 입력은 운영자 환경값과 무관하게 모든 revision에
+`STORY_CHAT_FREE_TEXT_ENABLED=0`으로 고정한다. ContentRelease bucket은 private
+`content-releases`만 허용하고 channel은 프리뷰 `staging`, 프로덕션 `production`
+으로 고정한다. 두 환경값은 story runtime이 `0`인 배포에도 항상 명시적으로
+주입된다. 운영자가 다른 bucket/channel을 설정하면 gcloud 인증·조회·배포보다
+먼저 로컬 preflight가 실패한다.
+
 결제 ON 이미지는 `NEXT_PUBLIC_SITE_URL=https://kindy.kr`가 아니면 Cloud Build가
 거부한다. 공개 Supabase URL/anon과 다른 `NEXT_PUBLIC_*` 공개값은 client bundle과
 standalone server가 서로 달라지지 않도록 같은 immutable image에 함께 고정된다.
 
 운영 공개 스모크가 실패하면 하네스가 직전 100% revision으로 자동 복귀한다. 성공 시 출력되는 정확한 rollback 명령을 사고 기록에 함께 남긴다. 수동 확인/롤백:
+
+프리뷰도 곧바로 `latest`에 트래픽을 보내지 않는다. `preview-candidate` tag와
+0% revision을 먼저 만들고 해당 tag URL의 live/ready가 새 revision을 정확히
+보고한 뒤에만 100%로 전환한다. 후보 스모크 실패 시 기존 트래픽은 그대로이며,
+전환 직후 canonical URL 검증 실패 시 가능한 경우 직전 100% revision으로 복구한다.
+
+헬스 응답은 source SHA뿐 아니라 Cloud Run이 자동 주입한 `K_REVISION`도 반환한다.
+프리뷰 스모크와 production canary는 둘을 모두 비교하므로, 같은 image/SHA를 다른
+env·Secret로 재배포해도 이전 revision 응답으로 후보 검증을 통과할 수 없다.
+`production_presale`은 `open_preview`, `protected_chat_pilot`은 같은
+`protected_chat_pilot` 프리뷰를 거친 경우에만 승격한다.
 
 ```bash
 bash scripts/gcp-release.sh status
@@ -82,7 +118,17 @@ bash scripts/gcp-release.sh rollback 'kindy-00000-abc'
 
 BIZ 6종 중 하나라도 비면 결제 CTA가 잠긴다.
 
-**런타임(Secret Manager → Cloud Run)** — 절대 번들에 넣지 않는다. `--update-secrets`로 주입.
+**런타임(Secret Manager → Cloud Run)** — 절대 번들에 넣지 않는다. 하네스는
+`--set-secrets`로 기존 revision의 Secret 참조를 먼저 지운 뒤 해당 환경의
+allowlist만 다시 주입한다.
+
+Cloud Run identity는 환경별로 고정한다. 공개 프리뷰는
+`kindy-preview-runtime@kindy-493701.iam.gserviceaccount.com`, 운영은
+`kindy-runtime@kindy-493701.iam.gserviceaccount.com`을 사용한다. 프리뷰 identity에는
+Secret Manager 접근을 부여하지 않는다. 이름이 다른
+`kindy-preview-supabase-service-role`도 운영과 같은 Supabase project의
+`BYPASSRLS` key로 확인됐으므로 주입 금지다. 같은 image digest를 사용해도
+identity와 Secret profile은 절대 공유하지 않는다.
 
 | Cloud Run env | Secret Manager 이름 | 상태 |
 |---|---|---|
@@ -100,19 +146,38 @@ BIZ 6종 중 하나라도 비면 결제 CTA가 잠긴다.
 | `RESEND_FROM_EMAIL` | `kindy-resend-from-email` | 옵션. 미설정 시 `Kindy <support@kindy.kr>` |
 | `KINDY_OPERATOR_KEY` | `kindy-operator-key` | 비스포크 생성 게이트(대표만 보유) |
 
-`INNGEST_DEV`는 로컬 전용 env다 — 프로덕션에는 존재하면 안 되며 `scripts/deploy-cloud-run.sh`가 제거한다. 전체 목록·설명은 `.env.local.example` 참조.
+`INNGEST_DEV`는 로컬 전용 env다 — 프로덕션에는 존재하면 안 되며
+`scripts/gcp-release.sh`가 제거한다. 전체 목록·설명은 `.env.local.example` 참조.
 
 **배포 환경 잠금(Cloud Run 런타임 env)** — `KINDY_DEPLOY_ENV`는 같은 이미지를 어느 서비스가 실행하는지 서버 시작 때 판별한다. `KINDY_RELEASE_SHA`는 헬스 응답과 배포 증적에 쓰인다. 둘 다 `gcp-release.sh`가 주입하며 Cloud Build substitution이 아니다. 미설정·빈 값·오타는 readiness 실패로 처리한다. 로컬 `npm run dev`(`NODE_ENV !== 'production'`)는 이 값과 무관하게 열린다.
 
 | Cloud Run 런타임 env | 프리뷰 서비스 (`kindy-landing-preview`) | 프로덕션 서비스 (`kindy`) |
 |---|---|---|
-| `KINDY_DEPLOY_ENV` | `preview` (필수) | `production` (명시 권장, 미설정이어도 잠김) |
+| `KINDY_DEPLOY_ENV` | `preview` (필수) | `production` (필수; 미설정이면 노출면은 잠기지만 readiness 실패) |
+| `KINDY_LAUNCH_MODE` | `open_preview` (기본) / `protected_chat_pilot` (명시) | `production_presale` (기본) / `protected_chat_pilot` (명시) |
 | `KINDY_RELEASE_SHA` | 배포한 40자 git SHA | 프리뷰와 동일한 40자 git SHA |
 | `KINDY_LOCAL_PREVIEW` | `0` | `0` |
 | `LESSON_GUEST_MODE` | `0` | `0` |
-| `BILLING_KEY_SECRET` | 주입하지 않음 | `kindy-billing-key-secret:latest`를 Secret Manager로 반드시 주입 |
+| `STORY_CHAT_RUNTIME_ENABLED` | 현재 반드시 `0` | 현재 반드시 `0` |
+| `STORY_CHAT_FREE_TEXT_ENABLED` | 항상 `0` | 항상 `0` |
+| `STORY_CONTENT_RELEASE_BUCKET` | `content-releases` (private, 고정) | `content-releases` (private, 고정) |
+| `STORY_CONTENT_RELEASE_CHANNEL` | `staging` (고정) | `production` (고정) |
+| `BILLING_KEY_SECRET` | 주입하지 않음 | `kindy-billing-key-secret:<배포 시 확인한 숫자 버전>`을 반드시 주입 |
 
-시크릿 값은 하네스가 읽지 않는다. `ENV_NAME=secret-name:latest` 참조만 Cloud Run revision에 연결하며, 필수 시크릿이 없거나 disabled면 배포 전에 실패한다. `INNGEST_DEV`와 `VERCEL_ENV`는 매 revision에서 제거된다. 프리뷰에는 별도 `kindy-preview-supabase-service-role`과 선택적 제작 AI만 연결하고 결제·빌링·운영자 Secret은 연결하지 않는다. 프리뷰 공개 IAM은 릴리스 하네스 밖의 별도 운영 정책으로 관리한다.
+`/api/health/ready`는 deploy env, launch mode의 허용 조합, story runtime의 정확한
+`0`, 자유 입력 `0`을 함께 검사한다. 현재 `1`은 GCP 하네스와 readiness 모두
+거절한다. 별도 GCS immutable object identity 또는 완전 RPC-only DB identity가
+구축되기 전에는 signed ContentRelease 설정이 있어도 활성화하지 않는다. 누락·오타·
+금지 조합이면 503이므로 preview smoke와 production canary가 자동으로 중단된다.
+
+시크릿 값은 하네스가 읽지 않는다. 배포 직전 각 `latest` alias가 가리키는
+`ENABLED` 숫자 버전을 조회한 뒤 `ENV_NAME=secret-name:<number>`로 revision에
+고정한다. 따라서 같은 revision의 새 instance와 rollback이 회전 후에도 같은
+credential을 사용한다. 필수 버전이 없거나 disabled면 배포 전에 실패한다.
+`INNGEST_DEV`, `VERCEL_ENV`, 레거시 `KINDY_PRESALE_LOCKDOWN`은 매 revision에서
+제거된다. 공개 프리뷰에는 Secret Manager 참조를 하나도 주입하지 않으며,
+브라우저 인증은 image에 포함된 공개 anon key와 RLS만 사용한다. 프리뷰 공개
+IAM은 릴리스 하네스 밖의 별도 운영 정책으로 관리한다.
 
 ---
 
@@ -154,6 +219,34 @@ BIZ 6종 중 하나라도 비면 결제 CTA가 잠긴다.
 - **백업/PITR 확인(P1-13)**: Supabase 대시보드 → Database → Backups. 유료 개시 전 Pro 이상 티어에서 일일 백업 + PITR 활성 여부 확인. `parent_consents`(PIPA)·`purchases`(전상법 보존)는 법정 보존 기록이므로 복원 경로가 필수.
 - **복원 1회 테스트(P1-13)**: 런칭 전 백업에서 스테이징/신규 프로젝트로 복원 1회를 실제로 수행해 복원 가능성을 검증한다(문서상 백업 ≠ 복원 검증).
 
+### Signed ContentRelease 발행/실행 경계
+
+`0032_content_release_runtime_registry.sql` 적용 자체는 runtime 활성화 승인이 아니다.
+현재는 `STORY_CHAT_RUNTIME_ENABLED=0`을 유지한다. 같은 Cloud Run process의
+`SUPABASE_SERVICE_ROLE_KEY`가 Storage RLS를 우회할 수 있으므로 별도 read-only
+Storage JWT만으로 object immutability가 성립하지 않는다. 활성화 전에는 별도 GCS
+bucket(runtime=`objectViewer`, publisher=`objectCreator`, versioning+retention/lock)
+또는 service-role를 제거한 RPC-only DB runtime identity가 반드시 필요하다.
+
+DB 역할은 서로 분리한다.
+
+- `kindy_content_release_publisher`: actual manifest/graph/all-asset bytes로 Mori
+  `verifyContentRelease`를 통과한 뒤
+  `record_application_verified_content_release_attestation`만 호출한다. SQL RPC는
+  hashing/download/signature 검증을 하지 않는다.
+- `kindy_content_release_operator`: `activate_content_release`,
+  `revoke_content_release`, `raise_content_release_minimum_version`만 호출한다.
+- Cloud Run `service_role`: registry SELECT와 read-only eligibility RPC만 가능하며
+  publisher/operator membership이나 mutation EXECUTE를 부여하지 않는다.
+
+publisher와 operator는 각기 감사 가능한 별도 login/CI identity가 `SET ROLE`해야
+한다. Mori publisher가 activation까지 이어서 호출하면 안 된다. manifest/graph/
+asset에는 private storage key만 저장하고 public/signed URL을 DB나 로그에 남기지
+않는다. Supabase custom Storage JWT 경로를 유지하려면 공식 role membership과
+실제 hosted `createSignedUrl` smoke도 필요하지만, 이는 위 immutable P0 경계를
+대체하지 않는다. 상세 검증과 남은 gate는
+`docs/plan/21_SIGNED_CONTENT_RELEASE_RUNTIME.md`를 따른다.
+
 ---
 
 ## 6. BILLING_KEY_SECRET (단일 장애점 — 유실 = 전 가구 카드 재등록)
@@ -161,12 +254,12 @@ BIZ 6종 중 하나라도 비면 결제 CTA가 잠긴다.
 빌링키 AES-256-GCM 암호화 키. 매 갱신 청구가 이 키로 복호화하므로 유실되면 전 구독자가 카드를 다시 등록해야 한다.
 
 1. **생성**: `openssl rand -base64 32`
-2. **Secret Manager 등록 + Cloud Run 주입**:
+2. **Secret Manager 등록**:
    ```bash
    printf %s "<생성한 키>" | gcloud secrets create kindy-billing-key-secret --data-file=-
-   gcloud run services update kindy --region=asia-northeast3 \
-     --update-secrets=BILLING_KEY_SECRET=kindy-billing-key-secret:latest
    ```
+   Cloud Run을 수동 `update`하지 않는다. 릴리스 하네스가 배포 시점의
+   enabled numeric Secret 버전을 해석해 해당 revision에 고정한다.
 3. **오프라인 에스크로 1부**: 암호화 USB나 문서 금고 등 오프라인 안전 위치에 사본 1부 별도 보관.
 4. **회전 주의**: 이 키를 회전하면 기존 `billing_keys`의 암호문을 **복호화할 수 없다** → 전 가구 카드 재등록 필요. 회전은 유출 등 최후 수단이며, 전 구독자 재등록 플로우를 준비한 뒤에만 수행한다.
 
@@ -189,9 +282,10 @@ BIZ 6종 중 하나라도 비면 결제 CTA가 잠긴다.
 ```bash
 printf %s "re_..." | gcloud secrets create kindy-resend-api-key --data-file=-
 printf %s "Kindy <support@kindy.kr>" | gcloud secrets create kindy-resend-from-email --data-file=-
-gcloud run services update kindy --region=asia-northeast3 \
-  --update-secrets=RESEND_API_KEY=kindy-resend-api-key:latest,RESEND_FROM_EMAIL=kindy-resend-from-email:latest
 ```
+
+시크릿을 수동 `:latest`로 Cloud Run에 연결하지 않는다. 다음 정식
+릴리스에서 `scripts/gcp-release.sh`가 현재 enabled numeric 버전을 고정한다.
 
 발신 도메인은 Resend에서 별도로 인증해야 한다. 인증 전에는 테스트 도메인/제한 발송만 가능하다.
 

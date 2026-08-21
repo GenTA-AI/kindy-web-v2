@@ -1,4 +1,7 @@
 const RELEASE_PREFIX = "releases/world.seurat-river/1.0.0";
+const EXPERIENCE_GRAPH_SHA256 =
+  "1a6aa6c50022b46ab95acdf5efd1b5d50fa2136ea867fcd35a53920c4587f699";
+const EXPERIENCE_GRAPH_SIZE_BYTES = 7_635;
 
 const artifact = (
   artifactId: string,
@@ -47,8 +50,8 @@ const artifacts = [
     "experience_graph",
     "experience-graph/v1",
     "experience-graph.json",
-    "3333333333333333333333333333333333333333333333333333333333333333",
-    14_000,
+    EXPERIENCE_GRAPH_SHA256,
+    EXPERIENCE_GRAPH_SIZE_BYTES,
   ),
   artifact(
     "artifact.keyframes",
@@ -131,8 +134,8 @@ export const validContentReleaseUnsignedFixture = {
     artifactId: "artifact.graph",
     schemaVersion: "experience-graph/v1",
     storageKey: `${RELEASE_PREFIX}/experience-graph.json`,
-    sha256: "3333333333333333333333333333333333333333333333333333333333333333",
-    sizeBytes: 14_000,
+    sha256: EXPERIENCE_GRAPH_SHA256,
+    sizeBytes: EXPERIENCE_GRAPH_SIZE_BYTES,
   },
   artifacts,
   assets: [
@@ -158,6 +161,24 @@ export const validContentReleaseUnsignedFixture = {
       durationMs: 12_000,
     },
     {
+      assetId: "media.river-light-poster",
+      kind: "image",
+      storageKey: `${RELEASE_PREFIX}/river-light-poster.webp`,
+      mimeType: "image/webp",
+      sha256: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      sizeBytes: 210_000,
+      width: 1080,
+      height: 1920,
+    },
+    {
+      assetId: "media.river-light-subtitles",
+      kind: "subtitle",
+      storageKey: `${RELEASE_PREFIX}/river-light.ko.vtt`,
+      mimeType: "text/vtt",
+      sha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      sizeBytes: 8_000,
+    },
+    {
       assetId: "media.sun-card",
       kind: "image",
       storageKey: `${RELEASE_PREFIX}/sun-card.webp`,
@@ -166,6 +187,16 @@ export const validContentReleaseUnsignedFixture = {
       sizeBytes: 180_000,
       width: 800,
       height: 1_000,
+    },
+    {
+      assetId: "media.world-cover",
+      kind: "image",
+      storageKey: `${RELEASE_PREFIX}/world-cover.webp`,
+      mimeType: "image/webp",
+      sha256: "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      sizeBytes: 260_000,
+      width: 1080,
+      height: 1920,
     },
   ],
   approvals: [
@@ -180,14 +211,14 @@ export const validContentReleaseUnsignedFixture = {
       "G5",
       "release_owner",
       "release.world.seurat-river.1-0-0",
-      "1cfcb2f045b00404106f941b0d92a1768286e766cca2ab7af4e8228cc44fccb0",
+      "97ac97644a656c8089b23c4caa0ed0deec32632631a487c26809a44588c1bf05",
       "2026-08-20T05:30:00.000Z",
     ),
     gateApproval(
       "G5",
       "safety",
       "release.world.seurat-river.1-0-0",
-      "1cfcb2f045b00404106f941b0d92a1768286e766cca2ab7af4e8228cc44fccb0",
+      "97ac97644a656c8089b23c4caa0ed0deec32632631a487c26809a44588c1bf05",
       "2026-08-20T05:40:00.000Z",
       "reviewer.final-safety",
     ),
@@ -197,5 +228,5 @@ export const validContentReleaseUnsignedFixture = {
     promptRegistrySha256: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
     policyRegistrySha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
   },
-  approvalScopeSha256: "1cfcb2f045b00404106f941b0d92a1768286e766cca2ab7af4e8228cc44fccb0",
+  approvalScopeSha256: "97ac97644a656c8089b23c4caa0ed0deec32632631a487c26809a44588c1bf05",
 } as const;
