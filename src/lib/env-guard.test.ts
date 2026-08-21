@@ -93,6 +93,25 @@ test('프로덕션에서는 BILLING_KEY_SECRET 누락과 빈 값을 모두 거�
   }
 });
 
+test('준비 전 Wenit runtime과 브라우저 공개 키를 프로덕션에서 거부한다', () => {
+  const publicSecret = 'unit-test-public-wenit-secret';
+  const violations = getProductionEnvironmentViolations({
+    NODE_ENV: 'production',
+    BILLING_KEY_SECRET: CONFIGURED_SECRET,
+    WENIT_SAFEGUARD_RUNTIME_ENABLED: '1',
+    NEXT_PUBLIC_WENIT_SAFEGUARD_API_KEY: publicSecret,
+  });
+
+  assert.deepEqual(
+    violations.map((violation) => violation.variable),
+    [
+      'WENIT_SAFEGUARD_RUNTIME_ENABLED',
+      'NEXT_PUBLIC_WENIT_SAFEGUARD_API_KEY',
+    ],
+  );
+  assert.equal(JSON.stringify(violations).includes(publicSecret), false);
+});
+
 test('프로덕션의 모든 위반을 한 번에 반환하고 환경변수 값은 노출하지 않는다', () => {
   const secretValue = 'must-never-appear-in-a-violation';
   const violations = getProductionEnvironmentViolations({

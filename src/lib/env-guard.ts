@@ -5,7 +5,9 @@ export type EnvironmentMap = Readonly<Record<string, string | undefined>>;
 export type GuardedEnvironmentVariable =
   | 'KINDY_LOCAL_PREVIEW'
   | 'LESSON_GUEST_MODE'
-  | 'BILLING_KEY_SECRET';
+  | 'BILLING_KEY_SECRET'
+  | 'WENIT_SAFEGUARD_RUNTIME_ENABLED'
+  | 'NEXT_PUBLIC_WENIT_SAFEGUARD_API_KEY';
 
 export type EnvironmentViolation = Readonly<{
   variable: GuardedEnvironmentVariable;
@@ -53,6 +55,24 @@ export function getProductionEnvironmentViolations(
       reason: '빌링키를 AES-256-GCM으로 암호화할 필수 키가 없습니다.',
       remediation:
         '프로덕션 시크릿 저장소에서 BILLING_KEY_SECRET을 비어 있지 않은 값으로 설정하세요.',
+    });
+  }
+
+  if (environment.WENIT_SAFEGUARD_RUNTIME_ENABLED === '1') {
+    violations.push({
+      variable: 'WENIT_SAFEGUARD_RUNTIME_ENABLED',
+      reason: '별도 preview DB, DLP·위기 평가, vendor 계약 pin과 아동 안전 게이트가 아직 준비되지 않았습니다.',
+      remediation:
+        '모든 activation gate와 입출력 이중 검사가 승인되기 전에는 값을 "0"으로 유지하세요.',
+    });
+  }
+
+  if (environment.NEXT_PUBLIC_WENIT_SAFEGUARD_API_KEY?.trim()) {
+    violations.push({
+      variable: 'NEXT_PUBLIC_WENIT_SAFEGUARD_API_KEY',
+      reason: 'Wenit 원본 API 키를 브라우저 번들에 노출합니다.',
+      remediation:
+        'NEXT_PUBLIC_* 변수를 제거하고 서버 Secret Manager의 WENIT_SAFEGUARD_API_KEY만 사용하세요.',
     });
   }
 
