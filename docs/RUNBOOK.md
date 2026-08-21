@@ -2,44 +2,61 @@
 
 > 운영자 = 대표 1인 기준. 배포·결제·콘텐츠·장애 대응의 실행 정본.
 > 코드 기준 설명은 `docs/SERVICE_OVERVIEW.md`, 런칭 갭 전수는 `docs/07_LAUNCH_GAP_AND_VIDEO_ENGINE_RESEARCH_2026-07-02.md` 참조.
-> GCP 프로젝트 `kindy-493701` · 리전 `asia-northeast3`(Seoul) · Cloud Run 서비스명 `kindy`.
+> GCP 프로젝트 `kindy-493701` · 리전 `asia-northeast3`(Seoul) · Artifact Registry `kindy-containers` · Cloud Run 프리뷰 `kindy-landing-preview` · 프로덕션 `kindy`.
 
 ---
 
-## 1. 배포 시퀀스
+## 1. 배포 시퀀스 (불변 다이제스트 승격)
 
-세 단계다. NEXT_PUBLIC_* 값은 **빌드 타임에 클라이언트 번들로 박히므로**, ①의 substitution에 실값을 넘기지 않으면 결제 CTA가 "결제 준비 중"으로 잠긴다(런타임 env로는 못 연다 — `docs/07` P0-2).
+`latest` 태그나 `gcr.io`를 직접 배포하지 않는다. `scripts/gcp-release.sh`만 정본이다. 이 하네스는 프로젝트·리전·서비스를 고정하고, dirty worktree를 거부하며, `git-<40자 SHA>-pay<0|1>` 불변 태그를 서울 Artifact Registry에 한 번 빌드한다. 프리뷰와 프로덕션은 **같은 `sha256` 다이제스트**를 쓴다.
 
-### ① 이미지 빌드 — `gcloud builds submit`
-
-주소·상호에 콤마가 들어갈 수 있어 gcloud 구분자 이스케이프 `^;^`를 쓴다(`cloudbuild.yaml` 헤더 참조). 첫 구분자 `^;^`가 "이후로는 `;`로 필드를 나눈다"는 선언이다.
+최초 1회(필수 API, immutable-tag 저장소, 전용 runtime service account, Secret Manager IAM):
 
 ```bash
-gcloud builds submit \
-  --config=cloudbuild.yaml \
-  --substitutions='^;^_SUPABASE_URL=https://xxx.supabase.co;_SUPABASE_ANON_KEY=eyJ...;_TOSS_CLIENT_KEY=live_ck_...;_SITE_URL=https://kindy.kr;_BIZ_REPRESENTATIVE_NAME=대표명;_BIZ_REGISTRATION_NUMBER=000-00-00000;_BIZ_MAIL_ORDER_NUMBER=제0000-서울강남-0000호;_BIZ_ADDRESS=서울 강남구 ..., 3층;_BIZ_PHONE=02-0000-0000;_BIZ_EMAIL=support@kindy.kr;_KINDY_START_BASE=;_TAG=latest'
+gcloud auth login
+bash scripts/gcp-release.sh bootstrap
 ```
 
-결과: `gcr.io/kindy-493701/kindy:latest` 푸시. service_role·secret 류는 절대 여기에 넣지 않는다(런타임 Secret Manager 전용).
-
-### ② 배포 — `gcloud run deploy`
+일반 릴리스:
 
 ```bash
-gcloud run deploy kindy \
-  --image=gcr.io/kindy-493701/kindy:latest \
-  --region=asia-northeast3 \
-  --allow-unauthenticated
+# 0. 반드시 커밋된 clean worktree에서 실행
+git status --short
+
+# 1-a. 결제 OFF 프리뷰: PortOne/Toss/BIZ 공개값을 강제로 빈 값으로 번들링
+KINDY_PAYMENTS_ENABLED=0 bash scripts/gcp-release.sh build
+
+# 1-b. 결제 가능한 릴리스: PortOne + BIZ 전체값이 있어야만 빌드
+# KINDY_PAYMENTS_ENABLED=1 bash scripts/gcp-release.sh build
+# 마지막 세 줄의 KINDY_RELEASE_SHA, KINDY_PAYMENTS_ENABLED,
+# KINDY_IMAGE_DIGEST_URI를 복사한다.
+
+# 2. 프리뷰 배포 + /api/health/live, /api/health/ready 스모크
+bash scripts/gcp-release.sh deploy-preview \
+  'asia-northeast3-docker.pkg.dev/kindy-493701/kindy-containers/kindy-web@sha256:<64-hex>' \
+  '<40-char-git-sha>'
+
+# 3. 프리뷰가 현재도 같은 digest이고 ready인지 재검증한 뒤 운영 후보 생성
+#    후보는 0%에서 Ready 확인 후 5% → 25% → 50% → 100% canary로 전환된다.
+#    pay0 이미지는 여기서 fail-closed되며 pay1 이미지만 운영 승격할 수 있다.
+bash scripts/gcp-release.sh promote \
+  'asia-northeast3-docker.pkg.dev/kindy-493701/kindy-containers/kindy-web@sha256:<64-hex>' \
+  '<40-char-git-sha>'
 ```
 
-주: GenTA org policy(`iam.allowedPolicyMemberDomains`)가 `allUsers`를 막아 직접 URL 공개는 안 되고 외부 접근은 로드밸런서 경유다(내부 인증 — `STATUS.md` 참조). 신규 이미지 배포마다 ②를 반복하면 된다.
+결제 ON 이미지는 `NEXT_PUBLIC_SITE_URL=https://kindy.kr`가 아니면 Cloud Build가
+거부한다. 공개 Supabase URL/anon과 다른 `NEXT_PUBLIC_*` 공개값은 client bundle과
+standalone server가 서로 달라지지 않도록 같은 immutable image에 함께 고정된다.
 
-### ③ Inngest 시크릿 주입 — `scripts/deploy-cloud-run.sh`
-
-Inngest Secret Manager 2종을 Cloud Run에 연결하고 `INNGEST_DEV` env를 제거한다(이것이 없으면 갱신 cron·영상 생성이 프로덕션에서 안 돈다). 최초 1회 + Inngest 키 회전 시 실행.
+운영 공개 스모크가 실패하면 하네스가 직전 100% revision으로 자동 복귀한다. 성공 시 출력되는 정확한 rollback 명령을 사고 기록에 함께 남긴다. 수동 확인/롤백:
 
 ```bash
-bash scripts/deploy-cloud-run.sh
+bash scripts/gcp-release.sh status
+bash scripts/gcp-release.sh smoke production '<40-char-git-sha>'
+bash scripts/gcp-release.sh rollback 'kindy-00000-abc'
 ```
+
+`scripts/deploy-cloud-run.sh`, `gcloud run deploy kindy`, mutable tag 배포는 금지한다. GenTA org policy 때문에 직접 Cloud Run URL 공개 IAM을 변경하지 않으며, `kindy.kr` 공개 경로는 기존 외부 로드밸런서를 유지한다.
 
 ---
 
@@ -51,7 +68,9 @@ bash scripts/deploy-cloud-run.sh
 |---|---|---|
 | `_SUPABASE_URL` | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 클라이언트 |
 | `_SUPABASE_ANON_KEY` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon |
-| `_TOSS_CLIENT_KEY` | `NEXT_PUBLIC_TOSS_CLIENT_KEY` | 결제 CTA 활성 조건 |
+| `_PORTONE_STORE_ID` | `NEXT_PUBLIC_PORTONE_STORE_ID` | 포트원 V2 상점 ID; 결제 CTA 필수 |
+| `_PORTONE_CHANNEL_KEY` | `NEXT_PUBLIC_PORTONE_CHANNEL_KEY` | 포트원 V2 채널 키; 결제 CTA 필수 |
+| `_TOSS_CLIENT_KEY` | `NEXT_PUBLIC_TOSS_CLIENT_KEY` | 기존 Toss 결제 호환(옵션) |
 | `_SITE_URL` | `NEXT_PUBLIC_SITE_URL` | OAuth 콜백·리다이렉트 기준 |
 | `_BIZ_REPRESENTATIVE_NAME` | `NEXT_PUBLIC_BIZ_REPRESENTATIVE_NAME` | 전자상거래법 §13 표시 |
 | `_BIZ_REGISTRATION_NUMBER` | `NEXT_PUBLIC_BIZ_REGISTRATION_NUMBER` | 〃 (사업자번호) |
@@ -71,8 +90,10 @@ BIZ 6종 중 하나라도 비면 결제 CTA가 잠긴다.
 | `ANTHROPIC_API_KEY` | `kindy-anthropic-key` | 등록됨 |
 | `FAL_KEY` | `kindy-fal-key` | 등록됨 |
 | `GOOGLE_API_KEY` / `GEMINI_API_KEY` | `kindy-google-key` | 등록됨 |
-| `INNGEST_SIGNING_KEY` | `kindy-inngest-signing-key` | **미등록 — §4** |
-| `INNGEST_EVENT_KEY` | `kindy-inngest-event-key` | **미등록 — §4** |
+| `INNGEST_SIGNING_KEY` | `kindy-inngest-signing-key` | 등록됨 |
+| `INNGEST_EVENT_KEY` | `kindy-inngest-event-key` | 등록됨 |
+| `PORTONE_API_SECRET` | `kindy-portone-api-secret` | **필수 — 서버 결제 조회/청구** |
+| `PORTONE_WEBHOOK_SECRET` | `kindy-portone-webhook-secret` | **필수 — 웹훅 HMAC fail-closed** |
 | `TOSS_SECRET_KEY` (live_sk_) | `kindy-toss-secret-key` | **런칭 전 생성·등록 필요** |
 | `BILLING_KEY_SECRET` | `kindy-billing-key-secret` | **런칭 전 생성·등록 필요 — §6** |
 | `RESEND_API_KEY` | `kindy-resend-api-key` | **결제 이메일 발송용 — §7** |
@@ -81,31 +102,17 @@ BIZ 6종 중 하나라도 비면 결제 CTA가 잠긴다.
 
 `INNGEST_DEV`는 로컬 전용 env다 — 프로덕션에는 존재하면 안 되며 `scripts/deploy-cloud-run.sh`가 제거한다. 전체 목록·설명은 `.env.local.example` 참조.
 
-**배포 환경 잠금(Cloud Run 런타임 env)** — `KINDY_DEPLOY_ENV`는 같은 이미지를 어느 서비스가 실행하는지 서버 시작 때 판별한다. `NEXT_PUBLIC_` 값이나 Cloud Build substitution이 아니며, 정확히 `preview`일 때만 프리뷰가 열린다. 미설정·빈 값·오타·그 밖의 값은 모두 프로덕션으로 간주해 잠근다. 로컬 `npm run dev`(`NODE_ENV !== 'production'`)는 이 값과 무관하게 열린다.
+**배포 환경 잠금(Cloud Run 런타임 env)** — `KINDY_DEPLOY_ENV`는 같은 이미지를 어느 서비스가 실행하는지 서버 시작 때 판별한다. `KINDY_RELEASE_SHA`는 헬스 응답과 배포 증적에 쓰인다. 둘 다 `gcp-release.sh`가 주입하며 Cloud Build substitution이 아니다. 미설정·빈 값·오타는 readiness 실패로 처리한다. 로컬 `npm run dev`(`NODE_ENV !== 'production'`)는 이 값과 무관하게 열린다.
 
 | Cloud Run 런타임 env | 프리뷰 서비스 (`kindy-landing-preview`) | 프로덕션 서비스 (`kindy`) |
 |---|---|---|
 | `KINDY_DEPLOY_ENV` | `preview` (필수) | `production` (명시 권장, 미설정이어도 잠김) |
-| `KINDY_LOCAL_PREVIEW` | `1` (현재 Supabase 없는 프리뷰 폴백) | `0` 또는 미설정 |
-| `LESSON_GUEST_MODE` | `1` (무로그인 레슨 검수 서비스에서만) | `0` 또는 미설정 |
-| `BILLING_KEY_SECRET` | 부팅에는 선택; 결제 경로 검수 시 프리뷰 전용 키 사용 | `kindy-billing-key-secret:latest`를 Secret Manager로 반드시 주입 |
+| `KINDY_RELEASE_SHA` | 배포한 40자 git SHA | 프리뷰와 동일한 40자 git SHA |
+| `KINDY_LOCAL_PREVIEW` | `0` | `0` |
+| `LESSON_GUEST_MODE` | `0` | `0` |
+| `BILLING_KEY_SECRET` | 주입하지 않음 | `kindy-billing-key-secret:latest`를 Secret Manager로 반드시 주입 |
 
-서비스별 설정(리드가 사람 게이트에서 실행):
-
-```bash
-gcloud run services update kindy-landing-preview \
-  --region=asia-northeast3 \
-  --update-env-vars=KINDY_DEPLOY_ENV=preview,KINDY_LOCAL_PREVIEW=1,LESSON_GUEST_MODE=1 \
-  --remove-env-vars=VERCEL_ENV
-
-gcloud run services update kindy \
-  --region=asia-northeast3 \
-  --update-env-vars=KINDY_DEPLOY_ENV=production,KINDY_LOCAL_PREVIEW=0,LESSON_GUEST_MODE=0 \
-  --update-secrets=BILLING_KEY_SECRET=kindy-billing-key-secret:latest \
-  --remove-env-vars=VERCEL_ENV
-```
-
-프리뷰 부팅 로그에는 `KINDY_DEPLOY_ENV="preview"` 때문에 열렸다는 경고가 한 줄 남는다. 이 값 자체는 고정된 비시크릿 판별자이며, 다른 환경변수 값은 로그에 출력하지 않는다.
+시크릿 값은 하네스가 읽지 않는다. `ENV_NAME=secret-name:latest` 참조만 Cloud Run revision에 연결하며, 필수 시크릿이 없거나 disabled면 배포 전에 실패한다. `INNGEST_DEV`와 `VERCEL_ENV`는 매 revision에서 제거된다. 프리뷰에는 별도 `kindy-preview-supabase-service-role`과 선택적 제작 AI만 연결하고 결제·빌링·운영자 Secret은 연결하지 않는다. 프리뷰 공개 IAM은 릴리스 하네스 밖의 별도 운영 정책으로 관리한다.
 
 ---
 
@@ -135,7 +142,7 @@ gcloud run services update kindy \
    printf %s "signkey-prod-..." | gcloud secrets create kindy-inngest-signing-key --data-file=-
    printf %s "<event-key>"      | gcloud secrets create kindy-inngest-event-key   --data-file=-
    ```
-3. **`bash scripts/deploy-cloud-run.sh`** — 두 시크릿 주입 + `INNGEST_DEV` 제거(§1-③).
+3. **다음 정식 릴리스 실행** — `gcp-release.sh deploy-preview`와 `promote`가 두 시크릿을 연결하고 `INNGEST_DEV`를 제거한다(§1).
 4. **앱 sync**: Inngest 대시보드에서 sync URL `https://kindy.kr/api/inngest` 등록 → 함수 2개(`subscription-renewal`, `video-generate`)가 잡히는지 확인.
 5. **cron 1회 발화 검증**: `subscription-renewal`(cron `TZ=Asia/Seoul 0 4 * * *`)을 대시보드에서 수동 트리거하거나 다음 04:00 발화 후 실행·성공 로그 확인.
 

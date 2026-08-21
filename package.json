@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:golden": "tsx --test src/lib/hero/world-state.golden.test.ts src/lib/hero/session-config.golden.test.ts src/lib/hero/cp-variants.golden.test.ts",
-    "test": "tsx --test src/components/island/engine.test.ts src/content/studio/animal-village-bible.test.ts src/lib/c6/evidence.test.ts src/lib/c6/recommendation.test.ts src/lib/hero/no-camera.test.ts src/lib/world/world-state.test.ts src/lib/island/island-state.test.ts src/lib/payment-charge-guard.test.ts src/lib/env-guard.test.ts src/lib/launch-surface.test.ts src/lib/subscription-pricing.test.ts scripts/island/build-atlas.test.mjs scripts/test-josa.ts && npm run test:golden",
+    "test": "tsx --test src/components/island/engine.test.ts src/content/studio/animal-village-bible.test.ts src/contracts/experience-graph.v1.test.ts src/contracts/content-release.v1.test.ts src/lib/c6/evidence.test.ts src/lib/c6/recommendation.test.ts src/lib/deployment-health.test.ts src/lib/hero/no-camera.test.ts src/lib/world/world-state.test.ts src/lib/island/island-state.test.ts src/lib/payment-charge-guard.test.ts src/lib/env-guard.test.ts src/lib/launch-surface.test.ts src/lib/subscription-pricing.test.ts scripts/island/build-atlas.test.mjs scripts/test-josa.ts && npm run test:golden",
     "smoke:director": "tsx --env-file=.env.local scripts/smoke-director.ts",
     "smoke:refs": "tsx --env-file=.env.local scripts/smoke-refs.ts",
     "smoke:s01": "tsx --env-file=.env.local scripts/smoke-s01.ts",
@@ -32,7 +32,8 @@
     "phaser": "^3.90.0",
     "qrcode.react": "^4.2.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

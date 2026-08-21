@@ -10,6 +10,7 @@ export default function SiteFooter() {
     pathname.startsWith('/play') ||
     pathname.startsWith('/demo/kiosk') ||
     pathname.startsWith('/lesson') ||
+    pathname.startsWith('/chats') ||
     pathname.startsWith('/world') ||
     pathname.startsWith('/island');
 
