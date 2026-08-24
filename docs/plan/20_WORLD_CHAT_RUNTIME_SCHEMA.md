@@ -39,7 +39,7 @@ children
        └─ world_chat_events
 ```
 
-모든 FK는 아이 또는 방 삭제에 `ON DELETE CASCADE`로 이어진다. message/event의 `(room_id, session_id, turn_id)` FK는 다른 방이나 세션의 turn ID를 섞을 수 없게 한다. 보호자는 자기 아이 행만 `SELECT`할 수 있고 브라우저 mutation 정책은 없다. 작성은 service-role 서버 경로만 허용한다.
+모든 FK는 아이 또는 방 삭제에 `ON DELETE CASCADE`로 이어진다. message/event의 `(room_id, session_id, turn_id)` FK는 다른 방이나 세션의 turn ID를 섞을 수 없게 한다. 0035 이후 브라우저 role은 chat 테이블을 직접 `SELECT`할 수 없고, 보호자는 consent-gated rendered API만 사용한다. 작성과 raw read는 server-only 경로만 허용한다.
 
 기존 `parent_consents`는 법적 증적이므로 아이 삭제 때 `child_id = null`로 남는 0018의 정책을 유지한다. 이 과거 행은 child ID가 일치하지 않으므로 활성 동의가 아니다.
 

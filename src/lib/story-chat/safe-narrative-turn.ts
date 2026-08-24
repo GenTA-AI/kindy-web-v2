@@ -112,10 +112,6 @@ export type SafeNarrativeTurnOutcome =
       director?: SafeNarrativeDirectorReceipt;
     }>;
 
-export type PublicSafeNarrativeTurnOutcome =
-  | Readonly<{ ok: true; plan: NarrativeActionPlan }>
-  | Readonly<{ ok: false; safetyPlan: NarrativeActionPlan }>;
-
 export type SafeNarrativeTurnDependencies = Readonly<{
   moderator: NarrativeTextModerator;
   director: NarrativeTurnDirector;
@@ -360,18 +356,6 @@ export class SafeNarrativeTurnOrchestrator {
   private cancelled(deadlineExpired: boolean): SafeNarrativeTurnOutcome {
     return genericFailure(deadlineExpired ? 'timeout' : 'cancelled');
   }
-}
-
-/** The only projection a future HTTP route may serialize to the browser. */
-export function projectSafeNarrativeTurnForClient(
-  outcome: SafeNarrativeTurnOutcome,
-): PublicSafeNarrativeTurnOutcome {
-  return outcome.ok
-    ? { ok: true, plan: parseNarrativeActionPlan(outcome.plan) }
-    : {
-        ok: false,
-        safetyPlan: parseNarrativeActionPlan(outcome.safetyPlan),
-      };
 }
 
 function buildContextualOutputModerationText(

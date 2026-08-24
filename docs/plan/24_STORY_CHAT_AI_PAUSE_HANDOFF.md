@@ -35,7 +35,8 @@ Free-text sequence:
 3. Claude closed-action selection;
 4. server graph transition revalidation;
 5. contextual Wenit check over sanitized child input plus authored candidate;
-6. browser projection containing only the plan or fixed safety plan.
+6. server-internal plan commit followed by a rendered message DTO; no plan is
+   serialized to the browser.
 
 ## Implemented files
 

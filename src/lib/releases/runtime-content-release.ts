@@ -536,3 +536,31 @@ export function isAllowedPrivateReleaseSignedUrl(
     return false;
   }
 }
+
+/**
+ * Browser asset URLs are stricter than the short-lived URLs used internally
+ * to verify release bytes: the URL must name the exact approved object in the
+ * fixed private bucket. A signer cannot ignore or replace the storage key it
+ * was asked to sign.
+ */
+export function isAllowedPrivateReleaseAssetSignedUrl(
+  value: string,
+  input: {
+    allowedOrigin: string;
+    bucket: string;
+    storageKey: string;
+  },
+): boolean {
+  try {
+    const parsed = new URL(value);
+    const expectedPath = `/storage/v1/object/sign/${input.bucket}/${input.storageKey}`;
+    return (
+      isAllowedPrivateReleaseSignedUrl(value, input.allowedOrigin)
+      && parsed.pathname === expectedPath
+      && parsed.searchParams.size === 1
+      && Boolean(parsed.searchParams.get('token'))
+    );
+  } catch {
+    return false;
+  }
+}

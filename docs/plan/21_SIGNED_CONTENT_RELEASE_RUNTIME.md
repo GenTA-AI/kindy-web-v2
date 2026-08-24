@@ -89,9 +89,11 @@ graph SHA/size/identity/media를 다시 검증한 뒤 final eligibility RPC로 I
 revocation/head/floor 변경을 재확인한다. 오류·timeout·parse drift·hash/signature
 mismatch는 모두 `null`로 닫히며 unsigned fallback은 없다.
 
-`VerifiedStoryGraphProvider`가 authored runtime에 이 loader를 주입한다. presentation
-projector/UI/API 접합은 이번 배치에서 수정하지 않았고, 향후 동일 verified snapshot을
-재사용해야 한다.
+`VerifiedStoryGraphProvider`가 authored runtime에 이 loader를 주입한다. 2026-08-24
+추가된 server browser surface는 rooms/messages/sessions/authored-turn 모두를 같은
+loader-owned verified snapshot으로 렌더링하고, raw release/reference DTO를 route에서
+직렬화하지 않는다. 이 접합은 로컬에서만 구현되었으며 runtime hard gate는
+계속 닫혀 있다.
 
 Supabase adapter는 `.download()`를 사용하지 않는다. 30초 signed URL을 메모리에만
 보유하고 exact Supabase origin/signed-object path만 허용하며 redirect와 cache를
@@ -148,5 +150,5 @@ project 또는 RPC-only identity 전에는 preview DB write path도 열지 않�
 - 첫 signed staging/production release의 실제 upload→byte verify→attest→activate.
 - Supabase custom Storage JWT를 유지한다면 공식 role membership 패턴과 hosted
   `createSignedUrl` 실제 smoke; 이것만으로 P0 immutability가 해결되지는 않는다.
-- verified presentation snapshot을 room-list projector/UI/API에 연결.
+- verified presentation snapshot의 hosted room-list/messages/session/turn smoke.
 - asset delivery의 동일 hash/byte bound와 ephemeral URL 경계.

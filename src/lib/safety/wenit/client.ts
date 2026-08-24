@@ -229,43 +229,46 @@ export class WenitSafeGuardClient {
     while (this.now() < deadlineAtMs) {
       if (signal?.aborted) return wenitUnavailable('aborted');
 
-      let lease;
+      let scheduledPoll;
       try {
-        lease = await this.#scheduler.acquire({
-          credentialScope: this.#credentialScope,
-          earliestStartAtMs,
-          deadlineAtMs,
-          minimumStartSpacingMs: WENIT_MINIMUM_POLL_START_SPACING_MS,
-        });
+        scheduledPoll = await this.#scheduler.run(
+          {
+            credentialScope: this.#credentialScope,
+            earliestStartAtMs,
+            deadlineAtMs,
+            minimumStartSpacingMs: WENIT_MINIMUM_POLL_START_SPACING_MS,
+          },
+          () => this.fetchWithinDeadline(
+            `${WENIT_MODERATION_ENDPOINT}/${encodeURIComponent(taskId)}`,
+            {
+              method: 'GET',
+              headers: requestHeaders(this.#apiKey),
+              cache: 'no-store',
+              credentials: 'omit',
+              redirect: 'error',
+              referrerPolicy: 'no-referrer',
+            },
+            deadlineAtMs,
+            signal,
+          ),
+        );
       } catch {
         return wenitUnavailable('scheduler_unavailable');
       }
-      if (!lease.acquired) {
+      if (!scheduledPoll.started) {
         return wenitUnavailable(
-          lease.reason === 'deadline' ? 'timeout' : 'scheduler_unavailable',
+          scheduledPoll.reason === 'deadline' ? 'timeout' : 'scheduler_unavailable',
         );
       }
       if (
-        !Number.isFinite(lease.startedAtMs)
-        || lease.startedAtMs < earliestStartAtMs
-        || lease.startedAtMs >= deadlineAtMs
+        !Number.isFinite(scheduledPoll.startedAtMs)
+        || scheduledPoll.startedAtMs < earliestStartAtMs
+        || scheduledPoll.startedAtMs >= deadlineAtMs
       ) {
         return wenitUnavailable('scheduler_unavailable');
       }
 
-      const polled = await this.fetchWithinDeadline(
-        `${WENIT_MODERATION_ENDPOINT}/${encodeURIComponent(taskId)}`,
-        {
-          method: 'GET',
-          headers: requestHeaders(this.#apiKey),
-          cache: 'no-store',
-          credentials: 'omit',
-          redirect: 'error',
-          referrerPolicy: 'no-referrer',
-        },
-        deadlineAtMs,
-        signal,
-      );
+      const polled = scheduledPoll.value;
       if (!polled.ok) return wenitUnavailable(polled.reason);
 
       if (polled.response.status === 429) {

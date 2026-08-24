@@ -155,7 +155,7 @@ export class SupabaseStoryChatRepository implements StoryChatRepository {
       .select('*')
       .eq('child_id', childId)
       .order('updated_at', { ascending: false })
-      .limit(100);
+      .limit(20);
     assertDatabaseResult(error);
     return parseRows(RoomRowSchema, data).map(toRoomRecord);
   }

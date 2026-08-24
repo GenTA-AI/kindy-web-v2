@@ -19,7 +19,6 @@ import type {
 import {
   SafeNarrativeTurnOrchestrator,
   projectNarrativePlanForModeration,
-  projectSafeNarrativeTurnForClient,
   type NarrativeTextModerator,
   type NarrativeTurnDirector,
 } from './safe-narrative-turn';
@@ -359,35 +358,6 @@ test('output projection contains display copy but no storage, hash, answer, or s
   ]) {
     assert.equal(projected?.includes(forbidden), false, forbidden);
   }
-});
-
-test('public projection strips every moderation, model, cost, latency, and failure detail', async () => {
-  const orchestrator = new SafeNarrativeTurnOrchestrator({
-    moderator: moderatorFrom(async () => allowed()),
-    director: directorFrom(async () => directorSuccess(approvedPlan)),
-  });
-  const internal = await orchestrator.run(safeInput());
-  const publicResult = projectSafeNarrativeTurnForClient(internal);
-  assert.deepEqual(publicResult, { ok: true, plan: approvedPlan });
-  for (const forbidden of [
-    '"inputModeration":',
-    '"outputModeration":',
-    '"director":',
-    '"tokensConsumed":',
-    '"riskScore":',
-    '"latencyMs":',
-  ]) {
-    assert.equal(JSON.stringify(publicResult).includes(forbidden), false);
-  }
-
-  const blockedInternal = await orchestrator.run({
-    ...safeInput(),
-    childInput: '010-1234-5678',
-  });
-  const blockedPublic = projectSafeNarrativeTurnForClient(blockedInternal);
-  assert.equal(blockedPublic.ok, false);
-  assert.equal(JSON.stringify(blockedPublic).includes('errorCode'), false);
-  assert.equal(JSON.stringify(blockedPublic).includes('privacy_redirect'), false);
 });
 
 function safeInput() {

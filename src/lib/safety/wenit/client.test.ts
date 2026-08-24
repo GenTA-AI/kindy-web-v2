@@ -7,8 +7,9 @@ import {
 } from './client';
 import type {
   WenitPollScheduleRequest,
-  WenitPollScheduleResult,
+  WenitPollRunResult,
   WenitPollScheduler,
+  WenitPollStartOperation,
 } from './poll-scheduler';
 import {
   makeWenitCompletedPayload,
@@ -30,12 +31,15 @@ class AdvancingScheduler implements WenitPollScheduler {
 
   constructor(private readonly clock: { now: number }) {}
 
-  async acquire(
+  async run<T>(
     request: WenitPollScheduleRequest,
-  ): Promise<WenitPollScheduleResult> {
+    startOperation: WenitPollStartOperation<T>,
+  ): Promise<WenitPollRunResult<T>> {
     this.calls.push(request);
     this.clock.now = Math.max(this.clock.now, request.earliestStartAtMs);
-    return { acquired: true, startedAtMs: this.clock.now };
+    const startedAtMs = this.clock.now;
+    const value = await startOperation();
+    return { started: true, startedAtMs, value };
   }
 }
 
@@ -160,14 +164,14 @@ test('분산 scheduler가 없거나 deadline을 넘기면 fail closed한다', as
   for (const [name, scheduleResult, expectedReason] of [
     [
       'unavailable',
-      { acquired: false, reason: 'unavailable' },
+      { started: false, reason: 'unavailable' },
       'scheduler_unavailable',
     ],
-    ['deadline', { acquired: false, reason: 'deadline' }, 'timeout'],
+    ['deadline', { started: false, reason: 'deadline' }, 'timeout'],
   ] as const) {
     await t.test(name, async () => {
       const scheduler: WenitPollScheduler = {
-        acquire: async () => scheduleResult,
+        run: async () => scheduleResult,
       };
       let calls = 0;
       const client = makeClient({

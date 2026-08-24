@@ -2,17 +2,17 @@ import { NextRequest } from 'next/server';
 
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { isSupabaseServiceConfigured } from '@/lib/supabase';
+import { isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { StoryChatRuntimeError } from '@/lib/story-chat/authored-runtime';
 import {
-  isStoryChatRuntimeError,
   storyChatBadRequestResponse,
+  storyChatGetErrorResponse,
   storyChatRuntimeDisabledResponse,
-  storyChatRuntimeErrorResponse,
   storyChatSuccessResponse,
   storyChatUnauthorizedResponse,
+  storyChatRuntimeErrorResponse,
 } from '@/lib/story-chat/http';
 import { getStoryChatRuntimeConfig } from '@/lib/story-chat/runtime-config';
-import { createStoryChatServerRuntime } from '@/lib/story-chat/server-runtime';
 import {
   StoryChatMessagesQuerySchema,
   StoryChatRoomIdSchema,
@@ -27,6 +27,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   if (!getStoryChatRuntimeConfig().runtimeEnabled) {
     return storyChatRuntimeDisabledResponse();
   }
+  if (!isSupabaseServerConfigured()) return storyChatUnauthorizedResponse();
 
   let parentId: string;
   try {
@@ -48,7 +49,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    const result = await createStoryChatServerRuntime().getRoomMessages({
+    const { createStoryChatServerBrowserSurface } = await import(
+      '@/lib/story-chat/server-browser-surface'
+    );
+    const result = await createStoryChatServerBrowserSurface().getRoomMessages({
       parentId,
       childId: query.data.child_id,
       roomId: roomId.data,
@@ -56,7 +60,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
     return storyChatSuccessResponse(result);
   } catch (error) {
-    if (isStoryChatRuntimeError(error)) return storyChatRuntimeErrorResponse(error);
-    return storyChatRuntimeErrorResponse(new StoryChatRuntimeError('storage_unavailable'));
+    return storyChatGetErrorResponse(error);
   }
 }

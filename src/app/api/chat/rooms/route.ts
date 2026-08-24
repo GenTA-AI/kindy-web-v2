@@ -2,17 +2,17 @@ import { NextRequest } from 'next/server';
 
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { isSupabaseServiceConfigured } from '@/lib/supabase';
+import { isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { StoryChatRuntimeError } from '@/lib/story-chat/authored-runtime';
 import {
-  isStoryChatRuntimeError,
   storyChatBadRequestResponse,
+  storyChatGetErrorResponse,
   storyChatRuntimeDisabledResponse,
-  storyChatRuntimeErrorResponse,
   storyChatSuccessResponse,
   storyChatUnauthorizedResponse,
+  storyChatRuntimeErrorResponse,
 } from '@/lib/story-chat/http';
 import { getStoryChatRuntimeConfig } from '@/lib/story-chat/runtime-config';
-import { createStoryChatServerRuntime } from '@/lib/story-chat/server-runtime';
 import { StoryChatChildIdSchema } from '@/types/story-chat-api';
 
 export const runtime = 'nodejs';
@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
   if (!getStoryChatRuntimeConfig().runtimeEnabled) {
     return storyChatRuntimeDisabledResponse();
   }
+  if (!isSupabaseServerConfigured()) return storyChatUnauthorizedResponse();
 
   let parentId: string;
   try {
@@ -40,13 +41,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await createStoryChatServerRuntime().listRooms({
+    const { createStoryChatServerBrowserSurface } = await import(
+      '@/lib/story-chat/server-browser-surface'
+    );
+    const result = await createStoryChatServerBrowserSurface().listRooms({
       parentId,
       childId: childId.data,
     });
     return storyChatSuccessResponse(result);
   } catch (error) {
-    if (isStoryChatRuntimeError(error)) return storyChatRuntimeErrorResponse(error);
-    return storyChatRuntimeErrorResponse(new StoryChatRuntimeError('storage_unavailable'));
+    return storyChatGetErrorResponse(error);
   }
 }

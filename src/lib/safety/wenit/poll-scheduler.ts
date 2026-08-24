@@ -13,9 +13,11 @@ export type WenitPollScheduleRequest = Readonly<{
   minimumStartSpacingMs: typeof WENIT_MINIMUM_POLL_START_SPACING_MS;
 }>;
 
-export type WenitPollScheduleResult =
-  | Readonly<{ acquired: true; startedAtMs: number }>
-  | Readonly<{ acquired: false; reason: 'deadline' | 'unavailable' }>;
+export type WenitPollRunResult<T> =
+  | Readonly<{ started: true; startedAtMs: number; value: T }>
+  | Readonly<{ started: false; reason: 'deadline' | 'unavailable' }>;
+
+export type WenitPollStartOperation<T> = () => Promise<T>;
 
 /**
  * Production implementations must serialize poll starts across every Cloud Run
@@ -23,13 +25,19 @@ export type WenitPollScheduleResult =
  * provided because it cannot enforce the vendor quota across instances.
  */
 export interface WenitPollScheduler {
-  /** Resolves only after the acquired start instant; never returns a future lease. */
-  acquire(request: WenitPollScheduleRequest): Promise<WenitPollScheduleResult>;
+  /**
+   * Owns the operation start after the distributed claim. A future lease must
+   * never escape to application code because a paused process could use it late.
+   */
+  run<T>(
+    request: WenitPollScheduleRequest,
+    startOperation: WenitPollStartOperation<T>,
+  ): Promise<WenitPollRunResult<T>>;
 }
 
 /** Safe default used until the distributed scheduler is provisioned. */
 export class UnavailableWenitPollScheduler implements WenitPollScheduler {
-  async acquire(): Promise<WenitPollScheduleResult> {
-    return { acquired: false, reason: 'unavailable' };
+  async run<T>(): Promise<WenitPollRunResult<T>> {
+    return { started: false, reason: 'unavailable' };
   }
 }

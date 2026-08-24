@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { isSupabaseServiceConfigured } from '@/lib/supabase';
+import { isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { StoryChatRuntimeError } from '@/lib/story-chat/authored-runtime';
 import { readBoundedJson } from '@/lib/story-chat/bounded-json';
 import {
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   if (!getStoryChatRuntimeConfig().runtimeEnabled) {
     return storyChatRuntimeDisabledResponse();
   }
+  if (!isSupabaseServerConfigured()) return storyChatUnauthorizedResponse();
 
   let parentId: string;
   try {
@@ -59,11 +61,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    const { createStoryChatServerRuntime } = await import(
-      '@/lib/story-chat/server-runtime'
+    const { createStoryChatServerBrowserSurface } = await import(
+      '@/lib/story-chat/server-browser-surface'
     );
-    const result = await createStoryChatServerRuntime().submitTurn({
+    const result = await createStoryChatServerBrowserSurface().submitTurn({
       parentId,
+      childId: turnRequest.data.child_id,
       roomId: roomId.data,
       request: turnRequest.data,
     });

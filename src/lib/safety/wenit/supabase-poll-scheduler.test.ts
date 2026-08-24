@@ -11,6 +11,7 @@ import {
 } from './supabase-poll-scheduler';
 
 const RESERVATION_ID = '018f60f7-f9c2-7d61-8e61-8fbffef932a1';
+const POLL_VALUE = 'poll-started';
 
 type Rpc = PollSchedulerSupabaseClient['rpc'];
 
@@ -28,6 +29,13 @@ function schedulerRequest(
 
 function mockClient(rpc: Rpc): PollSchedulerSupabaseClient {
   return { rpc };
+}
+
+function runScheduler(
+  scheduler: SupabaseWenitPollScheduler,
+  request = schedulerRequest(),
+): Promise<unknown> {
+  return scheduler.run(request, async () => POLL_VALUE);
 }
 
 test('reserves an opaque scope and waits outside PostgreSQL until the slot', async () => {
@@ -68,9 +76,10 @@ test('reserves an opaque scope and waits outside PostgreSQL until the slot', asy
     createReservationId: () => RESERVATION_ID,
   });
 
-  assert.deepEqual(await scheduler.acquire(schedulerRequest()), {
-    acquired: true,
+  assert.deepEqual(await runScheduler(scheduler), {
+    started: true,
     startedAtMs: 2_100,
+    value: POLL_VALUE,
   });
   assert.deepEqual(calls, [
     {
@@ -124,9 +133,10 @@ test('rounds PostgreSQL microseconds upward and never starts early', async () =>
     createReservationId: () => RESERVATION_ID,
   });
 
-  assert.deepEqual(await scheduler.acquire(schedulerRequest()), {
-    acquired: true,
+  assert.deepEqual(await runScheduler(scheduler), {
+    started: true,
     startedAtMs: 2_101,
+    value: POLL_VALUE,
   });
   assert.deepEqual(sleeps, [1_101]);
 });
@@ -142,8 +152,8 @@ test('returns deadline without calling PostgreSQL when the request is expired', 
     createReservationId: () => RESERVATION_ID,
   });
 
-  assert.deepEqual(await scheduler.acquire(schedulerRequest()), {
-    acquired: false,
+  assert.deepEqual(await runScheduler(scheduler), {
+    started: false,
     reason: 'deadline',
   });
   assert.equal(calls, 0);
@@ -161,8 +171,8 @@ test('maps a database deadline denial without waiting', async () => {
     createReservationId: () => RESERVATION_ID,
   });
 
-  assert.deepEqual(await scheduler.acquire(schedulerRequest()), {
-    acquired: false,
+  assert.deepEqual(await runScheduler(scheduler), {
+    started: false,
     reason: 'deadline',
   });
   assert.equal(sleepCalled, false);
@@ -187,8 +197,8 @@ test('fails closed on RPC errors, malformed rows, and invalid scope or spacing',
       now: () => 1_000,
       createReservationId: () => RESERVATION_ID,
     });
-    assert.deepEqual(await scheduler.acquire(schedulerRequest()), {
-      acquired: false,
+    assert.deepEqual(await runScheduler(scheduler), {
+      started: false,
       reason: 'unavailable',
     });
   }
@@ -204,16 +214,16 @@ test('fails closed on RPC errors, malformed rows, and invalid scope or spacing',
   });
 
   assert.deepEqual(
-    await scheduler.acquire(schedulerRequest({ credentialScope: 'raw/key' })),
-    { acquired: false, reason: 'unavailable' },
+    await runScheduler(scheduler, schedulerRequest({ credentialScope: 'raw/key' })),
+    { started: false, reason: 'unavailable' },
   );
   const invalidSpacingRequest = {
     ...schedulerRequest(),
     minimumStartSpacingMs: 1_000,
   } as unknown as WenitPollScheduleRequest;
   assert.deepEqual(
-    await scheduler.acquire(invalidSpacingRequest),
-    { acquired: false, reason: 'unavailable' },
+    await runScheduler(scheduler, invalidSpacingRequest),
+    { started: false, reason: 'unavailable' },
   );
   assert.equal(calls, 0);
 });
@@ -234,8 +244,8 @@ test('fails closed if an outside-database timer does not reach the reserved slot
     createReservationId: () => RESERVATION_ID,
   });
 
-  assert.deepEqual(await scheduler.acquire(schedulerRequest()), {
-    acquired: false,
+  assert.deepEqual(await runScheduler(scheduler), {
+    started: false,
     reason: 'unavailable',
   });
   assert.equal(sleepCalls, 3);
@@ -257,8 +267,8 @@ test('fails closed when the process wakes after the request deadline', async () 
     createReservationId: () => RESERVATION_ID,
   });
 
-  assert.deepEqual(await scheduler.acquire(schedulerRequest()), {
-    acquired: false,
+  assert.deepEqual(await runScheduler(scheduler), {
+    started: false,
     reason: 'deadline',
   });
 });
@@ -304,15 +314,18 @@ test('rechecks a late initial wake and waits for the DB actual-start claim', asy
     createReservationId: () => RESERVATION_ID,
   });
 
-  assert.deepEqual(await scheduler.acquire(schedulerRequest()), {
-    acquired: true,
+  assert.deepEqual(await runScheduler(scheduler), {
+    started: true,
     startedAtMs: 3_700,
+    value: POLL_VALUE,
   });
   assert.equal(claimCalls, 2);
 });
 
 test('fails closed when an actual-start claim response arrives over 250 ms late', async () => {
   let nowMs = 1_000;
+  let monotonicMs = 0;
+  let operationCalls = 0;
   const rpc = (async (name: string) => {
     if (name === 'reserve_wenit_poll_start') {
       return {
@@ -324,7 +337,7 @@ test('fails closed when an actual-start claim response arrives over 250 ms late'
         error: null,
       };
     }
-    nowMs += 251;
+    monotonicMs += 251;
     return {
       data: [{
         claim_status: 'claimed',
@@ -336,14 +349,107 @@ test('fails closed when an actual-start claim response arrives over 250 ms late'
   }) as Rpc;
   const scheduler = new SupabaseWenitPollScheduler(mockClient(rpc), {
     now: () => nowMs,
+    monotonicNow: () => monotonicMs,
     sleep: async (durationMs) => { nowMs += durationMs; },
     createReservationId: () => RESERVATION_ID,
   });
 
-  assert.deepEqual(await scheduler.acquire(schedulerRequest()), {
-    acquired: false,
+  assert.deepEqual(await scheduler.run(schedulerRequest(), async () => {
+    operationCalls += 1;
+    return POLL_VALUE;
+  }), {
+    started: false,
     reason: 'unavailable',
   });
+  assert.equal(operationCalls, 0);
+});
+
+test('uses a monotonic claim age and starts the operation inside run despite wall-clock rollback', async () => {
+  let nowMs = 1_000;
+  let monotonicMs = 10_000;
+  const order: string[] = [];
+  const rpc = (async (name: string) => {
+    if (name === 'reserve_wenit_poll_start') {
+      return {
+        data: [{
+          acquired: true,
+          start_after: '1970-01-01T00:00:02.100Z',
+          reservation_replay: false,
+        }],
+        error: null,
+      };
+    }
+    order.push('claim');
+    monotonicMs += 10;
+    nowMs = 2_000;
+    return {
+      data: [{
+        claim_status: 'claimed',
+        start_after: '1970-01-01T00:00:02.100Z',
+        claim_replay: false,
+      }],
+      error: null,
+    };
+  }) as Rpc;
+  const scheduler = new SupabaseWenitPollScheduler(mockClient(rpc), {
+    now: () => nowMs,
+    monotonicNow: () => monotonicMs,
+    sleep: async (durationMs) => { nowMs += durationMs; },
+    createReservationId: () => RESERVATION_ID,
+  });
+
+  const result = await scheduler.run(schedulerRequest(), async () => {
+    order.push('operation-start');
+    return POLL_VALUE;
+  });
+
+  assert.deepEqual(result, {
+    started: true,
+    startedAtMs: 2_000,
+    value: POLL_VALUE,
+  });
+  assert.deepEqual(order, ['claim', 'operation-start']);
+});
+
+test('fails closed if the monotonic clock regresses before operation dispatch', async () => {
+  let nowMs = 1_000;
+  let monotonicCalls = 0;
+  let operationCalls = 0;
+  const rpc = (async (name: string) => name === 'reserve_wenit_poll_start'
+    ? {
+        data: [{
+          acquired: true,
+          start_after: '1970-01-01T00:00:02.100Z',
+          reservation_replay: false,
+        }],
+        error: null,
+      }
+    : {
+        data: [{
+          claim_status: 'claimed',
+          start_after: '1970-01-01T00:00:02.100Z',
+          claim_replay: false,
+        }],
+        error: null,
+      }) as Rpc;
+  const scheduler = new SupabaseWenitPollScheduler(mockClient(rpc), {
+    now: () => nowMs,
+    monotonicNow: () => {
+      monotonicCalls += 1;
+      return monotonicCalls === 1 ? 100 : 99;
+    },
+    sleep: async (durationMs) => { nowMs += durationMs; },
+    createReservationId: () => RESERVATION_ID,
+  });
+
+  assert.deepEqual(await scheduler.run(schedulerRequest(), async () => {
+    operationCalls += 1;
+    return POLL_VALUE;
+  }), {
+    started: false,
+    reason: 'unavailable',
+  });
+  assert.equal(operationCalls, 0);
 });
 
 test('fails closed on malformed, replayed, or failed actual-start claims', async () => {
@@ -374,8 +480,8 @@ test('fails closed on malformed, replayed, or failed actual-start claims', async
       createReservationId: () => RESERVATION_ID,
     });
 
-    assert.deepEqual(await scheduler.acquire(schedulerRequest()), {
-      acquired: false,
+    assert.deepEqual(await runScheduler(scheduler), {
+      started: false,
       reason: 'unavailable',
     });
   }

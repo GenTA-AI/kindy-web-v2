@@ -25,7 +25,10 @@ Wenit의 API key 단위 poll 제한을 여러 Cloud Run instance에서 함께 �
 4. 성공하면 1,100ms 간격의 초기 slot과 receipt를 한 transaction에서 기록한다.
 5. adapter는 process에서 초기 slot까지 기다린 뒤 `claim_wenit_poll_start`를 호출한다.
 6. claim RPC는 DB clock과 별도 actual-start cursor를 다시 잠근다. 이전 process가 늦게 깨어났다면 한 요청만 현재 시각을 claim하고 나머지에는 새 미래 시각을 반환한다. adapter는 DB 밖에서 다시 기다리고 claim을 반복한다.
-7. actual claim cursor는 1,350ms 간격이고 adapter는 claim RPC 왕복이 250ms를 넘으면 poll을 폐기한다. 따라서 `acquire` 완료 시점은 전역으로 최소 1,100ms 간격을 유지한다.
+7. actual claim cursor는 1,350ms 간격이고 adapter는 monotonic clock으로 claim 요청부터 operation dispatch까지의 age가 250ms를 넘으면 poll을 폐기한다.
+8. adapter는 start lease를 application에 반환하지 않는다. `WenitPollScheduler.run`이 claim 직후 전달받은 callback을 같은 call stack에서 호출해 Wenit GET을 시작하고, 완료된 결과만 application에 돌려준다. 따라서 claim 뒤 process가 application await 구간에서 멈췄다가 오래된 lease로 GET을 시작할 수 없다.
+
+250ms age 판정에는 `Date.now()`가 아니라 `performance.now()`를 사용한다. wall clock rollback은 claim freshness 판정을 우회하지 못한다. 절대 deadline은 DB `clock_timestamp()`로 claim RPC에서도 다시 검증한다.
 
 RPC 오류, malformed row, timestamp 불일치, timer 실패, deadline 초과는 모두 `unavailable|deadline`으로 닫힌다. 예약 RPC 응답이 네트워크에서 유실되면 DB slot 한 개가 사용되지 않을 수 있지만 추가 poll은 발생하지 않는다. 현재 adapter는 불명확한 결과를 자동 재시도하지 않는다.
 
@@ -49,6 +52,7 @@ RPC 오류, malformed row, timestamp 불일치, timer 실패, deadline 초과는
 - 같은 UUID exact reservation/claim replay, deadline 거절 시 cursor 불변
 - 8개 독립 DB session의 동일 scope 동시 예약이 모두 고유한 1,100ms queue slot을 획득
 - 두 process가 모두 늦게 깨어난 adversarial race에서 하나만 actual start를 claim하고 다른 하나는 최소 1,350ms 뒤로 이동
+- claim 뒤 application pause가 개입할 수 없도록 scheduler가 GET start callback을 소유하며, 250ms 초과·monotonic clock regression이면 callback을 호출하지 않음
 - bounded cleanup
 
 이 migration을 hosted Supabase에 적용하거나 runtime을 켜지는 않았다. 외부 cohort 전에는 다음이 모두 필요하다.
@@ -59,4 +63,4 @@ RPC 오류, malformed row, timestamp 불일치, timer 실패, deadline 초과는
 - cleanup job과 scheduler 장애 경보
 - input/output 양쪽 Wenit gate 통합 eval
 
-현재 `WenitPollScheduler.acquire`에는 `AbortSignal`이 없다. 취소 중 예약 대기는 최대 15초 계속될 수 있지만, 이후 fetch는 이미 취소된 signal로 fail-closed되어 vendor poll을 추가 발생시키지 않는다. 이는 안전 우회가 아니라 bounded 자원·UX 문제이므로 runtime 활성화 전 P2로 개선한다.
+현재 `WenitPollScheduler.run`에는 `AbortSignal`이 없다. 취소 중 예약 대기는 최대 15초 계속될 수 있지만, 이후 callback의 fetch는 이미 취소된 signal로 fail-closed되어 vendor poll을 추가 발생시키지 않는다. 이는 안전 우회가 아니라 bounded 자원·UX 문제이므로 runtime 활성화 전 P2로 개선한다.

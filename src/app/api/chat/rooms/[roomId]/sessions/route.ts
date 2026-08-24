@@ -2,9 +2,11 @@ import { NextRequest } from 'next/server';
 
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { isSupabaseServiceConfigured } from '@/lib/supabase';
+import { isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { StoryChatRuntimeError } from '@/lib/story-chat/authored-runtime';
 import { readBoundedJson } from '@/lib/story-chat/bounded-json';
 import {
+  isStoryChatRuntimeError,
   storyChatBadRequestResponse,
   storyChatPayloadTooLargeResponse,
   storyChatPostBoundaryResponse,
@@ -36,6 +38,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   if (!getStoryChatRuntimeConfig().runtimeEnabled) {
     return storyChatRuntimeDisabledResponse();
   }
+  if (!isSupabaseServerConfigured()) return storyChatUnauthorizedResponse();
 
   let parentId: string;
   try {
@@ -62,10 +65,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    const { createStoryChatRoomLifecycle } = await import(
-      '@/lib/story-chat/server-room-lifecycle'
+    const { createStoryChatServerBrowserSurface } = await import(
+      '@/lib/story-chat/server-browser-surface'
     );
-    const result = await createStoryChatRoomLifecycle().openSession({
+    const result = await createStoryChatServerBrowserSurface().openSession({
       parentId,
       roomId: roomId.data,
       request: sessionRequest.data,
@@ -80,6 +83,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
     if (isStoryChatRoomLifecycleError(error)) {
       return storyChatRoomLifecycleErrorResponse(error);
+    }
+    if (isStoryChatRuntimeError(error)) {
+      return storyChatRuntimeErrorResponse(error);
     }
     return storyChatRuntimeErrorResponse(new StoryChatRuntimeError('storage_unavailable'));
   }

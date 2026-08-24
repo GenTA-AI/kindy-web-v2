@@ -3,8 +3,9 @@ import { z } from 'zod';
 import {
   WENIT_MINIMUM_POLL_START_SPACING_MS,
   type WenitPollScheduleRequest,
-  type WenitPollScheduleResult,
+  type WenitPollRunResult,
   type WenitPollScheduler,
+  type WenitPollStartOperation,
 } from './poll-scheduler';
 
 type PollSchedulerRpcResponse = Readonly<{
@@ -64,6 +65,7 @@ type SchedulerSleep = (durationMs: number) => Promise<void>;
 
 export type SupabaseWenitPollSchedulerDependencies = Readonly<{
   now?: () => number;
+  monotonicNow?: () => number;
   sleep?: SchedulerSleep;
   createReservationId?: () => string;
 }>;
@@ -106,6 +108,7 @@ function firstAndOnlyRow(data: unknown): unknown {
 export class SupabaseWenitPollScheduler implements WenitPollScheduler {
   readonly #client: PollSchedulerSupabaseClient;
   private readonly now: () => number;
+  private readonly monotonicNow: () => number;
   private readonly sleep: SchedulerSleep;
   private readonly createReservationId: () => string;
 
@@ -118,22 +121,26 @@ export class SupabaseWenitPollScheduler implements WenitPollScheduler {
     }
     this.#client = client;
     this.now = dependencies.now ?? Date.now;
+    this.monotonicNow = dependencies.monotonicNow ?? (() => performance.now());
     this.sleep = dependencies.sleep ?? defaultSleep;
     this.createReservationId = dependencies.createReservationId
       ?? (() => crypto.randomUUID());
   }
 
-  async acquire(request: WenitPollScheduleRequest): Promise<WenitPollScheduleResult> {
+  async run<T>(
+    request: WenitPollScheduleRequest,
+    startOperation: WenitPollStartOperation<T>,
+  ): Promise<WenitPollRunResult<T>> {
     const requestStartedAtMs = this.now();
     if (!requestIsUsable(request, requestStartedAtMs)) {
       return request.deadlineAtMs <= requestStartedAtMs
-        ? { acquired: false, reason: 'deadline' }
-        : { acquired: false, reason: 'unavailable' };
+        ? { started: false, reason: 'deadline' }
+        : { started: false, reason: 'unavailable' };
     }
 
     const reservationId = this.createReservationId();
     if (!UUID_PATTERN.test(reservationId)) {
-      return { acquired: false, reason: 'unavailable' };
+      return { started: false, reason: 'unavailable' };
     }
 
     let response;
@@ -145,15 +152,15 @@ export class SupabaseWenitPollScheduler implements WenitPollScheduler {
         p_deadline_at: new Date(request.deadlineAtMs).toISOString(),
       });
     } catch {
-      return { acquired: false, reason: 'unavailable' };
+      return { started: false, reason: 'unavailable' };
     }
 
-    if (response.error) return { acquired: false, reason: 'unavailable' };
+    if (response.error) return { started: false, reason: 'unavailable' };
     const parsed = ReservationResultSchema.safeParse(firstAndOnlyRow(response.data));
-    if (!parsed.success) return { acquired: false, reason: 'unavailable' };
-    if (!parsed.data.acquired) return { acquired: false, reason: 'deadline' };
+    if (!parsed.success) return { started: false, reason: 'unavailable' };
+    if (!parsed.data.acquired) return { started: false, reason: 'deadline' };
     if (parsed.data.reservation_replay) {
-      return { acquired: false, reason: 'unavailable' };
+      return { started: false, reason: 'unavailable' };
     }
 
     const scheduledAtMs = parsePostgresTimestampCeilingMs(parsed.data.start_after!);
@@ -162,21 +169,25 @@ export class SupabaseWenitPollScheduler implements WenitPollScheduler {
       || scheduledAtMs < request.earliestStartAtMs
       || scheduledAtMs >= request.deadlineAtMs
     ) {
-      return { acquired: false, reason: 'unavailable' };
+      return { started: false, reason: 'unavailable' };
     }
 
     const initialWait = await this.waitUntil(scheduledAtMs, request.deadlineAtMs);
     if (initialWait !== 'ready') {
-      return { acquired: false, reason: initialWait };
+      return { started: false, reason: initialWait };
     }
 
     // The initial reservation is only queue admission. Re-check the DB clock
-    // immediately before resolving acquire so a late old timer moves newer
-    // contenders instead of issuing a poll beside them.
+    // immediately before starting the operation so a late old timer moves
+    // newer contenders instead of issuing a poll beside them.
     for (let claimRound = 0; claimRound < MAXIMUM_CLAIM_ROUNDS; claimRound += 1) {
       const claimRequestedAtMs = this.now();
       if (claimRequestedAtMs >= request.deadlineAtMs) {
-        return { acquired: false, reason: 'deadline' };
+        return { started: false, reason: 'deadline' };
+      }
+      const claimRequestedAtTick = this.monotonicNow();
+      if (!Number.isFinite(claimRequestedAtTick)) {
+        return { started: false, reason: 'unavailable' };
       }
 
       let claimResponse;
@@ -187,14 +198,13 @@ export class SupabaseWenitPollScheduler implements WenitPollScheduler {
           p_deadline_at: new Date(request.deadlineAtMs).toISOString(),
         });
       } catch {
-        return { acquired: false, reason: 'unavailable' };
+        return { started: false, reason: 'unavailable' };
       }
-      const claimReturnedAtMs = this.now();
-      if (claimResponse.error) return { acquired: false, reason: 'unavailable' };
+      if (claimResponse.error) return { started: false, reason: 'unavailable' };
       const claim = ClaimResultSchema.safeParse(firstAndOnlyRow(claimResponse.data));
-      if (!claim.success) return { acquired: false, reason: 'unavailable' };
+      if (!claim.success) return { started: false, reason: 'unavailable' };
       if (claim.data.claim_status === 'deadline') {
-        return { acquired: false, reason: 'deadline' };
+        return { started: false, reason: 'deadline' };
       }
 
       const claimStartAtMs = parsePostgresTimestampCeilingMs(
@@ -205,7 +215,7 @@ export class SupabaseWenitPollScheduler implements WenitPollScheduler {
         || claimStartAtMs < scheduledAtMs
         || claimStartAtMs >= request.deadlineAtMs
       ) {
-        return { acquired: false, reason: 'unavailable' };
+        return { started: false, reason: 'unavailable' };
       }
 
       if (claim.data.claim_status === 'wait') {
@@ -214,7 +224,7 @@ export class SupabaseWenitPollScheduler implements WenitPollScheduler {
           request.deadlineAtMs,
         );
         if (claimWait !== 'ready') {
-          return { acquired: false, reason: claimWait };
+          return { started: false, reason: claimWait };
         }
         continue;
       }
@@ -222,22 +232,36 @@ export class SupabaseWenitPollScheduler implements WenitPollScheduler {
       // We intentionally do not replay an ambiguous claimed response. Losing a
       // slot is safe; issuing the same claim twice could duplicate a vendor GET.
       if (claim.data.claim_replay) {
-        return { acquired: false, reason: 'unavailable' };
+        return { started: false, reason: 'unavailable' };
       }
-      const claimRoundTripMs = claimReturnedAtMs - claimRequestedAtMs;
+      const operationStartTick = this.monotonicNow();
+      const claimToOperationMs = operationStartTick - claimRequestedAtTick;
+      const operationStartedAtMs = this.now();
       if (
-        claimRoundTripMs < 0
-        || claimRoundTripMs > MAXIMUM_RESERVED_SLOT_LATENESS_MS
-        || claimReturnedAtMs >= request.deadlineAtMs
+        !Number.isFinite(operationStartTick)
+        || claimToOperationMs < 0
+        || claimToOperationMs > MAXIMUM_RESERVED_SLOT_LATENESS_MS
+        || !Number.isSafeInteger(operationStartedAtMs)
+        || operationStartedAtMs < request.earliestStartAtMs
+        || operationStartedAtMs >= request.deadlineAtMs
       ) {
-        return claimReturnedAtMs >= request.deadlineAtMs
-          ? { acquired: false, reason: 'deadline' }
-          : { acquired: false, reason: 'unavailable' };
+        return operationStartedAtMs >= request.deadlineAtMs
+          ? { started: false, reason: 'deadline' }
+          : { started: false, reason: 'unavailable' };
       }
-      return { acquired: true, startedAtMs: claimReturnedAtMs };
+
+      // Invoke in this call stack, immediately after validating the claim.
+      // The callback must synchronously initiate the vendor GET before its
+      // returned promise yields; no transferable start lease escapes here.
+      try {
+        const value = await startOperation();
+        return { started: true, startedAtMs: operationStartedAtMs, value };
+      } catch {
+        return { started: false, reason: 'unavailable' };
+      }
     }
 
-    return { acquired: false, reason: 'unavailable' };
+    return { started: false, reason: 'unavailable' };
   }
 
   private async waitUntil(

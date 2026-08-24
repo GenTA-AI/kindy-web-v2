@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 
 import { StoryChatRuntimeError } from './authored-runtime';
-import type { StoryChatRateLimitError } from './rate-limit';
+import {
+  isStoryChatRateLimitError,
+  type StoryChatRateLimitError,
+} from './rate-limit';
 
 const NO_STORE_HEADERS = { 'Cache-Control': 'private, no-store' } as const;
 
@@ -107,6 +110,19 @@ export function storyChatRateLimitErrorResponse(
   return NextResponse.json(
     { error: { code: error.code, message: response.message } },
     { status: response.status, headers: NO_STORE_HEADERS },
+  );
+}
+
+/** Shared error boundary for consent-gated chat GET routes. */
+export function storyChatGetErrorResponse(error: unknown): NextResponse {
+  if (isStoryChatRateLimitError(error)) {
+    return storyChatRateLimitErrorResponse(error);
+  }
+  if (isStoryChatRuntimeError(error)) {
+    return storyChatRuntimeErrorResponse(error);
+  }
+  return storyChatRuntimeErrorResponse(
+    new StoryChatRuntimeError('storage_unavailable'),
   );
 }
 

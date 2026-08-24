@@ -203,7 +203,7 @@ $$;
 comment on function public.reserve_wenit_poll_start(
   text, uuid, timestamptz, timestamptz
 ) is
-  'Service-role-only Wenit queue reservation. DB clock plus a scope advisory lock atomically fixes initial slots 1,100 ms apart; application code waits outside PostgreSQL, then must call claim_wenit_poll_start immediately before issuing GET.';
+  'Service-role-only Wenit queue reservation. DB clock plus a scope advisory lock atomically fixes initial slots 1,100 ms apart; application code waits outside PostgreSQL, then the scheduler must call claim_wenit_poll_start immediately before starting GET.';
 
 -- ═══════════════════════════════════════════════════════
 -- 3. Atomic actual-start claim after the process-side wait
@@ -231,8 +231,8 @@ declare
   v_next_claim_at timestamptz;
   v_candidate timestamptz;
   -- A claim response may arrive up to 250 ms late and still be used by the
-  -- adapter. 1,350 ms claim slots therefore preserve 1,100 ms between acquire
-  -- completions while a very late initial reservation is re-queued here.
+  -- adapter. 1,350 ms claim slots therefore preserve 1,100 ms between GET
+  -- operation dispatches while a very late initial reservation is re-queued.
   v_claim_spacing constant interval := interval '1350 milliseconds';
   v_ttl constant interval := interval '15 minutes';
 begin
@@ -325,7 +325,7 @@ $$;
 comment on function public.claim_wenit_poll_start(
   text, uuid, timestamptz
 ) is
-  'Service-role-only actual-start claim. Rechecks the shared scope cursor with DB clock immediately after application wait; late contenders receive a new future instant. Claimed starts use 1,350 ms slots plus a 250 ms adapter response-age ceiling to preserve at least 1,100 ms.';
+  'Service-role-only actual-start claim. Rechecks the shared scope cursor with DB clock immediately after application wait; late contenders receive a new future instant. Claimed starts use 1,350 ms slots plus a 250 ms monotonic claim-to-GET-dispatch ceiling to preserve at least 1,100 ms.';
 
 -- ═══════════════════════════════════════════════════════
 -- 4. Bounded operational cleanup
