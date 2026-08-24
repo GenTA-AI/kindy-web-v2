@@ -65,3 +65,8 @@ build/
 .dev-team/wt/
 .dev-team/missions/*/runs/
 .dev-team/missions/*/state/
+
+# 에셋 인박스 — 팩 원본은 재배포 금지 라이선스라 git 제외 (README·config만 추적)
+assets-inbox/*
+!assets-inbox/README.md
+!assets-inbox/atlas.config.json

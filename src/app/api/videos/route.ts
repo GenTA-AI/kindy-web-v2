@@ -5,6 +5,11 @@ import type { VideoBrief } from '@/lib/video-providers/director.types';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { withFreshLibraryMediaUrls } from '@/lib/library-media';
 import type { Video } from '@/types';
+import { isLaunchSurfaceClosed } from '@/lib/launch-surface';
+
+function launchNotFound() {
+  return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+}
 
 function unauthorized() {
   return NextResponse.json({ error: '보호자 로그인이 필요해요.' }, { status: 401 });
@@ -53,6 +58,10 @@ async function verifyChildOwner(childId: string, parentId: string) {
 }
 
 export async function GET(request: NextRequest) {
+  if (isLaunchSurfaceClosed('/api/videos', process.env)) {
+    return launchNotFound();
+  }
+
   let parentId: string;
   try {
     parentId = await getCurrentParentId(request);
@@ -110,6 +119,10 @@ export async function GET(request: NextRequest) {
  *   2) 기존 stub 모드 (`video_url` 등 prefilled) → 단순 DB insert (백필/import 용)
  */
 export async function POST(request: NextRequest) {
+  if (isLaunchSurfaceClosed('/api/videos', process.env)) {
+    return launchNotFound();
+  }
+
   let parentId: string;
   try {
     parentId = await getCurrentParentId(request);

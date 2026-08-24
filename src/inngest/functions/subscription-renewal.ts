@@ -26,6 +26,11 @@
 import { inngest } from '../client';
 import { supabase } from '@/lib/supabase';
 import { chargeBillingKey, TossApiError } from '@/lib/toss';
+import {
+  chargeBillingKey as chargePortOneBillingKey,
+  mapPortOneStatusToPurchaseStatus,
+  PortOneApiError,
+} from '@/lib/portone';
 import { decryptBillingKey } from '@/lib/billing-crypto';
 import {
   SUBSCRIPTION_ORDER_NAME,
@@ -64,7 +69,7 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
   }
   const { data: bk, error: bkError } = await supabase
     .from('billing_keys')
-    .select('billing_key')
+    .select('billing_key, provider')
     .eq('id', sub.billing_key_id)
     .maybeSingle();
   if (bkError) {
@@ -97,7 +102,7 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
       bundle_type: 'subscription',
       credits_added: 0,
       amount_krw: sub.price_krw,
-      payment_provider: 'toss',
+      payment_provider: bk.provider ?? 'toss',
       order_id: orderId,
       status: 'pending',
     });
@@ -110,32 +115,55 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
     }
   }
 
-  // 3) 청구
-  let payment;
+  // 3) 청구 — billing_keys.provider 로 결제사 분기 (포트원 전환기: 기존 토스 키도 만료까지 동작)
+  let charged: { paymentKey: string; approvedAt: string | null; raw: unknown };
   try {
-    payment = await chargeBillingKey({
-      billingKey: decryptBillingKey(bk.billing_key),
-      customerKey: sub.parent_id,
-      amount: sub.price_krw,
-      orderId,
-      orderName: SUBSCRIPTION_ORDER_NAME,
-    });
+    if (bk.provider === 'portone') {
+      const payment = await chargePortOneBillingKey({
+        billingKey: decryptBillingKey(bk.billing_key),
+        customerKey: sub.parent_id,
+        amount: sub.price_krw,
+        orderId,
+        orderName: SUBSCRIPTION_ORDER_NAME,
+      });
+      if (mapPortOneStatusToPurchaseStatus(payment.status) !== 'paid') {
+        await supabase
+          .from('purchases')
+          .update({ status: 'failed', failed_reason: `status ${payment.status}`, raw_response: payment })
+          .eq('order_id', orderId);
+        await markPastDue(sub.id);
+        notifyRenewalFailure(sub, `결제가 완료되지 않았어요. 상태: ${payment.status}`);
+        return { subscriptionId: sub.id, result: 'failed', reason: `status ${payment.status}` };
+      }
+      charged = { paymentKey: payment.id, approvedAt: payment.paidAt ?? null, raw: payment };
+    } else {
+      const payment = await chargeBillingKey({
+        billingKey: decryptBillingKey(bk.billing_key),
+        customerKey: sub.parent_id,
+        amount: sub.price_krw,
+        orderId,
+        orderName: SUBSCRIPTION_ORDER_NAME,
+      });
+      if (payment.status !== 'DONE') {
+        await supabase
+          .from('purchases')
+          .update({ status: 'failed', failed_reason: `status ${payment.status}`, raw_response: payment })
+          .eq('order_id', orderId);
+        await markPastDue(sub.id);
+        notifyRenewalFailure(sub, `결제가 완료되지 않았어요. 상태: ${payment.status}`);
+        return { subscriptionId: sub.id, result: 'failed', reason: `status ${payment.status}` };
+      }
+      charged = { paymentKey: payment.paymentKey, approvedAt: payment.approvedAt ?? null, raw: payment };
+    }
   } catch (error) {
-    const reason = error instanceof TossApiError ? `${error.code}: ${error.message}` : '결제 승인 오류';
+    const reason =
+      error instanceof TossApiError || error instanceof PortOneApiError
+        ? `${error.code}: ${error.message}`
+        : '결제 승인 오류';
     await supabase.from('purchases').update({ status: 'failed', failed_reason: reason }).eq('order_id', orderId);
     await markPastDue(sub.id);
     notifyRenewalFailure(sub, reason);
     return { subscriptionId: sub.id, result: 'failed', reason };
-  }
-
-  if (payment.status !== 'DONE') {
-    await supabase
-      .from('purchases')
-      .update({ status: 'failed', failed_reason: `status ${payment.status}`, raw_response: payment })
-      .eq('order_id', orderId);
-    await markPastDue(sub.id);
-    notifyRenewalFailure(sub, `결제가 완료되지 않았어요. 상태: ${payment.status}`);
-    return { subscriptionId: sub.id, result: 'failed', reason: `status ${payment.status}` };
   }
 
   // 4) paid 기록 + 기간 연장 + entitlement 동기화
@@ -143,9 +171,9 @@ async function renewOne(sub: DueSubscription): Promise<RenewOutcome> {
     .from('purchases')
     .update({
       status: 'paid',
-      payment_key: payment.paymentKey,
-      paid_at: payment.approvedAt ?? new Date().toISOString(),
-      raw_response: payment,
+      payment_key: charged.paymentKey,
+      paid_at: charged.approvedAt ?? new Date().toISOString(),
+      raw_response: charged.raw,
     })
     .eq('order_id', orderId);
 

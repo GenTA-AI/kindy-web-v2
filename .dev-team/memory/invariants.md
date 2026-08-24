@@ -14,3 +14,64 @@
 12. **D-14(2026-07-05)**: 아이 표면 = 웹 선행(R1–R2), iOS(kindy-app)는 R3~R4 이식. 아이 표면 신규 화면 터치 타깃 ≥120pt(기획서 v2.2 §5 — 구 48px 기준을 아이 표면에서 대체), 부모 웹 ≥44pt.
 13. **prod 조작 [사람] 전용**: supabase db push·link, Secret Manager, Inngest Cloud, Toss, gcloud, gh 원격 설정 변경 — 워커 실행 금지(04 §0).
 14. **원본 문서 보관**: `docs/research/original/`은 수령 원본 사본 — 수정·삭제 금지.
+
+## 이용자 불변 조항 (2026-07-20 대표 지시)
+- **타겟 = 7~10세 초등 저학년. 게임이 어려우면 안 된다.** 모든 게임 태스크에 적용:
+  조작은 탭 이동 하나 / 실패·사망·전투 없음 / 길이 목적지로 시각 유도(길찾기 퍼즐 금지) /
+  텍스트 최소·큰 글씨 / 탭 타깃 44px+ / Enemies류 에셋 사용 금지.
+- 에셋 라이선스: Cute Fantasy 무료 티어 = 비상업 전용 → 개발·시안 한정. 실배포 전 유료 교체 필수(LICENSE.md 참조).
+
+## island-art 미션 컴파운드 (2026-07-20 리트로)
+15. **아틀라스 JSON이 진실**: 프레임 키를 코드에서 지어내지 말 것 — public/island/tiles/*.json
+    (또는 runtime-atlas.json)에서 확인한 실키만 상수화. 새 프레임 참조에는 실존 assert
+    단위 테스트 필수(island-state.test.ts·engine.test.ts 패턴).
+16. **태스크 Scope는 Do·Constraints가 전제한 파일 전부 명시**: 이번 미션 스코프 게이트 오탐
+    3회 전부 리드 스펙 버그. gate.sh는 불릿당 경로 1개(첫 토큰)만 읽는다 — 쉼표 병기 금지,
+    주석은 경로 뒤 공백 이후로.
+17. **Phaser 텍스처 키는 전 모듈 공유 네임스페이스**: 같은 키를 이미지/아틀라스 다른 방식으로
+    이중 등록하면 통합에서만 깨진다(t8 사례). 키는 모듈 접미사로 구분(island-water-props 등).
+    워크트리 검증 통과 ≠ 통합 통과 — 머지 후 wave hygiene(루트 실행·실화면)은 생략 불가.
+18. **이동 불변식**: 아바타 이동 종료 위치는 항상 보행 가능 칸(경계 0.51px 인셋)·비보행 시작
+    탈출 허용 — engine.test.ts 400회 무작위 탭 테스트가 감시. 이동 로직 수정 시 이 테스트 유지.
+19. **에셋 라이선스 게이트**: 아동용 금지 에셋(Enemies/Goblins/무기/Military) 차단은
+    build-atlas.mjs 공통 경로 + 거부 테스트로 강제(t10). 신규 팩 추가 시 docs/ASSETS.md
+    장부 갱신 + LICENSE.md 산출 확인이 머지 조건.
+
+## presale-lockdown 미션 (2026-08-03) — 머니·RLS 불변 조항
+20. **앱 레이어 강제는 강제가 아니다.** 브라우저는 anon 키로 PostgREST에 직접 갈 수 있다.
+    권한·결제·페이월·체험 한도는 **DB 정책**이 막아야 한다. "API 라우트에서 확인함"은 근거가 아니다.
+21. **머니 판정의 신뢰 원천**: 청구·엔타이틀먼트 결정이 사용자가 쓸 수 있는 테이블 값에 의존하면
+    반려. 신뢰 원천은 프로바이더 응답 또는 service-role 전용 행뿐. (2026-08-03 사고: `purchases.status`를
+    사용자가 'paid'로 UPDATE → 카드 청구 없이 구독 활성화.)
+22. **RLS 정책 신규 추가 시 `to authenticated` DML 금지.** owner-scoped SELECT만.
+    컨벤션 원본 = `0024_hero_world_state.sql`~`0029_hero_metrics.sql`. 기존 마이그레이션 수정 금지,
+    새 번호로만 추가.
+23. **RLS 검증은 인증 세션으로 쓰기를 시도해야 한다.** anon/service-role SELECT 카운트만 세는 검사는
+    2026-08-03에 발견된 결함 4건을 전부 못 잡았다(0029까지 생존). `scripts/verify-rls.ts`의
+    authenticated 쓰기 매트릭스를 지우거나 우회하지 말 것. PostgREST의 2xx/204는 성공 증거가 아니다 —
+    **전후 값 스냅샷으로 불변을 확인**해야 한다.
+24. **프로덕션 우회 플래그 금지**: `KINDY_LOCAL_PREVIEW=1`·`LESSON_GUEST_MODE=1`이 프로덕션에서
+    켜지면 부팅이 실패해야 한다. 특히 전자는 빌링키를 평문 저장시킨다.
+
+## presale-lockdown 리트로 컴파운드 (2026-08-06)
+25. **머지 후 통합 검증 전에 루트에서 `npm ci`.** 머지는 `package.json`/lockfile만 옮기고
+    메인 트리 `node_modules`는 그대로다. 이번에 Next 16.2.12로 올린 뒤 통합 검증이 전부 초록이었는데
+    실제 설치본은 16.2.3이었다 — **거짓 초록불**. 의존성 매니페스트를 건드린 태스크가 있으면
+    `npm ci` → 재검증이 순서다. (17의 의존성 판)
+26. **정적 프리렌더(`○`) 페이지의 런타임 env 가드는 빌드 타임에 얼어붙는다.** `/island`·`/world`·
+    `/start`·`/demo/*`·`/sample/library`의 `notFound()` 가드는 빌드 시점 env로 평가돼 404가 굳는다.
+    같은 이미지를 프리뷰로 띄워도 안 열린다(실측). 미들웨어 가드(동적)와 동작이 갈린다.
+    **런타임에 반응해야 하는 페이지 가드는 `force-dynamic`이거나 미들웨어여야 한다.**
+27. **테스트를 요구하는 태스크는 Scope에 테스트 파일 경로 + `package.json`을 반드시 넣는다.**
+    이 저장소의 `npm test`는 파일 목록 하드코딩이라 등록에 `package.json` 수정이 필수다.
+    빠뜨리면 스코프 게이트 오탐이 나고, 더 나쁘게는 **등록 안 된 테스트가 고아로 머지되어
+    CI에서 영영 안 돈다**(이번에 2건 발생). 불변조항 16의 구체판 — 오탐 4회 전부 리드 스펙 버그.
+28. **서버 전용 모듈에서 클라이언트가 쓸 값을 export하지 마라.** `@/lib/supabase`(service-role)를
+    물고 있는 모듈을 `'use client'` 파일이 import하면 번들에 들어간다 — **동적 import로도 못 막는다.**
+    실제 시크릿이 인라인되지 않아도 경계는 깨진 것이다. 해법은 우회가 아니라 의존성 없는 leaf 분리
+    (`subscription-types.ts`·`subscription-pricing.ts` 패턴).
+    검증: 빌드 후 `grep -rl "SUPABASE_SERVICE_ROLE_KEY" .next/static`이 비어야 한다.
+29. **검증 스크립트에는 positive control이 있어야 한다.** "공격이 막혔다"를 증명하려면 먼저
+    "공격자가 실제로 인증된 상태였다"를 증명해야 한다. 인증이 안 붙으면 전부 anon으로 나가
+    모든 항목이 PASS한다 — 가장 위험한 거짓 초록불. `verify-rls.ts`의 authenticated positive
+    control(자기 child 정확히 1행 + 남의 child 0행, 실패 시 run abort)을 지우지 말 것.

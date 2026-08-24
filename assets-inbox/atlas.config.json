@@ -1,0 +1,339 @@
+{
+  "schemaVersion": 1,
+  "pack": {
+    "name": "Kenmi Cute Fantasy Premium Bundle — RPG + Characters + UI",
+    "purchaseUrl": "https://kenmi-art.itch.io/cute-fantasy-rpg",
+    "licenseConditions": "PREMIUM: commercial and non-commercial project use allowed; modification allowed; redistribution or resale prohibited, including modified source assets.",
+    "purchasedAt": "2026-07-20"
+  },
+  "sources": [
+    {
+      "id": "grass-middle",
+      "file": "Cute_Fantasy/Tiles/Grass/Grass_1_Middle.png",
+      "atlas": "terrain"
+    },
+    {
+      "id": "beach-tile",
+      "file": "Cute_Fantasy/Tiles/Beach/Beach_Tiles.png",
+      "atlas": "terrain",
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 5 },
+        { "row": 1, "startColumn": 0, "frameCount": 5 },
+        { "row": 2, "startColumn": 0, "frameCount": 5 }
+      ]
+    },
+    {
+      "id": "path-tile",
+      "file": "Cute_Fantasy/Tiles/Grass/Grass_Tiles_1.png",
+      "atlas": "terrain",
+      "regions": [
+        { "row": 5, "startColumn": 0, "frameCount": 3 },
+        { "row": 6, "startColumn": 0, "frameCount": 3 },
+        { "row": 7, "startColumn": 0, "frameCount": 3 },
+        { "row": 8, "startColumn": 0, "frameCount": 3 },
+        { "row": 9, "startColumn": 0, "frameCount": 3 }
+      ]
+    },
+    {
+      "id": "path-decoration",
+      "file": "Cute_Fantasy/Tiles/Grass/Path_Decoration.png",
+      "atlas": "terrain"
+    },
+    {
+      "id": "path-middle",
+      "file": "Cute_Fantasy/Tiles/Grass/Path_Middle.png",
+      "atlas": "terrain"
+    },
+    {
+      "id": "cliff-tile",
+      "file": "Cute_Fantasy/Tiles/Cliff/Stone_Cliff_1_Tile.png",
+      "atlas": "terrain",
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 3 },
+        { "row": 1, "startColumn": 0, "frameCount": 3 },
+        { "row": 2, "startColumn": 0, "frameCount": 3 },
+        { "row": 3, "startColumn": 0, "frameCount": 3 },
+        { "row": 4, "startColumn": 0, "frameCount": 3 },
+        { "row": 5, "startColumn": 0, "frameCount": 3 }
+      ]
+    },
+    {
+      "id": "farmland-tile",
+      "file": "Cute_Fantasy/Tiles/FarmLand/FarmLand_Tile.png",
+      "atlas": "terrain",
+      "regions": [
+        { "row": 0, "startColumn": 1, "frameCount": 3 },
+        { "row": 1, "startColumn": 1, "frameCount": 3 },
+        { "row": 2, "startColumn": 1, "frameCount": 3 }
+      ]
+    },
+    {
+      "id": "water-tile",
+      "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+      "atlas": "water"
+    },
+    {
+      "id": "water-decoration",
+      "file": "Cute_Fantasy/Tiles/Water/Water_Decoration.png",
+      "atlas": "water"
+    },
+    {
+      "id": "water-middle",
+      "file": "Cute_Fantasy/Tiles/Water/Water_Middle.png",
+      "atlas": "water"
+    },
+    {
+      "id": "oak-tree",
+      "file": "Cute_Fantasy/Trees/Big_Oak_Tree.png",
+      "atlas": "props"
+    },
+    {
+      "id": "oak-tree-small",
+      "file": "Cute_Fantasy/Trees/Medium_Oak_Tree.png",
+      "atlas": "props"
+    },
+    {
+      "id": "house-1-wood-base-blue",
+      "file": "Cute_Fantasy/Buildings/Buildings/Houses/Wood/House_1_Wood_Base_Blue.png",
+      "atlas": "props"
+    },
+    {
+      "id": "bridge-wood",
+      "file": "Cute_Fantasy/Tiles/Bridge/Bridge_Wood.png",
+      "atlas": "props"
+    },
+    {
+      "id": "fences",
+      "file": "Cute_Fantasy/Outdoor decoration/Fences.png",
+      "atlas": "props"
+    },
+    {
+      "id": "chest",
+      "file": "Cute_Fantasy/Buildings/House_Decor/Chest_Anim.png",
+      "atlas": "props"
+    },
+    {
+      "id": "outdoor-decor",
+      "file": "Cute_Fantasy/Outdoor decoration/Outdoor_Decor.png",
+      "atlas": "props"
+    },
+    {
+      "id": "flowers",
+      "file": "Cute_Fantasy/Outdoor decoration/Flowers.png",
+      "atlas": "props"
+    },
+    {
+      "id": "lighthouse-tower",
+      "file": "Cute_Fantasy/Buildings/Buildings/Unique_Buildings/Silo/Silo.png",
+      "atlas": "props"
+    },
+    {
+      "id": "lantern",
+      "file": "Cute_Fantasy/Outdoor decoration/Lantern.png",
+      "atlas": "props"
+    },
+    {
+      "id": "placeable-decoration",
+      "file": "Cute_Fantasy/Buildings/House_Decor/Placeable_Decoration.png",
+      "atlas": "props"
+    },
+    {
+      "id": "butterfly",
+      "file": "Cute_Fantasy/Animals/Butterfly/Butterfly.png",
+      "atlas": "props"
+    },
+    {
+      "id": "chairs",
+      "file": "Cute_Fantasy/Buildings/House_Decor/Chairs.png",
+      "atlas": "props"
+    },
+    {
+      "id": "house-plants",
+      "file": "Cute_Fantasy/Buildings/House_Decor/House_Plants.png",
+      "atlas": "props"
+    },
+    {
+      "id": "bookshelves",
+      "file": "Cute_Fantasy/Buildings/House_Decor/BookShelves.png",
+      "atlas": "props"
+    },
+    {
+      "id": "boat",
+      "file": "Cute_Fantasy/Outdoor decoration/Boat.png",
+      "atlas": "props"
+    },
+    {
+      "id": "fisherwoman",
+      "file": "Cute_Fantasy/NPCs (Premade)/Bartender_Katy.png",
+      "atlas": "character",
+      "frameSize": 64,
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 2 }
+      ]
+    },
+    {
+      "id": "village-angel",
+      "file": "Cute_Fantasy_Characters/Angels/Angel_1.png",
+      "atlas": "character",
+      "frameSize": 64,
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 2 }
+      ]
+    },
+    {
+      "id": "ui-frames",
+      "file": "Cute_Fantasy_UI/UI/UI_Frames.png",
+      "atlas": "ui"
+    },
+    {
+      "id": "ui-bars",
+      "file": "Cute_Fantasy_UI/UI/UI_Bars.png",
+      "atlas": "ui"
+    },
+    {
+      "id": "ui-icons",
+      "file": "Cute_Fantasy_UI/UI/UI_Icons.png",
+      "atlas": "ui"
+    },
+    {
+      "id": "ui-font",
+      "file": "Cute_Fantasy_UI/UI/Font.png",
+      "atlas": "ui"
+    },
+    {
+      "id": "avatar-base",
+      "file": "Cute_Fantasy/Player/Player_Base/Player_Base_animations.png",
+      "atlas": "avatar-parts",
+      "frameSize": 64,
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 2 },
+        { "row": 1, "startColumn": 0, "frameCount": 2 },
+        { "row": 2, "startColumn": 0, "frameCount": 2 }
+      ]
+    },
+    {
+      "id": "shirt-orange",
+      "file": "Cute_Fantasy/Player/Chest/Farmer_Shirt/Farmer_Shirt_1_Orange.png",
+      "atlas": "avatar-parts",
+      "frameSize": 64,
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 2 },
+        { "row": 1, "startColumn": 0, "frameCount": 2 },
+        { "row": 2, "startColumn": 0, "frameCount": 2 }
+      ]
+    },
+    {
+      "id": "shirt-green",
+      "file": "Cute_Fantasy/Player/Chest/Farmer_Shirt/Farmer_Shirt_1_Green.png",
+      "atlas": "avatar-parts",
+      "frameSize": 64,
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 2 },
+        { "row": 1, "startColumn": 0, "frameCount": 2 },
+        { "row": 2, "startColumn": 0, "frameCount": 2 }
+      ]
+    },
+    {
+      "id": "shirt-blue",
+      "file": "Cute_Fantasy/Player/Chest/Farmer_Shirt/Farmer_Shirt_1_Blue.png",
+      "atlas": "avatar-parts",
+      "frameSize": 64,
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 2 },
+        { "row": 1, "startColumn": 0, "frameCount": 2 },
+        { "row": 2, "startColumn": 0, "frameCount": 2 }
+      ]
+    },
+    {
+      "id": "shirt-purple",
+      "file": "Cute_Fantasy/Player/Chest/Farmer_Shirt/Farmer_Shirt_1_Purple.png",
+      "atlas": "avatar-parts",
+      "frameSize": 64,
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 2 },
+        { "row": 1, "startColumn": 0, "frameCount": 2 },
+        { "row": 2, "startColumn": 0, "frameCount": 2 }
+      ]
+    },
+    {
+      "id": "shirt-white-brown",
+      "file": "Cute_Fantasy/Player/Chest/Farmer_Shirt/Farmer_Shirt_1_White_and_Brown.png",
+      "atlas": "avatar-parts",
+      "frameSize": 64,
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 2 },
+        { "row": 1, "startColumn": 0, "frameCount": 2 },
+        { "row": 2, "startColumn": 0, "frameCount": 2 }
+      ]
+    },
+    {
+      "id": "shirt-pink",
+      "file": "Cute_Fantasy/Player/Chest/Farmer_Shirt/Farmer_Shirt_1_Pink.png",
+      "atlas": "avatar-parts",
+      "frameSize": 64,
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 2 },
+        { "row": 1, "startColumn": 0, "frameCount": 2 },
+        { "row": 2, "startColumn": 0, "frameCount": 2 }
+      ]
+    },
+    {
+      "id": "farmer-hat",
+      "file": "Cute_Fantasy/Player/Accessories/Farmer_Hat_1.png",
+      "atlas": "avatar-parts",
+      "frameSize": 64,
+      "regions": [
+        { "row": 0, "startColumn": 0, "frameCount": 2 },
+        { "row": 1, "startColumn": 0, "frameCount": 2 },
+        { "row": 2, "startColumn": 0, "frameCount": 2 }
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "id": "water-ripples",
+      "atlas": "water",
+      "source": "water-decoration",
+      "row": 0,
+      "startColumn": 0,
+      "frameCount": 3,
+      "frameDurationMs": 720
+    },
+    {
+      "id": "fisherwoman-idle",
+      "atlas": "character",
+      "source": "fisherwoman",
+      "row": 0,
+      "startColumn": 0,
+      "frameCount": 2,
+      "frameDurationMs": 500
+    },
+    {
+      "id": "avatar-down",
+      "atlas": "avatar-parts",
+      "source": "avatar-base",
+      "row": 0,
+      "startColumn": 0,
+      "frameCount": 2,
+      "frameDurationMs": 200
+    },
+    {
+      "id": "avatar-side",
+      "atlas": "avatar-parts",
+      "source": "avatar-base",
+      "row": 1,
+      "startColumn": 0,
+      "frameCount": 2,
+      "frameDurationMs": 200
+    },
+    {
+      "id": "avatar-up",
+      "atlas": "avatar-parts",
+      "source": "avatar-base",
+      "row": 2,
+      "startColumn": 0,
+      "frameCount": 2,
+      "frameDurationMs": 200
+    }
+  ]
+}

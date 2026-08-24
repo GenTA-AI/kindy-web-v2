@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import MoriCharacter from '@/components/MoriCharacter';
 import StyleGrid from '@/components/StyleGrid';
+import { resolveOnboardingCompletionPath } from '@/lib/launch-surface';
 import { createBrowserClient, isSupabaseBrowserConfigured } from '@/lib/supabase-browser';
 
 type Step = 1 | 2 | 3;
@@ -32,6 +33,7 @@ function OnboardingContent() {
   const [step, setStep] = useState<Step>(1);
   const [authReady, setAuthReady] = useState(false);
   const [parentEmail, setParentEmail] = useState<string>('');
+  const [requestedNext, setRequestedNext] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -51,7 +53,9 @@ function OnboardingContent() {
   };
 
   useEffect(() => {
-    setAddMode(new URLSearchParams(window.location.search).get('add') === '1');
+    const searchParams = new URLSearchParams(window.location.search);
+    setAddMode(searchParams.get('add') === '1');
+    setRequestedNext(searchParams.get('next'));
   }, []);
 
   useEffect(() => {
@@ -145,7 +149,7 @@ function OnboardingContent() {
         throw new Error(child?.error ?? '아이 이름표를 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
       }
 
-      router.push(`/play/first-journey?childId=${child.id}`);
+      router.push(resolveOnboardingCompletionPath(requestedNext, child.id));
     } catch (e) {
       setError(e instanceof Error ? e.message : '아이 이름표를 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
     } finally {

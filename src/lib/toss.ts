@@ -28,6 +28,7 @@ export interface TossPayment {
   paymentKey: string;
   orderId: string;
   orderName?: string;
+  currency?: string;
   status:
     | 'READY'
     | 'IN_PROGRESS'
@@ -52,6 +53,27 @@ export class TossApiError extends Error {
     this.name = 'TossApiError';
     this.status = status;
     this.code = code;
+  }
+}
+
+export class TossPaymentLookupError extends Error {
+  constructor(options?: ErrorOptions) {
+    super('Toss payment lookup failed', options);
+    this.name = 'TossPaymentLookupError';
+  }
+}
+
+export class TossPaymentVerificationError extends Error {
+  readonly reason: 'payment_mismatch' | 'payment_not_paid';
+
+  constructor(reason: TossPaymentVerificationError['reason']) {
+    super(
+      reason === 'payment_mismatch'
+        ? 'Toss payment amount or currency mismatch'
+        : 'Toss payment is not paid',
+    );
+    this.name = 'TossPaymentVerificationError';
+    this.reason = reason;
   }
 }
 
@@ -135,6 +157,89 @@ export async function chargeBillingKey(params: {
  */
 export async function getPayment(paymentKey: string): Promise<TossPayment> {
   return tossFetch<TossPayment>(`/v1/payments/${encodeURIComponent(paymentKey)}`);
+}
+
+/** 결정적 orderId 로 승인된 결제를 조회한다. */
+export async function getPaymentByOrderId(orderId: string): Promise<TossPayment> {
+  return tossFetch<TossPayment>(`/v1/payments/orders/${encodeURIComponent(orderId)}`);
+}
+
+/**
+ * 404만 결제 없음으로 취급한다. 네트워크 오류나 5xx 등은 검증 실패로 보존해
+ * 호출자가 구독 활성화를 fail-closed 할 수 있게 한다.
+ */
+export async function findPaymentByOrderId(
+  orderId: string,
+  lookupPayment: (orderId: string) => Promise<TossPayment> = getPaymentByOrderId,
+): Promise<TossPayment | null> {
+  try {
+    const payment = await lookupPayment(orderId);
+    if (!payment || typeof payment !== 'object') {
+      throw new Error('Toss payment lookup returned an empty response');
+    }
+    return payment;
+  } catch (error) {
+    if (error instanceof TossApiError && error.status === 404) {
+      return null;
+    }
+    throw new TossPaymentLookupError({ cause: error });
+  }
+}
+
+/** 결제 완료 상태와 주문 ID·금액·통화를 모두 대조한다. */
+export function verifyPayment(params: {
+  payment: TossPayment;
+  orderId: string;
+  expectedAmount: number;
+  expectedCurrency: string;
+}): void {
+  if (!params.payment || typeof params.payment !== 'object' || params.payment.status !== 'DONE') {
+    throw new TossPaymentVerificationError('payment_not_paid');
+  }
+  if (
+    params.payment.orderId !== params.orderId ||
+    params.payment.totalAmount !== params.expectedAmount ||
+    params.payment.currency !== params.expectedCurrency
+  ) {
+    throw new TossPaymentVerificationError('payment_mismatch');
+  }
+}
+
+/**
+ * 로컬 paid 행은 프로바이더가 같은 주문의 정상 결제를 확인한 경우에만 재사용한다.
+ * 결제가 실제로 없으면 동일 orderId 로 청구하고, 조회 실패·모호한 응답은 예외로 닫는다.
+ */
+export async function resolveFirstPayment(params: {
+  purchaseStatus: string | null | undefined;
+  orderId: string;
+  expectedAmount: number;
+  expectedCurrency: string;
+  lookupPayment?: (orderId: string) => Promise<TossPayment>;
+  beforeCharge: () => Promise<void>;
+  chargePayment: () => Promise<TossPayment>;
+}): Promise<{ alreadyPaid: boolean; payment: TossPayment }> {
+  if (params.purchaseStatus === 'paid') {
+    const existingPayment = await findPaymentByOrderId(params.orderId, params.lookupPayment);
+    if (existingPayment) {
+      verifyPayment({
+        payment: existingPayment,
+        orderId: params.orderId,
+        expectedAmount: params.expectedAmount,
+        expectedCurrency: params.expectedCurrency,
+      });
+      return { alreadyPaid: true, payment: existingPayment };
+    }
+  }
+
+  await params.beforeCharge();
+  const payment = await params.chargePayment();
+  verifyPayment({
+    payment,
+    orderId: params.orderId,
+    expectedAmount: params.expectedAmount,
+    expectedCurrency: params.expectedCurrency,
+  });
+  return { alreadyPaid: false, payment };
 }
 
 /** 토스 결제 status → purchases.status 매핑. */

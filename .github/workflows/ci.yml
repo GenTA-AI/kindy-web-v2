@@ -18,4 +18,5 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npx tsc --noEmit
+      # 새 테스트 파일은 package.json의 test 스크립트 목록에 등록해야 한다.
       - run: npm run test

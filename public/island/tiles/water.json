@@ -1,0 +1,504 @@
+{
+  "animations": {
+    "water-ripples": {
+      "frameDurationMs": 720,
+      "frames": [
+        "water-decoration__r000_c000",
+        "water-decoration__r000_c001",
+        "water-decoration__r000_c002"
+      ],
+      "repeat": -1
+    }
+  },
+  "frames": {
+    "water-tile__r000_c000": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "rotated": false,
+      "source": {
+        "column": 0,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 0
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r000_c001": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 16,
+        "y": 0
+      },
+      "rotated": false,
+      "source": {
+        "column": 1,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 0
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r000_c002": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 32,
+        "y": 0
+      },
+      "rotated": false,
+      "source": {
+        "column": 2,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 0
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r001_c000": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 48,
+        "y": 0
+      },
+      "rotated": false,
+      "source": {
+        "column": 0,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 1
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r001_c001": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 64,
+        "y": 0
+      },
+      "rotated": false,
+      "source": {
+        "column": 1,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 1
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r001_c002": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 16
+      },
+      "rotated": false,
+      "source": {
+        "column": 2,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 1
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r002_c000": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 16,
+        "y": 16
+      },
+      "rotated": false,
+      "source": {
+        "column": 0,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 2
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r002_c001": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 32,
+        "y": 16
+      },
+      "rotated": false,
+      "source": {
+        "column": 1,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 2
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r002_c002": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 48,
+        "y": 16
+      },
+      "rotated": false,
+      "source": {
+        "column": 2,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 2
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r003_c000": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 64,
+        "y": 16
+      },
+      "rotated": false,
+      "source": {
+        "column": 0,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 3
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r003_c001": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 32
+      },
+      "rotated": false,
+      "source": {
+        "column": 1,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 3
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r003_c002": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 16,
+        "y": 32
+      },
+      "rotated": false,
+      "source": {
+        "column": 2,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 3
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r004_c000": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 32,
+        "y": 32
+      },
+      "rotated": false,
+      "source": {
+        "column": 0,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 4
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r004_c001": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 48,
+        "y": 32
+      },
+      "rotated": false,
+      "source": {
+        "column": 1,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 4
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-tile__r004_c002": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 64,
+        "y": 32
+      },
+      "rotated": false,
+      "source": {
+        "column": 2,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Tile_1.png",
+        "row": 4
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-decoration__r000_c000": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 48
+      },
+      "rotated": false,
+      "source": {
+        "column": 0,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Decoration.png",
+        "row": 0
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-decoration__r000_c001": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 16,
+        "y": 48
+      },
+      "rotated": false,
+      "source": {
+        "column": 1,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Decoration.png",
+        "row": 0
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-decoration__r000_c002": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 32,
+        "y": 48
+      },
+      "rotated": false,
+      "source": {
+        "column": 2,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Decoration.png",
+        "row": 0
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    },
+    "water-middle__r000_c000": {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 48,
+        "y": 48
+      },
+      "rotated": false,
+      "source": {
+        "column": 0,
+        "file": "Cute_Fantasy/Tiles/Water/Water_Middle.png",
+        "row": 0
+      },
+      "sourceSize": {
+        "h": 16,
+        "w": 16
+      },
+      "spriteSourceSize": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "trimmed": false
+    }
+  },
+  "meta": {
+    "app": "scripts/island/build-atlas.mjs",
+    "format": "RGBA8888",
+    "image": "water.png",
+    "frameSize": 16,
+    "gridSize": 16,
+    "pixelArt": true,
+    "scale": "1",
+    "size": {
+      "h": 64,
+      "w": 80
+    },
+    "tileSize": 16
+  }
+}

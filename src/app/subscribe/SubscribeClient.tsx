@@ -1,10 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
+import * as PortOne from '@portone/browser-sdk/v2';
 import MoriCharacter from '@/components/MoriCharacter';
 import type { SubscriptionRow, EntitlementRow } from '@/lib/subscription-types';
 import { businessInfo, isBusinessInfoComplete } from '@/lib/business-info';
+import {
+  SUBSCRIPTION_PRICE_KRW,
+  formatKrw,
+  formatKrwWithSymbol,
+} from '@/lib/subscription-pricing';
 
 interface SubscribeClientProps {
   parentId: string;
@@ -12,9 +17,6 @@ interface SubscribeClientProps {
   initialSubscription: SubscriptionRow | null;
   initialEntitlement: EntitlementRow;
 }
-
-const PRICE_KRW = 25000;
-const krw = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 
 function formatDate(iso: string | null): string {
   if (!iso) return '-';
@@ -29,7 +31,7 @@ const BENEFITS = [
 ];
 
 const PAYMENT_NOTES = [
-  '카드를 등록하면 첫 달 25,000원이 바로 결제돼요.',
+  `카드를 등록하면 첫 달 ${formatKrw(SUBSCRIPTION_PRICE_KRW)}이 바로 결제돼요.`,
   '다음 달부터 같은 날 자동 결제돼요.',
   '해지는 이 화면에서 바로 접수되고, 현재 기간 끝까지 이용할 수 있어요.',
   '아이 플레이 화면에는 광고와 결제 버튼이 없어요.',
@@ -56,14 +58,17 @@ export default function SubscribeClient({
   // 정기결제 사전 명시 동의(전자상거래법·여신전문금융업법). 카드 등록 전 필수.
   const [billingConsent, setBillingConsent] = useState(false);
 
-  const hasTossClientKey = Boolean(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
+  // 반드시 리터럴 접근 (business-info.ts 의 인라인 규칙과 동일).
+  const hasPortOneKeys = Boolean(
+    process.env.NEXT_PUBLIC_PORTONE_STORE_ID && process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY,
+  );
   const isSubscribed =
     !!subscription &&
     (subscription.status === 'active' || subscription.status === 'past_due');
   const isCanceledButPremium =
     !!subscription && subscription.status === 'canceled' && entitlement.is_premium;
   const businessComplete = isBusinessInfoComplete();
-  const checkoutReady = hasTossClientKey && businessComplete;
+  const checkoutReady = hasPortOneKeys && businessComplete;
   const currentPeriodEndLabel = formatDate(
     subscription?.current_period_end ?? entitlement.premium_until ?? null,
   );
@@ -74,8 +79,9 @@ export default function SubscribeClient({
     setPending('card');
     setError(null);
     try {
-      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
-      if (!clientKey) {
+      const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
+      const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
+      if (!storeId || !channelKey) {
         throw new Error('지금은 결제창을 열 수 없어요. 잠시 후 다시 시도해주세요.');
       }
       if (!businessComplete) {
@@ -93,15 +99,36 @@ export default function SubscribeClient({
           throw new Error('동의 저장이 잠시 어려워요. 잠시 후 다시 시도해 주세요.');
         }
       }
-      const tossPayments = await loadTossPayments(clientKey);
-      const payment = tossPayments.payment({ customerKey: parentId });
-      await payment.requestBillingAuth({
-        method: 'CARD',
-        successUrl: `${window.location.origin}/subscribe/success`,
-        failUrl: `${window.location.origin}/subscribe/fail`,
-        customerEmail: email ?? undefined,
+      // 포트원 V2 빌링키 발급. 데스크톱(iframe)은 프라미스로 빌링키를 즉시 받고,
+      // 모바일(리다이렉트 환경)은 redirectUrl(/subscribe/success?billingKey=...)로 돌아온다.
+      const issue = await PortOne.requestIssueBillingKey({
+        storeId,
+        channelKey,
+        billingKeyMethod: 'CARD',
+        issueId: `issue-${parentId.replace(/-/g, '').slice(0, 16)}-${Date.now()}`,
+        issueName: 'Kindy 월 구독',
+        customer: {
+          customerId: parentId,
+          ...(email ? { email } : {}),
+        },
+        redirectUrl: `${window.location.origin}/subscribe/success`,
       });
-      // requestBillingAuth 는 리다이렉트되므로 여기 도달하지 않음.
+      if (!issue || issue.code !== undefined) {
+        // 사용자가 창을 닫은 경우는 조용히 복귀(아래 catch 의 취소 필터와 동일).
+        throw new Error(issue?.message ?? '카드 등록이 완료되지 않았어요.');
+      }
+      // 서버에 빌링키 등록 + 첫 달 결제 (서버가 빌링키를 포트원에 재조회해 검증한다)
+      const res = await fetch('/api/payments/portone/billing-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ billingKey: issue.billingKey }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error ?? '결제 처리에 실패했어요.');
+      }
+      window.location.href = `/subscribe/success?registered=1&charged=${data.charged === false ? 0 : 1}`;
+      return;
     } catch (e) {
       const message = e instanceof Error ? e.message : '카드 등록창을 열지 못했어요.';
       // 사용자가 창을 닫은 경우는 조용히 복귀.
@@ -159,7 +186,7 @@ export default function SubscribeClient({
             </p>
           </div>
           <MoriCharacter
-            className="h-20 w-20 shrink-0 overflow-hidden rounded-[26px] border border-line bg-white shadow-sm"
+            className="h-20 w-20 shrink-0 overflow-hidden rounded-[26px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150"
             imageClassName="scale-125"
             label="Kindy Mori"
             withGlow={false}
@@ -188,7 +215,9 @@ export default function SubscribeClient({
             Kindy 멤버십
           </div>
           <div className="mb-4 flex items-baseline gap-1.5">
-            <span className="text-3xl font-black">{krw(PRICE_KRW)}</span>
+            <span className="text-3xl font-black">
+              {formatKrwWithSymbol(SUBSCRIPTION_PRICE_KRW)}
+            </span>
             <span className="text-sm font-bold text-white/70">/ 월</span>
           </div>
           <ul className="space-y-3">
@@ -225,7 +254,7 @@ export default function SubscribeClient({
           </div>
         </section>
 
-        <section className="mb-5 rounded-2xl border border-line bg-white p-4 shadow-sm">
+        <section className="mb-5 rounded-2xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-4">
           <h2 className="text-sm font-black text-ink">결제 전에 확인해요</h2>
           <div className="mt-3 grid gap-2">
             {PAYMENT_NOTES.map((note) => (
@@ -238,7 +267,7 @@ export default function SubscribeClient({
 
         {/* 구독 상태 / CTA */}
         {isSubscribed ? (
-          <section className="mb-5 rounded-2xl border border-line bg-white p-5 shadow-sm">
+          <section className="mb-5 rounded-2xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-5">
             <h2 className="mb-3 text-base font-black text-ink">멤버십 관리</h2>
             <div className="space-y-1.5 text-sm font-semibold text-ink2">
               <div className="flex justify-between">
@@ -255,7 +284,9 @@ export default function SubscribeClient({
               </div>
               <div className="flex justify-between">
                 <span>월 요금</span>
-                <span className="font-bold text-ink">{krw(subscription?.price_krw ?? PRICE_KRW)}</span>
+                <span className="font-bold text-ink">
+                  {formatKrwWithSymbol(SUBSCRIPTION_PRICE_KRW)}
+                </span>
               </div>
             </div>
             {subscription?.status === 'past_due' && (
@@ -265,7 +296,7 @@ export default function SubscribeClient({
                 </div>
                 <button
                   onClick={startCardRegistration}
-                  disabled={pending !== null || !hasTossClientKey}
+                  disabled={pending !== null || !hasPortOneKeys}
                   className="mt-3 w-full rounded-2xl bg-saged px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-sagebg transition hover:bg-ink active:scale-[0.98] disabled:opacity-60"
                 >
                   {pending === 'card' ? '카드 등록창 여는 중…' : '카드 다시 등록하기'}
@@ -320,7 +351,7 @@ export default function SubscribeClient({
               </div>
             )}
             {checkoutReady && (
-              <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-2xl border border-line bg-white px-4 py-3">
+              <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-2xl border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 px-4 py-3">
                 <input
                   type="checkbox"
                   checked={billingConsent}
@@ -328,7 +359,8 @@ export default function SubscribeClient({
                   className="mt-0.5 h-4 w-4 shrink-0 accent-saged"
                 />
                 <span className="text-xs font-semibold leading-relaxed text-ink2">
-                  매월 {krw(PRICE_KRW)}이 등록한 카드로 <strong className="font-black text-ink">자동 결제</strong>되는
+                  매월 {formatKrwWithSymbol(SUBSCRIPTION_PRICE_KRW)}이 등록한 카드로{' '}
+                  <strong className="font-black text-ink">자동 결제</strong>되는
                   정기결제에 동의합니다.{' '}
                   {isCanceledButPremium
                     ? `남은 이용 기간에는 결제되지 않고, ${formatDate(entitlement.premium_until)}부터 자동 결제가 이어져요.`
@@ -359,8 +391,8 @@ export default function SubscribeClient({
         {/* 약관/사업자 고지 (전자상거래 표시 의무) */}
         <section className="space-y-1.5 text-[11px] font-semibold leading-relaxed text-ink3">
           <p>
-            구독 시 매월 {krw(PRICE_KRW)}이 등록된 카드로 자동 결제돼요. 해지하면 현재 결제 기간이
-            끝나는 날까지 이용할 수 있고, 다음 결제는 일어나지 않아요.
+            구독 시 매월 {formatKrwWithSymbol(SUBSCRIPTION_PRICE_KRW)}이 등록된 카드로 자동 결제돼요.
+            해지하면 현재 결제 기간이 끝나는 날까지 이용할 수 있고, 다음 결제는 일어나지 않아요.
           </p>
           <p>
             <strong className="font-black text-ink2">청약철회·환불 안내</strong> · 결제일로부터 7일 이내,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase, isSupabaseServiceConfigured } from '@/lib/supabase';
+import { isLaunchSurfaceClosed } from '@/lib/launch-surface';
 
 // 아산 꿈샘 키오스크(Kindy 데모) 익명 이벤트 인제스트.
 // 설계: KIOSK_KINDY_퍼널추적_설계.md §6. 무인증 + service-role 쓰기(RLS 우회).
@@ -51,10 +52,18 @@ type IncomingEvent = {
 };
 
 export async function OPTIONS() {
+  if (isLaunchSurfaceClosed('/api/kiosk/events', process.env)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
 export async function POST(request: NextRequest) {
+  if (isLaunchSurfaceClosed('/api/kiosk/events', process.env)) {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
+
   // sendBeacon 은 Content-Type 이 다양함(application/json | text/plain) → 방어적 파싱.
   let body: Record<string, unknown>;
   try {

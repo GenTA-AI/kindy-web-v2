@@ -1,0 +1,35 @@
+# Cloud Build 업로드 컨텍스트 제외 목록. Docker 빌드는 .dockerignore를 따로 본다.
+# 이 파일이 있으면 gcloud는 .gitignore 대신 이걸 쓴다.
+.git
+.gitignore
+node_modules
+.next
+*.log
+# Never upload any dotenv file. cloudbuild substitutions are allowlisted by the
+# release script; runtime credentials come from Secret Manager.
+.env
+.env.*
+.env.local
+.DS_Store
+
+# 대용량·비배포 산출물
+ir/
+output/
+tmp/
+coverage/
+assets-inbox/
+docs/
+scripts/
+모두의창업/
+.dev-team/
+.agents/
+.codex/
+.vscode/
+.idea/
+supabase/.temp
+supabase/
+*.safetensors
+*.ckpt
+
+# 유료 팩 원본은 재배포 금지 라이선스 — 빌드 컨텍스트에도 올리지 않는다.
+# (런타임에 필요한 것은 tracked된 public/island/tiles/ 가공 산출물뿐)

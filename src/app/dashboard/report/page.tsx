@@ -187,6 +187,62 @@ function toRoundResult(row: RoundRow): GameRoundResult | null {
   };
 }
 
+type SessionTimelineRow = {
+  id: string;
+  started_at: string | null;
+  completed_at: string | null;
+  rounds_completed: number | null;
+  rounds_total: number | null;
+};
+
+function formatSessionTime(value: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function SessionTimeline({ sessions }: { sessions: SessionTimelineRow[] }) {
+  if (sessions.length === 0) return null;
+
+  return (
+    <section className="mt-5 rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
+      <p className="text-xs font-black uppercase tracking-[.16em] text-sage">세션 타임라인</p>
+      <h2 className="mt-2 text-2xl font-black">최근 7일, 아이가 만난 수업</h2>
+      <p className="mt-2 text-sm leading-relaxed text-ink3">
+        수업을 마치는 순간이 여기에 쌓입니다. 완료 표시는 아이가 끝까지 함께했다는 뜻이에요.
+      </p>
+      <ol className="mt-5 flex flex-col gap-3">
+        {sessions.map((session) => {
+          const done = Boolean(session.completed_at);
+          return (
+            <li
+              key={session.id}
+              className={`flex items-center justify-between gap-4 rounded-2xl border p-4 ${
+                done ? 'border-sage/50 bg-sagebg/60' : 'border-line bg-mist'
+              }`}
+            >
+              <div>
+                <p className="text-sm font-black text-ink">
+                  {done ? '수업 완료 🎉' : '수업 진행 중'}
+                </p>
+                <p className="mt-0.5 text-xs font-semibold text-ink3">
+                  {formatSessionTime(session.started_at)}
+                  {done ? ` → ${formatSessionTime(session.completed_at)} 마침` : ''}
+                </p>
+              </div>
+              {session.rounds_total ? (
+                <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-saged">
+                  놀이 {session.rounds_completed ?? 0}/{session.rounds_total}
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 async function loadReport(parentId: string | null, requestedChildId: string | null, sampleMode = false) {
   if (sampleMode) {
     return {
@@ -196,6 +252,15 @@ async function loadReport(parentId: string | null, requestedChildId: string | nu
         age: DEFAULT_LOCAL_PREVIEW_CHILD.age,
       },
       rounds: LOCAL_PREVIEW_ROUNDS,
+      sessions: [
+        {
+          id: 'sample-session',
+          started_at: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
+          completed_at: new Date().toISOString(),
+          rounds_completed: 3,
+          rounds_total: 3,
+        },
+      ] as SessionTimelineRow[],
       sessionCount: 1,
       completedSessionCount: 1,
       latestCompletedAt: null,
@@ -215,6 +280,17 @@ async function loadReport(parentId: string | null, requestedChildId: string | nu
         age: previewChild.age,
       },
       rounds: hasPlayedPreview ? previewRounds : [],
+      sessions: previewGame
+        ? ([
+            {
+              id: 'preview-session',
+              started_at: previewGame.updated_at ?? new Date().toISOString(),
+              completed_at: previewGame.completed_at ?? null,
+              rounds_completed: previewRounds.length,
+              rounds_total: previewGame.rounds.length,
+            },
+          ] as SessionTimelineRow[])
+        : [],
       sessionCount: previewGame ? 1 : 0,
       completedSessionCount: previewGame?.completed_at ? 1 : 0,
       latestCompletedAt: previewGame?.completed_at ?? null,
@@ -241,6 +317,7 @@ async function loadReport(parentId: string | null, requestedChildId: string | nu
     return {
       child: null,
       rounds: [] as GameRoundResult[],
+      sessions: [] as SessionTimelineRow[],
       sessionCount: 0,
       completedSessionCount: 0,
       latestCompletedAt: null,
@@ -259,7 +336,7 @@ async function loadReport(parentId: string | null, requestedChildId: string | nu
       .limit(120),
     supabase
       .from('game_sessions')
-      .select('id, completed_at')
+      .select('id, started_at, completed_at, rounds_completed, rounds_total')
       .eq('child_id', child.id)
       .gte('started_at', since)
       .order('started_at', { ascending: false })
@@ -272,6 +349,7 @@ async function loadReport(parentId: string | null, requestedChildId: string | nu
   return {
     child,
     rounds: ((rounds ?? []) as RoundRow[]).map(toRoundResult).filter((item): item is GameRoundResult => Boolean(item)),
+    sessions: ((sessions ?? []) as SessionTimelineRow[]),
     sessionCount: sessions?.length ?? 0,
     completedSessionCount: (sessions ?? []).filter((session) => Boolean(session.completed_at)).length,
     latestCompletedAt: (sessions ?? [])
@@ -355,13 +433,16 @@ function SeedStateCard({ seed }: { seed: ParentReportGrowthData['seeds'][number]
 function GrowthMapSections({ report }: { report: ParentReportGrowthData }) {
   return (
     <>
-      <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
+      <section className="mt-5 rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[.16em] text-sage">성장지도</p>
             <h2 className="mt-2 text-2xl font-black">여섯 씨앗 상태</h2>
             <p className="mt-3 max-w-3xl text-sm font-semibold leading-relaxed text-ink2">
               놀이에서 보인 작은 단서를 씨앗 상태로만 정리합니다. 더 살펴볼 부분은 천천히 선명해집니다.
+            </p>
+            <p className="mt-2 max-w-3xl text-xs leading-relaxed text-ink3">
+              이 지도는 활동 중 관찰을 요약한 참고 자료예요. 검사나 진단이 아니며, 아이의 능력을 점수로 판정하지 않습니다.
             </p>
           </div>
         </div>
@@ -373,20 +454,20 @@ function GrowthMapSections({ report }: { report: ParentReportGrowthData }) {
       </section>
 
       <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+        <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
           <p className="text-xs font-black uppercase tracking-[.16em] text-sage">잘 들어간 학습 문</p>
           <h2 className="mt-2 text-2xl font-black">잘 들어온 문으로 이어가요</h2>
           <p className="mt-4 text-sm font-semibold leading-relaxed text-ink2">{report.strengthLine}</p>
         </section>
 
-        <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+        <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
           <p className="text-xs font-black uppercase tracking-[.16em] text-clay">더 자랄 씨앗</p>
           <h2 className="mt-2 text-2xl font-black">다음에 함께 열어볼 문</h2>
           <p className="mt-4 text-sm font-semibold leading-relaxed text-ink2">{report.growthLine}</p>
         </section>
       </section>
 
-      <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
+      <section className="mt-5 rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
         <p className="text-xs font-black uppercase tracking-[.16em] text-sage">생각도구 기록</p>
         <h2 className="mt-2 text-2xl font-black">놀이 속 생각 흐름</h2>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -411,7 +492,7 @@ function GrowthRecommendationPanel({
   recommendationLabel: string;
 }) {
   return (
-    <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+    <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
       <p className="text-xs font-black uppercase tracking-[.16em] text-clay">다음 이야기</p>
       <h2 className="mt-2 text-2xl font-black">오늘 이어갈 이야기 문</h2>
       {recommendation.storyTitles.length > 0 && (
@@ -439,7 +520,7 @@ function GrowthRecommendationPanel({
 
 function EmptyReport({ childName }: { childName: string }) {
   return (
-    <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+    <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
       <p className="text-xs font-black uppercase tracking-[.16em] text-sage">아직 피는 중</p>
       <h2 className="mt-2 text-2xl font-black leading-snug">{childName}의 첫 기록이 곧 자라나요.</h2>
       <p className="mt-3 text-sm font-semibold leading-relaxed text-ink2">
@@ -471,7 +552,7 @@ function HomeUseGuide({
   ];
 
   return (
-    <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
+    <section className="mt-5 rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-[.16em] text-clay">가정 사용 가이드</p>
@@ -520,7 +601,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
     report = await loadReport(parentId, requestedChildId, sampleMode);
   } catch {
     loadFailed = true;
-    report = { child: null, rounds: [], sessionCount: 0, completedSessionCount: 0, latestCompletedAt: null };
+    report = { child: null, rounds: [], sessions: [], sessionCount: 0, completedSessionCount: 0, latestCompletedAt: null };
   }
 
   const childName = displayName(report.child);
@@ -610,7 +691,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
             </p>
           </section>
 
-          <section className="overflow-hidden rounded-[34px] border border-line bg-white shadow-sm">
+          <section className="overflow-hidden rounded-[34px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150">
             <MoriCharacter className="aspect-square w-full" imageClassName="scale-110" label="모리" />
           </section>
         </header>
@@ -624,7 +705,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
         )}
 
         <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1.05fr_.95fr]">
-          <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+          <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
             <p className="text-xs font-black uppercase tracking-[.16em] text-sage">기록 요약</p>
             <h2 className="mt-2 text-2xl font-black">다음에 해볼 놀이</h2>
             <div className="mt-5 grid gap-3">
@@ -645,7 +726,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
               recommendationLabel={recommendationLabel}
             />
           ) : (
-            <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+            <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
               <p className="text-xs font-black uppercase tracking-[.16em] text-clay">이번 주 이야기</p>
               <h2 className="mt-2 text-2xl font-black">영상과 단서 놀이 3일 흐름</h2>
               <div className="mt-5 grid gap-3">
@@ -674,6 +755,8 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
           <Metric label="대화 힌트" value={`${starters.length}개`} />
         </section>
 
+        <SessionTimeline sessions={report.sessions} />
+
         {growthReport && <GrowthMapSections report={growthReport} />}
 
         <HomeUseGuide
@@ -692,7 +775,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
         ) : (
           <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[.94fr_1.06fr]">
             <div className="space-y-5">
-              <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+              <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
                 <p className="text-xs font-black uppercase tracking-[.16em] text-sage">
                   {growthReport ? '이번 주 이야기' : '성장 하이라이트'}
                 </p>
@@ -702,7 +785,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
                 </p>
               </section>
 
-              <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+              <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
                 <p className="text-xs font-black uppercase tracking-[.16em] text-clay">이번 주 함께한 활동</p>
                 <h2 className="mt-2 text-2xl font-black leading-snug">{summaryLine}</h2>
                 <p className="mt-3 text-sm font-semibold leading-relaxed text-ink2">
@@ -711,7 +794,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
               </section>
             </div>
 
-            <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+            <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[.16em] text-sage">놀이 기록</p>
@@ -728,7 +811,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
           </section>
         )}
 
-        <section className="mt-5 rounded-[30px] border border-line bg-white p-6 shadow-sm">
+        <section className="mt-5 rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[.16em] text-sage">놀이 지도</p>
@@ -751,7 +834,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
         </section>
 
         <section className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1.05fr_.95fr]">
-          <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+          <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
             <p className="text-xs font-black uppercase tracking-[.16em] text-sage">
               {growthReport ? '부모 대화 힌트' : '오늘 이렇게 물어보세요'}
             </p>
@@ -775,7 +858,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
             </ol>
           </section>
 
-          <section className="rounded-[30px] border border-line bg-white p-6 shadow-sm">
+          <section className="rounded-[30px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-6">
             <p className="text-xs font-black uppercase tracking-[.16em] text-clay">자주 고른 단서</p>
             <h2 className="mt-2 text-2xl font-black">자주 고른 단서를 모았어요</h2>
             <dl className="mt-5 space-y-3">
@@ -795,7 +878,7 @@ export default async function ParentSelReportPage({ searchParams }: ReportPagePr
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <article className="rounded-[26px] border border-line bg-white p-5 shadow-sm">
+    <article className="rounded-[26px] border border-white/60 bg-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_32px_rgba(35,49,38,0.10)] backdrop-blur-2xl backdrop-saturate-150 p-5">
       <p className="text-[11px] font-black uppercase tracking-[.14em] text-sage">{label}</p>
       <p className="mt-3 text-3xl font-black text-ink">{value}</p>
     </article>

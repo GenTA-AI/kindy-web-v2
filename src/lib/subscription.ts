@@ -5,9 +5,15 @@ import { supabase } from '@/lib/supabase';
 import type { SubscriptionRow, EntitlementRow } from '@/lib/subscription-types';
 
 export type { SubscriptionRow, EntitlementRow, SubscriptionStatus } from '@/lib/subscription-types';
+export {
+  SUBSCRIPTION_LIST_DAILY_PRICE_KRW,
+  SUBSCRIPTION_LIST_PRICE_KRW,
+  SUBSCRIPTION_PRICE_KRW,
+  formatKrw,
+  formatKrwWithSymbol,
+} from '@/lib/subscription-pricing';
 
 export const SUBSCRIPTION_PLAN = 'kindy_monthly';
-export const SUBSCRIPTION_PRICE_KRW = 25000;
 export const SUBSCRIPTION_ORDER_NAME = 'Kindy 멤버십 월 구독';
 /** 구독 orderId 접두사 — webhook 에서 구독 결제 식별에 사용. */
 export const SUBSCRIPTION_ORDER_PREFIX = 'sub_';

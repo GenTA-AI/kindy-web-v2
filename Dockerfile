@@ -8,13 +8,9 @@
 #
 # ffmpeg/ffprobe 는 video-pipeline 의 concat 단계 및 last-frame 추출에 사용.
 #
-# 빌드:  docker build -t gcr.io/$PROJECT/kindy:latest \
-#          --build-arg NEXT_PUBLIC_SUPABASE_URL=... --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
-#          --build-arg NEXT_PUBLIC_TOSS_CLIENT_KEY=... --build-arg NEXT_PUBLIC_BIZ_REPRESENTATIVE_NAME=... \
-#          (BIZ 6종 전체 — 빠지면 결제 CTA가 "결제 준비 중"으로 잠김, 아래 ARG 목록 참조) .
-# 테스트: docker run -p 8080:8080 --env-file .env.local gcr.io/$PROJECT/kindy:latest
-#        (주의: NEXT_PUBLIC_* 는 빌드 타임 인라인 — --env-file 로는 결제 버튼이 안 열린다)
-# 배포:  gcloud run deploy kindy --image=gcr.io/$PROJECT/kindy:latest --region=asia-northeast3 --allow-unauthenticated
+# 빌드·배포 정본: scripts/gcp-release.sh (immutable Artifact Registry digest)
+# NEXT_PUBLIC_* 는 공개값이지만 빌드 결과와 런타임 서버가 같은 값을 보도록
+# 아래 build/runtime stage 양쪽에 명시한다. Secret은 절대 ARG로 전달하지 않는다.
 
 # ═══════════════════════════════════════════════════════
 # Stage 1: dependencies
@@ -47,6 +43,8 @@ COPY . .
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_TOSS_CLIENT_KEY
+ARG NEXT_PUBLIC_PORTONE_STORE_ID
+ARG NEXT_PUBLIC_PORTONE_CHANNEL_KEY
 ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_BIZ_REPRESENTATIVE_NAME
 ARG NEXT_PUBLIC_BIZ_REGISTRATION_NUMBER
@@ -58,6 +56,8 @@ ARG NEXT_PUBLIC_KINDY_START_BASE
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
     NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
     NEXT_PUBLIC_TOSS_CLIENT_KEY=$NEXT_PUBLIC_TOSS_CLIENT_KEY \
+    NEXT_PUBLIC_PORTONE_STORE_ID=$NEXT_PUBLIC_PORTONE_STORE_ID \
+    NEXT_PUBLIC_PORTONE_CHANNEL_KEY=$NEXT_PUBLIC_PORTONE_CHANNEL_KEY \
     NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_BIZ_REPRESENTATIVE_NAME=$NEXT_PUBLIC_BIZ_REPRESENTATIVE_NAME \
     NEXT_PUBLIC_BIZ_REGISTRATION_NUMBER=$NEXT_PUBLIC_BIZ_REGISTRATION_NUMBER \
@@ -82,10 +82,41 @@ RUN apk add --no-cache ffmpeg tini && \
     addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
+# Next standalone server still reads these public values at runtime (health,
+# proxy, server-side Supabase clients). Re-declare the build args in this stage
+# so the immutable image carries the exact same values that its client bundle
+# was compiled with.
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_TOSS_CLIENT_KEY
+ARG NEXT_PUBLIC_PORTONE_STORE_ID
+ARG NEXT_PUBLIC_PORTONE_CHANNEL_KEY
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_BIZ_REPRESENTATIVE_NAME
+ARG NEXT_PUBLIC_BIZ_REGISTRATION_NUMBER
+ARG NEXT_PUBLIC_BIZ_MAIL_ORDER_NUMBER
+ARG NEXT_PUBLIC_BIZ_ADDRESS
+ARG NEXT_PUBLIC_BIZ_PHONE
+ARG NEXT_PUBLIC_BIZ_EMAIL
+ARG NEXT_PUBLIC_KINDY_START_BASE
+
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=8080 \
-    HOSTNAME=0.0.0.0
+    HOSTNAME=0.0.0.0 \
+    NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
+    NEXT_PUBLIC_TOSS_CLIENT_KEY=$NEXT_PUBLIC_TOSS_CLIENT_KEY \
+    NEXT_PUBLIC_PORTONE_STORE_ID=$NEXT_PUBLIC_PORTONE_STORE_ID \
+    NEXT_PUBLIC_PORTONE_CHANNEL_KEY=$NEXT_PUBLIC_PORTONE_CHANNEL_KEY \
+    NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+    NEXT_PUBLIC_BIZ_REPRESENTATIVE_NAME=$NEXT_PUBLIC_BIZ_REPRESENTATIVE_NAME \
+    NEXT_PUBLIC_BIZ_REGISTRATION_NUMBER=$NEXT_PUBLIC_BIZ_REGISTRATION_NUMBER \
+    NEXT_PUBLIC_BIZ_MAIL_ORDER_NUMBER=$NEXT_PUBLIC_BIZ_MAIL_ORDER_NUMBER \
+    NEXT_PUBLIC_BIZ_ADDRESS=$NEXT_PUBLIC_BIZ_ADDRESS \
+    NEXT_PUBLIC_BIZ_PHONE=$NEXT_PUBLIC_BIZ_PHONE \
+    NEXT_PUBLIC_BIZ_EMAIL=$NEXT_PUBLIC_BIZ_EMAIL \
+    NEXT_PUBLIC_KINDY_START_BASE=$NEXT_PUBLIC_KINDY_START_BASE
 
 # Standalone 번들: 최소 node_modules 만 포함. static + public 은 별도 copy.
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./

@@ -2,8 +2,11 @@ node_modules
 .next
 .git
 .gitignore
+# Build args are the only allowed public config path. Never copy dotenv files,
+# including production credentials, into a Docker layer or Cloud Build context.
+.env
+.env.*
 .env.local
-.env.*.local
 *.log
 npm-debug.log*
 .DS_Store
@@ -14,6 +17,19 @@ design-doc.md
 pitch-deck.md
 ir-deck.html
 coverage
+tmp
+output
+ir
+docs/proposals
+docs
+assets-inbox
+scripts
+supabase
+모두의창업
+.agents
+.codex
+*.safetensors
+*.ckpt
 .vscode
 .idea
 supabase/.temp

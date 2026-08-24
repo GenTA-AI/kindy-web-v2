@@ -40,13 +40,16 @@ function ErrorIcon() {
 }
 
 /**
- * /subscribe/success — 토스 카드 등록(requestBillingAuth) successUrl.
- * 쿼리의 authKey/customerKey 를 서버로 보내 빌링키 발급 + 첫 달 결제를 수행.
+ * /subscribe/success — 포트원 카드 등록 완료 화면. 두 진입 경로:
+ * 1) 모바일 리다이렉트: 포트원이 ?billingKey=... 를 붙여 돌아옴 → 서버 등록+첫 결제 수행
+ * 2) 데스크톱 인라인: SubscribeClient 가 서버 처리를 마친 뒤 ?registered=1&charged=… 로 이동
  */
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const authKey = searchParams.get('authKey');
-  const customerKey = searchParams.get('customerKey');
+  const billingKey = searchParams.get('billingKey');
+  const registered = searchParams.get('registered');
+  const chargedParam = searchParams.get('charged');
+  const redirectError = searchParams.get('message');
 
   const [phase, setPhase] = useState<Phase>('processing');
   const [error, setError] = useState<string | null>(null);
@@ -61,18 +64,35 @@ function SuccessContent() {
     if (startedRef.current) return; // StrictMode 중복 호출 방지
     startedRef.current = true;
 
-    if (!authKey || !customerKey) {
+    // 경로 2: 인라인 처리 완료 후 도착 — 상태만 조회해 표시.
+    if (registered === '1') {
+      setCharged(chargedParam !== '0');
+      (async () => {
+        try {
+          const res = await fetch('/api/subscription');
+          const data = await res.json().catch(() => null);
+          setCardSummary(data?.cardSummary ?? null);
+          setPeriodEnd(data?.subscription?.current_period_end ?? data?.entitlement?.premium_until ?? null);
+        } finally {
+          setPhase('done');
+        }
+      })();
+      return;
+    }
+
+    // 경로 1: 포트원 리다이렉트 — billingKey 로 서버 등록+첫 결제.
+    if (!billingKey) {
       setPhase('error');
-      setError('카드 등록 정보가 없어요. 처음부터 다시 시도해주세요.');
+      setError(redirectError ?? '카드 등록 정보가 없어요. 처음부터 다시 시도해주세요.');
       return;
     }
 
     (async () => {
       try {
-        const res = await fetch('/api/payments/toss/billing-key', {
+        const res = await fetch('/api/payments/portone/billing-key', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ authKey, customerKey }),
+          body: JSON.stringify({ billingKey }),
         });
         const data = await res.json().catch(() => null);
         if (!res.ok) {
@@ -87,7 +107,7 @@ function SuccessContent() {
         setPhase('error');
       }
     })();
-  }, [authKey, customerKey]);
+  }, [billingKey, registered, chargedParam, redirectError]);
 
   return (
     <main className="flex-1 bg-cream text-ink [word-break:keep-all]">

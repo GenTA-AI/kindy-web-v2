@@ -24,6 +24,14 @@ export interface AxisEvidence {
   transfer: number;
   quality: number;
   age_band_adjustment: number;
+  /** 실제로 관찰된 신호만 레벨 갱신에 쓴다 — 관찰 없는 요소는 중립값을 지어내지 않고 가중치에서 제외 (로드맵 P0). */
+  observed: {
+    performance: boolean;
+    process: boolean;
+    persistence: boolean;
+    preference: boolean;
+    transfer: boolean;
+  };
 }
 
 export interface AxisProfileState {
@@ -45,6 +53,8 @@ export interface GameRoundEvidenceRecord {
   hint_count?: number | null;
   retry_count?: number | null;
   abandoned?: boolean | null;
+  /** 30초 무응답 자동선택 — 노출로만 기록하고 역량 업데이트에서 제외한다 (로드맵 P0). */
+  auto_selected?: boolean | null;
 }
 
 export interface RoundEvidenceContext {
@@ -100,11 +110,10 @@ export function ageBandAdjustment(age: number | null): number {
 }
 
 function performanceScore(input: RoundEvidenceInput): number {
-  const completed = input.completed && !input.abandoned;
-
+  // 정오답 없는 '완료'는 노출이지 학습효과가 아니다 — 0.6 부여 휴리스틱 제거 (로드맵 P0).
+  // 정오답 없는 라운드는 isAssessableRound 게이트가 상류에서 레벨 갱신 자체를 제외한다.
   if (input.is_correct === true) return 1;
   if (input.is_correct === false) return 0.25;
-  if (completed) return 0.6;
   return 0;
 }
 
@@ -112,7 +121,7 @@ function processScore(input: RoundEvidenceInput): number {
   let score = 1 - 0.2 * Math.min(input.hint_count, 3);
 
   if (input.elapsed_ms === null) {
-    score -= 0.1;
+    // 시간 미관찰은 감점이 아니라 미관찰 — observed.process가 제외를 담당한다.
   } else if (input.elapsed_ms < 800) {
     score -= 0.3;
   } else if (input.elapsed_ms > 45_000) {
@@ -141,9 +150,10 @@ function preferenceScore(input: RoundEvidenceInput): number {
 }
 
 function transferScore(input: RoundEvidenceInput): number {
+  // 전이 자료가 없으면 0.5를 지어내지 않는다 — 미관찰은 observed.transfer=false로 제외 (로드맵 P0).
   if (input.transfer_success === true) return 1;
   if (input.transfer_success === false) return 0.3;
-  return 0.5;
+  return 0;
 }
 
 function qualityScore(input: RoundEvidenceInput): number {
@@ -158,14 +168,25 @@ function qualityScore(input: RoundEvidenceInput): number {
   return realSignalCount / 5;
 }
 
-function evidenceBase(evidence: AxisEvidence): number {
-  return (
-    0.3 * evidence.performance +
-    0.25 * evidence.process +
-    0.2 * evidence.persistence +
-    0.1 * evidence.preference +
-    0.15 * evidence.transfer
-  );
+const EVIDENCE_WEIGHTS = {
+  performance: 0.3,
+  process: 0.25,
+  persistence: 0.2,
+  preference: 0.1,
+  transfer: 0.15,
+} as const;
+
+/** 관찰된 요소만 가중 재정규화. 아무것도 관찰되지 않으면 null(증거 없음). */
+function evidenceBase(evidence: AxisEvidence): number | null {
+  let numerator = 0;
+  let denominator = 0;
+  for (const key of Object.keys(EVIDENCE_WEIGHTS) as Array<keyof typeof EVIDENCE_WEIGHTS>) {
+    if (!evidence.observed[key]) continue;
+    numerator += EVIDENCE_WEIGHTS[key] * evidence[key];
+    denominator += EVIDENCE_WEIGHTS[key];
+  }
+  if (denominator === 0) return null;
+  return numerator / denominator;
 }
 
 function resolveIsCorrect(round: GameRoundEvidenceRecord): boolean | null {
@@ -214,11 +235,28 @@ export function buildEvidence(input: RoundEvidenceInput): AxisEvidence {
     transfer: clamp01(transferScore(input)),
     quality: clamp01(qualityScore(input)),
     age_band_adjustment: input.age_band_adjustment ?? 0,
+    observed: {
+      performance: input.is_correct !== null,
+      process: input.elapsed_ms !== null || input.hint_count > 0,
+      persistence: input.retried || input.retry_count > 0 || input.abandoned,
+      preference: input.preferred_character_match || input.activity_type_revisit,
+      transfer: input.transfer_success !== null,
+    },
   };
+}
+
+/**
+ * 역량 업데이트 대상 판별 — 로드맵 P0의 두 원칙:
+ * ① 자동선택(auto_selected)은 노출로만 기록한다 ② 정오답 없는 완료는 학습효과가 아니다.
+ */
+export function isAssessableRound(round: GameRoundEvidenceRecord): boolean {
+  if (round.auto_selected === true) return false;
+  return resolveIsCorrect(round) !== null;
 }
 
 export function updateAxis(previous: AxisProfileState, evidence: AxisEvidence): AxisProfileState {
   const base = evidenceBase(evidence);
+  if (base === null) return { ...previous };
   const ageAdjusted = clamp01(base + evidence.age_band_adjustment);
   const confidenceGain = Math.min(0.08, 0.02 + evidence.quality * 0.06);
 

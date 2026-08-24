@@ -1,0 +1,10 @@
+p1-tap-feedback:
+p2-path-guidance:
+p3-sound:
+p4-onboarding:
+p5-read-aloud:
+p6-reward-fx:
+p7-hud-icons:
+p8-living-island:
+p9-forgiving-decorate:
+p10-a11y:
