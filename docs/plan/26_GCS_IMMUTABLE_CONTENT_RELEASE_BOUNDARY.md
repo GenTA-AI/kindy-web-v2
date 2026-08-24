@@ -1,7 +1,7 @@
 # 26. GCS immutable ContentRelease 경계
 
 작성일: 2026-08-24
-상태: **서버 adapter·config·단위 테스트만 로컬 구현, GCP 미프로비저닝, runtime hard-disabled**
+상태: **서버 composition까지 로컬 접합, GCP 미프로비저닝, runtime hard-disabled**
 
 ## 결론
 
@@ -11,8 +11,10 @@ Supabase `service_role`이 같은 Cloud Run 프로세스에 남아 있어도 rel
 bucket에서 읽고, 브라우저에는 검증된 release가 선언한 단 하나의 object에 대한
 15분 이하 V4 HTTPS signed URL만 발급한다.
 
-이 변경은 현재 `server-runtime-content-release.ts` composition을 바꾸지 않고
-`STORY_CHAT_RUNTIME_ENABLED`도 열지 않는다. GCP bucket/IAM/retention을 실제로
+`server-runtime-content-release.ts` composition은 이제 exact GCS config일 때만
+GCS object loader와 signer를 만들고, Supabase에는 release registry 조회만 맡긴다.
+legacy Supabase Storage object-reader/signer에는 fallback하지 않는다.
+`STORY_CHAT_RUNTIME_ENABLED`는 열지 않았고 GCP bucket/IAM/retention을 실제로
 만들거나 수정하지 않았으므로 아직 activation-ready가 아니다.
 
 ## 로컬 코드 경계
@@ -44,7 +46,7 @@ Cloud Run metadata endpoint만 호출한다. 공식 runtime contract의 `default
 
 ## fail-closed 환경 계약
 
-새 `getGcsContentReleaseRuntimeConfig`는 기존 Supabase config와 별도다. 아래 값이
+`getGcsContentReleaseRuntimeConfig`는 기존 Supabase config와 별도다. 아래 값이
 모두 exact match일 때만 `{ configured: true }`를 반환한다.
 
 | 환경 | channel | private bucket | signer/runtime identity |
@@ -57,14 +59,26 @@ reader JWT, custom credential JSON, private key, `GOOGLE_APPLICATION_CREDENTIALS
 환경값이 하나라도 있으면 GCS config는 닫힌다. ADC의 Cloud Run metadata credential
 source만 사용한다.
 
-이 config는 아직 배포 하네스나 production composition에 연결하지 않았다. 따라서
-환경변수만 넣어도 storage backend가 자동 전환되지 않는다.
+이 config는 server composition에 연결됐지만 compile-time runtime gate는 여전히
+`false`다. 또한 배포 하네스에는 아직 exact GCS env를 넣지 않았으므로 환경변수만
+부분적으로 추가해 runtime을 여는 경로는 없다.
 
 ## 실제 GCP에서 먼저 만족해야 할 조건
+
+현재 `kindy-493701`에는 Cloud Run service-agent 같은 project-level role이 필요하고,
+그 permission은 아래 exact read-only scanner를 통과할 수 없다. 같은 project 안의
+bucket IAM만으로 effective isolation을 증명할 수 없으므로 별도 content project와
+exact bucket/identity allowlist 재검토가 먼저다. 현재 project에서 bootstrap/check가
+실패하는 것이 안전한 기대 동작이다.
 
 1. staging/production을 물리적으로 분리한 두 bucket을 같은 region에 만든다.
 2. Uniform bucket-level access와 Public Access Prevention을 강제한다.
 3. Object Versioning을 켜고 retention policy를 설정한 뒤 검증 후 lock한다.
+   별도 project에서 먼저 runtime-viewer-only no-writer IAM으로 봉인하고 최소 8일
+   quarantine한 다음 live/noncurrent·soft-deleted object, managed folder, pending
+   multipart upload의 second empty proof와 Audit Log 검토를 통과한 뒤에만 unlocked
+   30일 policy와 final publisher role을 추가한다. 열거할 수 없는 resumable session
+   URI가 IAM 제거 뒤에도 최대 1주 유효하므로 즉시 empty proof는 충분하지 않다.
 4. preview runtime SA에는 staging bucket `roles/storage.objectViewer`만, production
    runtime SA에는 production bucket `roles/storage.objectViewer`만 준다.
 5. 각 runtime SA가 자기 identity로 V4 URL을 만들 수 있도록 자기 service account에
@@ -85,7 +99,7 @@ source만 사용한다.
    | staging | `https://kindy-landing-preview-g3d7kdf7ta-du.a.run.app` (적용 직전 Cloud Run `status.url` 재확인 필수) |
    | production | `https://kindy.kr` |
 
-9. 그 다음에만 Supabase adapter 대신 GCS adapter를 server composition에 주입하고
+9. 이미 로컬 접합된 GCS composition으로
    upload→hash/size verify→attest→activate의 첫 staging release를 검증한다.
 
 현재 `ContentRelease v1`에는 GCS object generation이 없어서 browser URL은
@@ -97,23 +111,59 @@ blocker다. defense-in-depth 후속 계약에서는 manifest/registry에 exact G
 위 외부 증거와 기존 DB/browser/safety gate가 모두 통과하기 전에는
 `STORY_CHAT_RUNTIME_ENABLED=0`과 compile-time immutable-boundary gate를 그대로 둔다.
 
+## GCP bootstrap/check 하네스
+
+exact allowlist와 비가역 lock 분리를 코드로 검토할 수 있도록
+`scripts/gcp-content-release.sh`를 추가했다. public surface는 offline `plan`과 read-only
+`prelock-check`/`check`/`metageneration`뿐이다. `bootstrap`과 비가역
+`lock-retention`은 첫 gcloud 호출 전에 hard-fail한다. separate-project/8일 quarantine/
+second empty+Audit proof와 별도 irreversible 승인이 구현되기 전에는 다시 열지 않는다.
+publisher upload/impersonation 명령은 실행 identity 계약이 아직 증명되지 않아
+의도적으로 제공하지 않는다. 후속 Mori runner는 별도 project에서 exact publisher
+identity를 attached keyless ADC로 직접 사용하고 `ifGenerationMatch=0`을 강제해야 한다.
+
+bucket IAM policy 전체는 own runtime viewer와 own publisher creator 두 binding만,
+runtime service-account policy 전체는 signBlob-only self binding 하나만 허용하고
+publisher service-account resource policy는 exact empty를 요구한다. project policy는
+custom/간접 member path를 거절하고 각 predefined role의 live includedPermissions가
+exact read-only allowlist 안에만 있는지 검사한다. unknown/future permission 하나도
+fail-closed다. protected identity의 user-managed key, active/inactive/deleted HMAC key와
+모든 API key description도 검사한다. 이 identity/credential guard는 bucket과 signBlob
+grant 직전·직후에 반복한다. 새 bucket의 provider default IAM도 legacy bucket/object
+owner/reader 네 role의 exact project members만 허용한다. mutation helper의 no-writer,
+empty proof, metageneration-bound REST lock과 curl `-q` 처리는 차기 two-phase 설계용
+테스트 준비물이며 public command에서 unreachable이다. 다만
+organization/folder/group inherited IAM은 정적 check로 증명되지
+않으므로 Policy Troubleshooter와 실제 identity negative probe가 activation blocker다.
+
+실행 순서, 승인 문자열, CORS/video/WebVTT 및 cross-channel negative smoke 증거는
+`docs/plan/29_GCS_CONTENT_RELEASE_BOOTSTRAP_RUNBOOK.md`를 정본으로 사용한다. 이
+하네스를 실제 GCP에 실행하지 않았으며 현재 외부 activation blocker는 그대로다.
+
 ## 로컬 검증
 
 ```bash
 NODE_OPTIONS=--conditions=react-server npx tsx --test \
   src/lib/releases/gcs-runtime-content-release-config.test.ts \
-  src/lib/releases/gcs-runtime-content-release.test.ts
+  src/lib/releases/gcs-runtime-content-release.test.ts \
+  src/lib/releases/server-runtime-content-release.test.ts
 npx tsc --noEmit
 npx eslint \
   src/lib/releases/gcs-runtime-content-release.ts \
   src/lib/releases/gcs-runtime-content-release-config.ts \
   src/lib/releases/gcs-runtime-content-release.test.ts \
-  src/lib/releases/gcs-runtime-content-release-config.test.ts
+  src/lib/releases/gcs-runtime-content-release-config.test.ts \
+  src/lib/releases/server-runtime-content-release.ts \
+  src/lib/releases/server-runtime-content-release.test.ts
+bash scripts/gcp-content-release.test.sh
 ```
 
 단위 테스트는 exact GCS API URL/auth header, redirect/cache 거절, actual byte drift,
 ADC 지연 deadline, IAM `signBlob`, V4 URL host/bucket/path/query/identity binding,
 malformed signature와 credential/config drift의 fail-closed 동작을 검증한다.
+composition 테스트는 invalid config가 DB client 생성 전 `null`로 닫히는지,
+Supabase는 registry로만 남는지, object read/sign이 metadata identity를 거쳐 GCS와
+IAM endpoint만 호출하는지 확인한다.
 
 ## 공식 규격 근거
 

@@ -228,6 +228,28 @@ Storage JWT만으로 object immutability가 성립하지 않는다. 활성화 �
 bucket(runtime=`objectViewer`, publisher=`objectCreator`, versioning+retention/lock)
 또는 service-role를 제거한 RPC-only DB runtime identity가 반드시 필요하다.
 
+GCS 경계 검토는 `scripts/gcp-content-release.sh`를 사용한다. 현재 public surface는
+offline `plan`과 read-only `prelock-check`/`check`/`metageneration`뿐이다. `bootstrap`과
+비가역 `lock-retention`은 첫 gcloud 호출 전에 항상 실패한다. UBLA/PAP/versioning,
+channel별 runtime=`objectViewer`, publisher=`objectCreator`, signBlob-only self role,
+exact CORS를 read-only로 검사한다. project custom role·간접
+member와 exact read-only allowlist 밖의 live predefined-role permission, protected SA의
+user-managed/HMAC/API authorization key, publisher SA의 non-empty resource policy는
+fail-closed다.
+
+현재 `kindy-493701`의 standard Cloud Run service-agent role은 이 exact scanner에서
+의도적으로 실패하므로 별도 content project가 P0 blocker다. GCS resumable upload
+session URI는 IAM 제거 뒤에도 최대 1주간 추가 인증 없이 finalize될 수 있고 열거할 수
+없으므로, no-writer 봉인 후 최소 8일 quarantine와 second empty/Audit Log proof도 P0다.
+또한 `publish-create`나
+publisher impersonation 명령은 제공하지 않는다. 별도 project에서 exact publisher
+identity를 attached keyless ADC로 쓰는 Mori runner와 `ifGenerationMatch=0` upload를
+독립 검토·구현하기 전에는 발행할 수 없다. 전체 실행/negative smoke/승인 절차는
+`docs/plan/29_GCS_CONTENT_RELEASE_BOOTSTRAP_RUNBOOK.md`가 정본이다. 현재 GCP에는
+실행하지 않았고 runtime은 계속 `0`이다. `check`가 통과해도 org/folder/group inherited
+IAM은 정적으로 증명되지 않으므로 Policy Troubleshooter와 실제 cross-channel deny
+증거 없이는 activation-ready로 간주하지 않는다.
+
 DB 역할은 서로 분리한다.
 
 - `kindy_content_release_publisher`: actual manifest/graph/all-asset bytes로 Mori
