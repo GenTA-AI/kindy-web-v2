@@ -130,8 +130,9 @@ const PICTURE_DETECTIVES_ROOM: StoryChatRoomData = {
       type: 'cinematic',
       title: '색점 폭풍을 통과하라',
       description: '서연이의 선택으로 이어진 5초 장면이에요. 원본 화면을 자르지 않고 그대로 보여 줍니다.',
-      videoUrl: '/landing/seurat-alive.mp4',
-      posterUrl: '/landing/seurat-poster.jpg',
+      videoUrl: '/chat/seurat-alive-vertical.mp4',
+      posterUrl: '/chat/seurat-vertical-poster.jpg',
+      subtitlesUrl: '/chat/seurat-clue.vtt',
       durationLabel: '0:05',
     },
     {
@@ -146,7 +147,7 @@ const PICTURE_DETECTIVES_ROOM: StoryChatRoomData = {
       status: 'ready',
       title: '서연이가 찾아낸 첫 단서',
       description: '강아지를 따라가 노란 색점을 발견한 순간이에요.',
-      imageUrl: '/landing/seurat-fishing.jpg',
+      imageUrl: '/chat/seurat-memory-4x5.jpg',
       imageAlt: '그림 속 강가와 노란 색점 단서가 담긴 모험 장면',
     },
     {

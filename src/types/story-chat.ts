@@ -95,6 +95,7 @@ export interface StoryCinematicMessage extends StoryChatMessageBase {
   description: string;
   videoUrl: string;
   posterUrl?: string;
+  subtitlesUrl?: string;
   durationLabel: string;
   watched?: boolean;
 }

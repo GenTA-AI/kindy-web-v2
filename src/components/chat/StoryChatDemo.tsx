@@ -22,7 +22,14 @@ export default function StoryChatDemo({ initialRoomId }: StoryChatDemoProps) {
   const activeRoom = activeRoomId ? DEMO_STORY_CHAT_ROOMS[activeRoomId] : null;
 
   if (activeRoom) {
-    return <StoryChatRoom key={activeRoom.preview.id} room={activeRoom} onBack={() => setActiveRoomId(null)} />;
+    return (
+      <StoryChatRoom
+        key={activeRoom.preview.id}
+        room={activeRoom}
+        embedded
+        onBack={() => setActiveRoomId(null)}
+      />
+    );
   }
 
   return (

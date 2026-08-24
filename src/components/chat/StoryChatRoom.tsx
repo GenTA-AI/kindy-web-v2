@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ChatAvatar from '@/components/chat/ChatAvatar';
 import ChatComposer from '@/components/chat/ChatComposer';
 import StoryMessageRenderer from '@/components/chat/StoryMessageRenderer';
@@ -18,11 +18,12 @@ interface StoryChatRoomProps {
   room: StoryChatRoomData;
   onBack?: () => void;
   backHref?: string;
+  embedded?: boolean;
   onSendMessage?: (text: string) => void;
   onChoiceSelected?: (messageId: string, option: StoryChoiceOption) => void;
 }
 
-type StoryPhase = 'choice' | 'open' | 'complete';
+type StoryPhase = 'choice' | 'responding' | 'open' | 'complete';
 
 interface DemoSafetyReview {
   text: string;
@@ -40,6 +41,36 @@ const CHOICE_MORI_TEXT: Record<string, string> = {
   'check-parasol': '양산 아래에 노란 발자국이 있어. 강아지가 그 길 끝의 색점 폭풍으로 달려가고 있어!',
   'ask-mori': '점들이 한쪽으로 흐르고 있어. 저 강아지도 같은 방향을 보고 있네. 색점 폭풍까지 함께 가 보자!',
 };
+
+const CHOICE_MEMORY_TEXT: Record<string, string> = {
+  'follow-dog': '강아지를 따라가 노란 색점을 발견한 순간이에요.',
+  'check-parasol': '양산 아래에서 노란 발자국과 색점의 흐름을 발견한 순간이에요.',
+  'ask-mori': '모리와 점들의 방향을 비교해 색점 폭풍의 길을 찾아낸 순간이에요.',
+};
+
+function personalizeAuthoredTail(
+  tail: readonly StoryChatMessage[],
+  option: StoryChoiceOption,
+): StoryChatMessage[] {
+  return tail.map((message) => {
+    if (message.type === 'generated_image' && message.id === 'first-memory') {
+      return {
+        ...message,
+        title: `${option.label} — 서연이의 단서`,
+        description: CHOICE_MEMORY_TEXT[option.id] ?? message.description,
+      };
+    }
+
+    if (message.type === 'cinematic') {
+      return {
+        ...message,
+        description: `${option.label} 선택으로 이어진 5초 장면이에요. 9:16 세로 화면 안에서 단서를 찾아보세요.`,
+      };
+    }
+
+    return message;
+  });
+}
 
 function BackIcon() {
   return (
@@ -61,10 +92,13 @@ function ReplayIcon() {
 function CinematicStage({
   cinematic,
   onReturn,
+  embedded = false,
 }: {
   cinematic: StoryCinematicMessage;
   onReturn: () => void;
+  embedded?: boolean;
 }) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const returnButtonRef = useRef<HTMLButtonElement | null>(null);
   const [hasEnded, setHasEnded] = useState(false);
@@ -79,7 +113,30 @@ function CinematicStage({
     returnButtonRef.current?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onReturn();
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onReturn();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const focusable = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), video[controls], [href], [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
 
     window.addEventListener('keydown', onKeyDown);
@@ -97,52 +154,67 @@ function CinematicStage({
 
     setHasEnded(false);
     video.currentTime = 0;
-    void video.play();
+    void video.play().catch(() => undefined);
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#101210]" role="dialog" aria-modal="true" aria-labelledby="cinematic-title">
+    <div
+      ref={dialogRef}
+      className="fixed inset-0 z-[100] bg-[#101210]"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cinematic-title"
+      aria-describedby="cinematic-description"
+    >
       <div className="mx-auto flex h-dvh w-full max-w-[480px] flex-col border-x border-white/10 bg-[#101210] text-white">
-        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-white/15 px-5 pb-4 pt-[max(18px,env(safe-area-inset-top))]">
+        <header className={`flex shrink-0 items-center justify-between gap-4 border-b border-white/15 px-5 pb-4 ${embedded ? 'pt-4' : 'pt-[max(18px,env(safe-area-inset-top))]'}`}>
           <div className="min-w-0">
-            <p className="text-[13px] font-semibold tracking-[0.08em] text-white/60">이야기 장면</p>
+            <p className="text-[14px] font-semibold tracking-[0.04em] text-white/75">9:16 이야기 장면</p>
             <h2 id="cinematic-title" className="mt-1 truncate text-[18px] font-bold">{cinematic.title}</h2>
           </div>
           <button
             ref={returnButtonRef}
             type="button"
             onClick={onReturn}
-            className="min-h-12 shrink-0 border border-white/40 px-4 text-[15px] font-semibold text-white transition-colors hover:bg-white hover:text-ink"
+            className="min-h-12 shrink-0 touch-manipulation border border-white/50 px-4 text-[16px] font-semibold text-white transition-colors hover:bg-white hover:text-ink"
           >
             대화로
           </button>
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col justify-center">
-          <div className="relative flex w-full items-center bg-black">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="relative mx-auto aspect-[9/16] w-full max-w-[390px] bg-black">
             <video
               ref={videoRef}
               src={cinematic.videoUrl}
               poster={cinematic.posterUrl}
               controls
-              autoPlay
               playsInline
               preload="metadata"
               onPlay={() => setHasEnded(false)}
               onEnded={() => setHasEnded(true)}
-              className="aspect-video h-auto w-full object-contain"
+              className="h-full w-full object-contain"
             >
+              {cinematic.subtitlesUrl && (
+                <track
+                  src={cinematic.subtitlesUrl}
+                  kind="subtitles"
+                  srcLang="ko"
+                  label="한국어"
+                  default
+                />
+              )}
               이 브라우저에서는 영상을 재생할 수 없어요.
             </video>
             {hasEnded && (
               <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/55" aria-live="polite">
-                <p className="border border-white/50 bg-black/75 px-4 py-3 text-[15px] font-semibold">장면이 끝났어요</p>
+                <p className="border border-white/50 bg-black/75 px-4 py-3 text-[16px] font-semibold">장면이 끝났어요</p>
               </div>
             )}
           </div>
           <div className="px-5 py-5">
-            <p className="text-[16px] leading-7 text-white/85">{cinematic.description}</p>
-            <p className="mt-2 text-[13px] leading-5 text-white/55">영상이 끝나도 대화로 자동 이동하지 않아요. 다시 보거나 준비됐을 때 돌아가세요.</p>
+            <p id="cinematic-description" className="text-[16px] leading-7 text-white/90">{cinematic.description}</p>
+            <p className="mt-2 text-[14px] leading-6 text-white/75">재생 버튼을 직접 눌러 시작해요. 준비됐을 때 대화로 돌아가면 다음 장면이 이어져요.</p>
           </div>
         </div>
 
@@ -150,7 +222,7 @@ function CinematicStage({
           <button
             type="button"
             onClick={replay}
-            className="flex min-h-12 items-center justify-center gap-2 border border-white/40 text-[15px] font-semibold transition-colors hover:bg-white/10"
+            className="flex min-h-12 touch-manipulation items-center justify-center gap-2 border border-white/50 text-[16px] font-semibold transition-colors hover:bg-white/10"
           >
             <ReplayIcon />
             다시 보기
@@ -158,7 +230,7 @@ function CinematicStage({
           <button
             type="button"
             onClick={onReturn}
-            className="min-h-12 bg-white px-4 text-[15px] font-bold text-ink transition-colors hover:bg-cream"
+            className="min-h-12 touch-manipulation bg-white px-4 text-[16px] font-bold text-ink transition-colors hover:bg-cream"
           >
             대화로 돌아가기
           </button>
@@ -176,24 +248,24 @@ function SafetyReviewPanel({
   onFinish: () => void;
 }) {
   return (
-    <section className="ml-[54px] border border-sages bg-white p-4" role="status" aria-live="polite">
-      <p className="text-[13px] font-semibold tracking-[0.06em] text-sage">안전 확인 단계</p>
+    <section className="ml-0 border border-sages bg-white p-4 min-[390px]:ml-[54px]" role="status" aria-live="polite">
+      <p className="text-[14px] font-semibold tracking-[0.04em] text-sage">안전 확인 단계</p>
       <h3 className="mt-1 text-[17px] font-bold leading-6 text-ink">답장을 만들기 전에 내용을 확인해요</h3>
-      <p className="mt-2 text-[15px] leading-6 text-ink2">
+      <p className="mt-2 text-[16px] leading-7 text-ink2">
         실제 서비스에서는 개인정보와 위험한 표현을 먼저 확인합니다. 이 시제품은 방금 쓴 말을 저장하거나 AI로 보내지 않았어요.
       </p>
       <div className="mt-4 grid gap-2">
         <button
           type="button"
           onClick={onContinue}
-          className="min-h-12 bg-saged px-4 text-[15px] font-bold text-white transition-colors hover:bg-ink"
+          className="min-h-12 touch-manipulation bg-saged px-4 text-[16px] font-bold text-white transition-colors hover:bg-ink"
         >
           승인된 예시 답장으로 계속
         </button>
         <button
           type="button"
           onClick={onFinish}
-          className="min-h-12 border border-line px-4 text-[15px] font-semibold text-ink2 transition-colors hover:bg-mist"
+          className="min-h-12 touch-manipulation border border-line px-4 text-[16px] font-semibold text-ink2 transition-colors hover:bg-mist"
         >
           오늘은 여기까지
         </button>
@@ -228,46 +300,119 @@ export default function StoryChatRoom({
   room,
   onBack,
   backHref = '/chats',
+  embedded = false,
   onSendMessage,
   onChoiceSelected,
 }: StoryChatRoomProps) {
   const initialChoiceIndex = room.messages.findIndex((message) => message.type === 'choice' && !message.selectedOptionId);
-  const [messages, setMessages] = useState<StoryChatMessage[]>(room.messages);
+  const [messages, setMessages] = useState<StoryChatMessage[]>(() => (
+    initialChoiceIndex >= 0
+      ? room.messages.slice(0, initialChoiceIndex + 1)
+      : [...room.messages]
+  ));
   const [phase, setPhase] = useState<StoryPhase>(initialChoiceIndex >= 0 ? 'choice' : 'open');
-  const [storyUnlocked, setStoryUnlocked] = useState(initialChoiceIndex < 0);
   const [activeCinematic, setActiveCinematic] = useState<StoryCinematicMessage | null>(null);
   const [safetyReview, setSafetyReview] = useState<DemoSafetyReview | null>(null);
   const [resolvedQuickReplies, setResolvedQuickReplies] = useState<Set<string>>(() => new Set());
+  const rootRef = useRef<HTMLElement | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
-  const hasMountedRef = useRef(false);
+  const authoredTailRef = useRef<StoryChatMessage[]>(
+    initialChoiceIndex >= 0 ? room.messages.slice(initialChoiceIndex + 1) : [],
+  );
+  const scheduledTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const choiceInFlightRef = useRef(false);
+  const expandedCinematicsRef = useRef<Set<string>>(new Set());
   const primaryActor = room.preview.participants[0];
   const isNotice = room.preview.kind === 'notice';
 
-  const visibleMessages = useMemo(() => {
-    if (isNotice || storyUnlocked || initialChoiceIndex < 0) return messages;
-    return [
-      ...messages.slice(0, initialChoiceIndex + 1),
-      ...messages.slice(room.messages.length),
-    ];
-  }, [initialChoiceIndex, isNotice, messages, room.messages.length, storyUnlocked]);
+  const scrollMessageIntoView = useCallback((messageId: string) => {
+    requestAnimationFrame(() => {
+      const messageElement = Array.from(
+        timelineRef.current?.querySelectorAll<HTMLElement>('[data-story-message-id]') ?? [],
+      ).find((element) => element.dataset.storyMessageId === messageId);
+
+      messageElement?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+  }, []);
+
+  const scrollToLatest = useCallback(() => {
+    requestAnimationFrame(() => {
+      const timeline = timelineRef.current;
+      timeline?.scrollTo({ top: timeline.scrollHeight, behavior: 'smooth' });
+    });
+  }, []);
+
+  const appendMessageOnce = useCallback((message: StoryChatMessage) => {
+    setMessages((current) => (
+      current.some((candidate) => candidate.id === message.id)
+        ? current
+        : [...current, message]
+    ));
+  }, []);
 
   useEffect(() => {
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-      return;
-    }
-    const timeline = timelineRef.current;
-    timeline?.scrollTo({ top: timeline.scrollHeight, behavior: 'smooth' });
-  }, [phase, visibleMessages.length]);
+    const root = rootRef.current;
+    const viewport = window.visualViewport;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousOverscroll = document.documentElement.style.overscrollBehavior;
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overscrollBehavior = 'none';
+
+    const updateViewport = () => {
+      if (!root) return;
+
+      const visibleHeight = viewport?.height ?? window.innerHeight;
+      const offsetTop = viewport?.offsetTop ?? 0;
+      const layoutHeight = Math.max(document.documentElement.clientHeight, window.innerHeight);
+      const keyboardVisible = layoutHeight - visibleHeight - offsetTop > 120;
+
+      if (!embedded) {
+        root.style.setProperty('--chat-viewport-height', `${Math.round(visibleHeight)}px`);
+        root.style.setProperty('--chat-viewport-offset-top', `${Math.round(offsetTop)}px`);
+      }
+      root.dataset.keyboardVisible = keyboardVisible ? 'true' : 'false';
+
+      if (document.activeElement?.closest('[data-chat-composer]')) {
+        const timeline = timelineRef.current;
+        requestAnimationFrame(() => {
+          timeline?.scrollTo({ top: timeline.scrollHeight });
+        });
+      }
+    };
+
+    updateViewport();
+    viewport?.addEventListener('resize', updateViewport);
+    viewport?.addEventListener('scroll', updateViewport);
+    window.addEventListener('resize', updateViewport);
+    window.addEventListener('orientationchange', updateViewport);
+
+    return () => {
+      viewport?.removeEventListener('resize', updateViewport);
+      viewport?.removeEventListener('scroll', updateViewport);
+      window.removeEventListener('resize', updateViewport);
+      window.removeEventListener('orientationchange', updateViewport);
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overscrollBehavior = previousOverscroll;
+    };
+  }, [embedded]);
+
+  useEffect(() => () => {
+    scheduledTimersRef.current.forEach(clearTimeout);
+  }, []);
 
   const roomStatus = useMemo(() => {
     if (isNotice) return '읽기 전용 안내방';
     if (phase === 'complete') return '오늘의 이야기 완료';
-    return '자동으로 움직이는 이야기 캐릭터';
+    if (phase === 'responding') return '모리가 다음 장면을 준비하는 중';
+    return '모리와 이야기 중 · 체험판';
   }, [isNotice, phase]);
 
   const appendEnding = (text: string, timestamp = Date.now()) => {
     if (!primaryActor) return;
+
+    scheduledTimersRef.current.forEach(clearTimeout);
+    scheduledTimersRef.current = [];
 
     const reply: StoryCharacterTextMessage = {
       id: `authored-character-${timestamp}`,
@@ -277,9 +422,11 @@ export default function StoryChatRoom({
       createdAtLabel: '지금',
     };
 
-    setMessages((current) => [...current, reply, makeEnding(timestamp)]);
+    const ending = makeEnding(timestamp);
+    setMessages((current) => [...current, reply, ending]);
     setSafetyReview(null);
     setPhase('complete');
+    scrollMessageIntoView(ending.id);
   };
 
   const continueAfterSafetyReview = () => {
@@ -295,6 +442,7 @@ export default function StoryChatRoom({
       };
       setMessages((current) => [...current, hint]);
       setSafetyReview(null);
+      scrollMessageIntoView(hint.id);
       return;
     }
 
@@ -302,7 +450,7 @@ export default function StoryChatRoom({
   };
 
   const sendMessage = (text: string) => {
-    if (isNotice || phase === 'complete' || safetyReview) return;
+    if (isNotice || phase === 'complete' || phase === 'responding' || safetyReview) return;
 
     const submittedAt = Date.now();
     const localMessage: StoryChatMessage = {
@@ -316,11 +464,13 @@ export default function StoryChatRoom({
 
     setMessages((current) => [...current, localMessage]);
     setSafetyReview({ text, submittedAt });
+    scrollToLatest();
     onSendMessage?.(text);
   };
 
   const selectChoice = (messageId: string, option: StoryChoiceOption) => {
-    if (phase !== 'choice') return;
+    if (phase !== 'choice' || choiceInFlightRef.current) return;
+    choiceInFlightRef.current = true;
 
     const selectedAt = Date.now();
     const childMessage: StoryChatMessage = {
@@ -339,6 +489,12 @@ export default function StoryChatRoom({
       createdAtLabel: '지금',
     } : null;
 
+    const personalizedTail = personalizeAuthoredTail(
+      initialChoiceIndex >= 0 ? room.messages.slice(initialChoiceIndex + 1) : [],
+      option,
+    );
+    authoredTailRef.current = personalizedTail;
+
     setMessages((current) => {
       const choiceIndex = current.findIndex((message) => message.id === messageId);
       if (choiceIndex < 0) return current;
@@ -347,18 +503,63 @@ export default function StoryChatRoom({
       if (selectedChoice.type !== 'choice' || selectedChoice.selectedOptionId) return current;
 
       const updatedChoice = { ...selectedChoice, selectedOptionId: option.id };
-      const authoredBridge = characterMessage ? [childMessage, characterMessage] : [childMessage];
       return [
         ...current.slice(0, choiceIndex),
         updatedChoice,
-        ...authoredBridge,
         ...current.slice(choiceIndex + 1),
+        childMessage,
       ];
     });
-    setStoryUnlocked(true);
-    setPhase('open');
+    setPhase('responding');
+    scrollMessageIntoView(childMessage.id);
+
+    if (characterMessage) {
+      const characterTimer = setTimeout(() => {
+        appendMessageOnce(characterMessage);
+        scrollMessageIntoView(characterMessage.id);
+      }, 450);
+      scheduledTimersRef.current.push(characterTimer);
+    }
+
+    const cinematic = personalizedTail[0];
+    const cinematicTimer = setTimeout(() => {
+      if (cinematic) {
+        appendMessageOnce(cinematic);
+        scrollMessageIntoView(cinematic.id);
+      }
+      choiceInFlightRef.current = false;
+      setPhase('open');
+    }, 1050);
+    scheduledTimersRef.current.push(cinematicTimer);
     onChoiceSelected?.(messageId, option);
   };
+
+  const returnFromCinematic = useCallback(() => {
+    const cinematicId = activeCinematic?.id;
+    setActiveCinematic(null);
+    if (!cinematicId) return;
+    if (expandedCinematicsRef.current.has(cinematicId)) return;
+    expandedCinematicsRef.current.add(cinematicId);
+
+    const tail = authoredTailRef.current;
+    const cinematicIndex = tail.findIndex((message) => message.id === cinematicId);
+    if (cinematicIndex < 0) return;
+
+    const remainingTail = tail.slice(cinematicIndex + 1);
+    if (remainingTail.length === 0) return;
+
+    setPhase('responding');
+    remainingTail.forEach((message, index) => {
+      const timer = setTimeout(() => {
+        appendMessageOnce(message);
+        scrollMessageIntoView(message.id);
+        if (index === remainingTail.length - 1) {
+          setPhase('open');
+        }
+      }, 250 + index * 450);
+      scheduledTimersRef.current.push(timer);
+    });
+  }, [activeCinematic, appendMessageOnce, scrollMessageIntoView]);
 
   const selectQuickReply = (messageId: string, reply: StoryQuickReply) => {
     if (resolvedQuickReplies.has(messageId) || phase === 'complete' || safetyReview) return;
@@ -380,9 +581,13 @@ export default function StoryChatRoom({
 
   const finishFromSafetyReview = () => {
     if (!safetyReview) return;
+    scheduledTimersRef.current.forEach(clearTimeout);
+    scheduledTimersRef.current = [];
     setSafetyReview(null);
-    setMessages((current) => [...current, makeEnding(safetyReview.submittedAt)]);
+    const ending = makeEnding(safetyReview.submittedAt);
+    setMessages((current) => [...current, ending]);
     setPhase('complete');
+    scrollMessageIntoView(ending.id);
   };
 
   const composerConfig = phase === 'complete'
@@ -394,15 +599,23 @@ export default function StoryChatRoom({
     : room.composer;
 
   return (
-    <main className="h-dvh overflow-hidden bg-[#F1EEE7] text-ink">
-      <div className="mx-auto flex h-dvh w-full max-w-[480px] flex-col bg-cream md:border-x md:border-line">
-        <header className="z-20 flex shrink-0 items-center gap-3 border-b border-line bg-cream px-3 pb-3 pt-[max(12px,env(safe-area-inset-top))]">
+    <>
+      <main
+        ref={rootRef}
+        className={`${embedded
+          ? 'relative h-full'
+          : 'fixed inset-x-0 top-[var(--chat-viewport-offset-top,0px)] h-[var(--chat-viewport-height,100dvh)]'
+        } overflow-hidden bg-[#F1EEE7] text-ink`}
+        aria-hidden={activeCinematic ? true : undefined}
+      >
+        <div className="mx-auto flex h-full w-full max-w-[480px] flex-col bg-cream md:border-x md:border-line">
+        <header className={`z-20 flex shrink-0 items-center gap-3 border-b border-line bg-cream px-3 pb-3 ${embedded ? 'pt-3' : 'pt-[max(12px,env(safe-area-inset-top))]'}`}>
           {onBack ? (
-            <button type="button" onClick={onBack} className="flex h-12 w-12 shrink-0 items-center justify-center text-ink transition-colors hover:bg-mist" aria-label="대화방 목록으로 돌아가기">
+            <button type="button" onClick={onBack} className="flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center text-ink transition-colors hover:bg-mist" aria-label="대화방 목록으로 돌아가기">
               <BackIcon />
             </button>
           ) : (
-            <Link href={backHref} className="flex h-12 w-12 shrink-0 items-center justify-center text-ink transition-colors hover:bg-mist" aria-label="대화방 목록으로 돌아가기">
+            <Link href={backHref} className="flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center text-ink transition-colors hover:bg-mist" aria-label="대화방 목록으로 돌아가기">
               <BackIcon />
             </Link>
           )}
@@ -410,25 +623,39 @@ export default function StoryChatRoom({
           {primaryActor && <ChatAvatar actor={primaryActor} size="md" decorative />}
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-[17px] font-bold text-ink">{room.preview.title}</h1>
-            <p className="mt-0.5 truncate text-[13px] text-ink3">{roomStatus}</p>
+            <p className="mt-0.5 truncate text-[14px] text-ink2">{roomStatus}</p>
           </div>
         </header>
 
-        <div ref={timelineRef} className="flex-1 overflow-y-auto overscroll-contain bg-[#F3F0E9] px-4 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div
+          ref={timelineRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#F3F0E9] px-4 py-5 [scrollbar-width:none] [scroll-padding-block:20px] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
+          role="log"
+          aria-label={`${room.preview.title} 대화 내용`}
+          aria-live="polite"
+          aria-relevant="additions text"
+          aria-busy={phase === 'responding'}
+        >
           <div className="space-y-5">
-            {visibleMessages.map((message) => (
-              <StoryMessageRenderer
+            {messages.map((message) => (
+              <div
                 key={message.id}
-                message={message}
-                interactionDisabled={
-                  phase === 'complete'
-                  || Boolean(safetyReview)
-                  || (message.type === 'quick_replies' && resolvedQuickReplies.has(message.id))
-                }
-                onChoice={selectChoice}
-                onQuickReply={selectQuickReply}
-                onPlayCinematic={setActiveCinematic}
-              />
+                data-story-message-id={message.id}
+                className="scroll-m-5"
+              >
+                <StoryMessageRenderer
+                  message={message}
+                  interactionDisabled={
+                    phase === 'complete'
+                    || phase === 'responding'
+                    || Boolean(safetyReview)
+                    || (message.type === 'quick_replies' && resolvedQuickReplies.has(message.id))
+                  }
+                  onChoice={selectChoice}
+                  onQuickReply={selectQuickReply}
+                  onPlayCinematic={setActiveCinematic}
+                />
+              </div>
             ))}
             {safetyReview && (
               <SafetyReviewPanel
@@ -441,13 +668,18 @@ export default function StoryChatRoom({
         </div>
 
         <div className="z-20 shrink-0">
-          <ChatComposer config={composerConfig} onSend={sendMessage} pending={Boolean(safetyReview)} />
+          <ChatComposer
+            config={composerConfig}
+            onSend={sendMessage}
+            pending={Boolean(safetyReview) || phase === 'responding'}
+          />
         </div>
-      </div>
+        </div>
+      </main>
 
       {activeCinematic && (
-        <CinematicStage cinematic={activeCinematic} onReturn={() => setActiveCinematic(null)} />
+        <CinematicStage cinematic={activeCinematic} embedded={embedded} onReturn={returnFromCinematic} />
       )}
-    </main>
+    </>
   );
 }

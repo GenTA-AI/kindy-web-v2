@@ -38,11 +38,11 @@ function NoticeRow({ room }: { room: StoryChatRoomPreview }) {
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-baseline justify-between gap-3">
           <h3 className="truncate text-[16px] font-bold text-ink">{room.title}</h3>
-          <time className="shrink-0 text-[13px] text-ink3">{room.updatedLabel}</time>
+          <time className="shrink-0 text-[14px] text-ink2">{room.updatedLabel}</time>
         </div>
-        <p className="mt-1 truncate text-[15px] leading-6 text-ink2">{room.lastMessage}</p>
+        <p className="mt-1 truncate text-[16px] leading-6 text-ink2">{room.lastMessage}</p>
       </div>
-      <span className="shrink-0 text-ink3"><ForwardIcon className="h-4 w-4" /></span>
+      <span className="shrink-0 text-ink2"><ForwardIcon className="h-5 w-5" /></span>
     </div>
   );
 }
@@ -51,7 +51,7 @@ function WorldInvitation({ room }: { room: StoryChatRoomPreview }) {
   const actor = room.participants[0];
 
   return (
-    <article className="overflow-hidden border border-ink/20 bg-white">
+    <article className="overflow-hidden border border-ink/20 bg-white transition-colors hover:border-saged">
       <div className="relative aspect-[16/9] bg-deep">
         {room.coverUrl && (
           <Image
@@ -68,8 +68,8 @@ function WorldInvitation({ room }: { room: StoryChatRoomPreview }) {
         <div className="flex items-center gap-3">
           {actor && <ChatAvatar actor={actor} size="sm" decorative />}
           <div>
-            <p className="text-[13px] font-semibold tracking-[0.08em] text-sage">새로 도착한 초대</p>
-            <p className="mt-0.5 text-[14px] text-ink3">{room.subtitle}</p>
+            <p className="text-[14px] font-semibold tracking-[0.04em] text-sage">새로 도착한 초대</p>
+            <p className="mt-0.5 text-[14px] text-ink2">{room.subtitle}</p>
           </div>
         </div>
         <h2 className="mt-4 text-[24px] font-bold leading-8 tracking-[-0.02em] text-ink">{room.title}</h2>
@@ -91,14 +91,14 @@ export default function ChatInbox({ child, rooms, onOpenRoom }: ChatInboxProps) 
     onOpenRoom ? (
       <button
         type="button"
-        className="block w-full text-left"
+        className="block min-h-12 w-full touch-manipulation text-left"
         onClick={() => onOpenRoom(room)}
         aria-label={`${room.title} 대화방 열기`}
       >
         {children}
       </button>
     ) : (
-      <Link href={room.href} className="block" aria-label={`${room.title} 대화방 열기`}>
+      <Link href={room.href} className="block min-h-12 touch-manipulation" aria-label={`${room.title} 대화방 열기`}>
         {children}
       </Link>
     )
@@ -111,7 +111,7 @@ export default function ChatInbox({ child, rooms, onOpenRoom }: ChatInboxProps) 
           <div className="flex items-center justify-between gap-4">
             <div>
               <h1 className="text-[30px] font-bold leading-9 tracking-[-0.03em]">대화</h1>
-              <p className="mt-1 text-[15px] text-ink2">{child.name}이의 이야기 세계</p>
+              <p className="mt-1 text-[16px] text-ink2">{child.name}이의 이야기 세계</p>
             </div>
             <ChatAvatar actor={child} size="md" />
           </div>
@@ -120,12 +120,17 @@ export default function ChatInbox({ child, rooms, onOpenRoom }: ChatInboxProps) 
         <section aria-labelledby="new-world-heading" className="px-5 py-6">
           <div className="mb-3 flex items-baseline justify-between gap-4">
             <h2 id="new-world-heading" className="text-[17px] font-bold">새로운 세계</h2>
-            <p className="text-[13px] text-ink3">초대 {invitations.length}개</p>
+            <p className="text-[14px] text-ink2">초대 {invitations.length}개</p>
           </div>
           <div className="space-y-4">
             {invitations.map((room) => (
               <div key={room.id}>{roomLink(room, <WorldInvitation room={room} />)}</div>
             ))}
+            {invitations.length === 0 && (
+              <p className="border border-line bg-white p-5 text-[16px] leading-7 text-ink2">
+                새 세계가 도착하면 이곳에 초대장이 보여요.
+              </p>
+            )}
           </div>
         </section>
 
