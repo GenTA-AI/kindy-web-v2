@@ -11,9 +11,10 @@ interface SubscribeClientProps {
   email: string | null;
   initialSubscription: SubscriptionRow | null;
   initialEntitlement: EntitlementRow;
+  billingEnabled: boolean;
 }
 
-const PRICE_KRW = 25000;
+import { SUBSCRIPTION_PRICE_KRW as PRICE_KRW, SUBSCRIPTION_PRICE_LABEL } from '@/lib/subscription-pricing';
 const krw = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 
 function formatDate(iso: string | null): string {
@@ -29,7 +30,7 @@ const BENEFITS = [
 ];
 
 const PAYMENT_NOTES = [
-  '카드를 등록하면 첫 달 25,000원이 바로 결제돼요.',
+  `카드를 등록하면 첫 달 ${SUBSCRIPTION_PRICE_LABEL}원이 바로 결제돼요.`,
   '다음 달부터 같은 날 자동 결제돼요.',
   '해지는 이 화면에서 바로 접수되고, 현재 기간 끝까지 이용할 수 있어요.',
   '아이 플레이 화면에는 광고와 결제 버튼이 없어요.',
@@ -46,6 +47,7 @@ export default function SubscribeClient({
   email,
   initialSubscription,
   initialEntitlement,
+  billingEnabled,
 }: SubscribeClientProps) {
   const [subscription, setSubscription] = useState(initialSubscription);
   const [entitlement, setEntitlement] = useState(initialEntitlement);
@@ -63,7 +65,7 @@ export default function SubscribeClient({
   const isCanceledButPremium =
     !!subscription && subscription.status === 'canceled' && entitlement.is_premium;
   const businessComplete = isBusinessInfoComplete();
-  const checkoutReady = hasTossClientKey && businessComplete;
+  const checkoutReady = billingEnabled && hasTossClientKey && businessComplete;
   const currentPeriodEndLabel = formatDate(
     subscription?.current_period_end ?? entitlement.premium_until ?? null,
   );
@@ -78,7 +80,7 @@ export default function SubscribeClient({
       if (!clientKey) {
         throw new Error('지금은 결제창을 열 수 없어요. 잠시 후 다시 시도해주세요.');
       }
-      if (!businessComplete) {
+      if (!checkoutReady) {
         throw new Error('결제 준비가 끝나면 바로 시작할 수 있어요.');
       }
       // 이미 구독 중(past_due 카드 재등록 포함)이면 동의 증적이 이미 있으므로 체크박스를 다시 요구하지 않는다.
@@ -363,15 +365,11 @@ export default function SubscribeClient({
             끝나는 날까지 이용할 수 있고, 다음 결제는 일어나지 않아요.
           </p>
           <p>
-            <strong className="font-black text-ink2">청약철회·환불 안내</strong> · 결제일로부터 7일 이내,
-            콘텐츠를 이용하지 않았다면 청약철회(전액 환불)를 요청할 수 있어요. 이미 이용을 시작한
-            디지털 콘텐츠는 「전자상거래법」 제17조에 따라 청약철회가 제한될 수 있어요. 환불은 고객센터
-            ({businessInfo.email})로 요청하면 영업일 기준 3일 이내 처리돼요. 정기결제는 다음 결제일
-            전에 해지하면 추가 청구가 없어요.
+            <strong className="font-black text-ink2">취소·환불 안내</strong> · 첫 결제 후 14일 이내에는 이용 여부와 관계없이 전액 환불해요. 이후에는 남은 미이용 기간을 일할 계산해 환불해요. 해지는 다음 결제 중단, 환불은 별도 신청이며 고객센터({businessInfo.email})로 접수할 수 있어요. <a href="/legal/refund" className="underline">전체 환불 정책</a>
           </p>
           {businessComplete ? (
             <p>
-              판매자: {businessInfo.brand} (대표 {businessInfo.representativeName}) · 사업자등록번호{' '}
+              판매자: {businessInfo.legalName} (대표 {businessInfo.representativeName}) · 사업자등록번호{' '}
               {businessInfo.registrationNumber} · 통신판매업 {businessInfo.mailOrderRegistrationNumber}
             </p>
           ) : (

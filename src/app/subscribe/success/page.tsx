@@ -60,6 +60,7 @@ function SuccessContent() {
   useEffect(() => {
     if (startedRef.current) return; // StrictMode 중복 호출 방지
     startedRef.current = true;
+    window.history.replaceState(null, '', window.location.pathname);
 
     if (!authKey || !customerKey) {
       setPhase('error');
@@ -78,6 +79,7 @@ function SuccessContent() {
         if (!res.ok) {
           throw new Error(data?.error ?? '결제 처리에 실패했어요.');
         }
+        if (!data?.ok || !data?.entitlement?.is_premium || !data?.subscription?.current_period_end) throw new Error('이용권 활성화를 확인하지 못했어요. 고객센터에 문의해 주세요.');
         setCardSummary(data.cardSummary ?? null);
         setPeriodEnd(data.subscription?.current_period_end ?? null);
         setCharged(data.charged !== false);

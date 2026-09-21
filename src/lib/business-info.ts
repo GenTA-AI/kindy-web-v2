@@ -1,5 +1,6 @@
 export interface BusinessInfo {
   brand: string;
+  legalName: string;
   representativeName: string | null;
   registrationNumber: string | null;
   mailOrderRegistrationNumber: string | null;
@@ -19,6 +20,7 @@ function clean(value: string | undefined): string | null {
 
 export const businessInfo: BusinessInfo = {
   brand: 'Kindy',
+  legalName: '주식회사 젠타',
   representativeName: clean(process.env.NEXT_PUBLIC_BIZ_REPRESENTATIVE_NAME),
   registrationNumber: clean(process.env.NEXT_PUBLIC_BIZ_REGISTRATION_NUMBER),
   mailOrderRegistrationNumber: clean(process.env.NEXT_PUBLIC_BIZ_MAIL_ORDER_NUMBER),
@@ -29,7 +31,7 @@ export const businessInfo: BusinessInfo = {
 
 export function businessInfoRows(info: BusinessInfo = businessInfo): Array<[string, string]> {
   return [
-    ['상호', info.brand],
+    ['상호', info.legalName],
     ['대표', info.representativeName],
     ['사업자등록번호', info.registrationNumber],
     ['통신판매업 신고번호', info.mailOrderRegistrationNumber],

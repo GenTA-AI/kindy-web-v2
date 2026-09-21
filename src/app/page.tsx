@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Reveal from '@/components/landing/Reveal';
+import { SUBSCRIPTION_PRICE_LABEL } from '@/lib/subscription-pricing';
 
 const START_HREF = '/auth/login?next=/onboarding';
 
@@ -45,7 +46,7 @@ const ANCHORS = [
   { name: '미술·피아노 학원', price: '월 12~20만원', limit: '이동 필요, 그리기 기술 중심' },
   { name: '어린이 명작 전집', price: '세트당 29~41만원', limit: '일시불 부담, 아이 혼자 안 읽음' },
   { name: '예술의전당 어린이 아카데미', price: '90분 1회 62,000원', limit: '서울 집중, 예약 경쟁' },
-  { name: 'Kindy', price: '월 34,900원 · 얼리버드 24,900원', limit: '매주 새 작품, 카톡으로 도착' },
+  { name: 'Kindy', price: `월 34,900원 · 얼리버드 ${SUBSCRIPTION_PRICE_LABEL}원`, limit: '매주 새 작품, 카톡으로 도착' },
 ];
 
 const SESSION_STEPS = [
@@ -75,7 +76,7 @@ const FAQ = [
     q: '키즈 OTT랑 뭐가 달라요?',
     a: '라이브러리가 아니라 커리큘럼입니다. 매주 아이의 반응을 보고 다음 편을 고릅니다.',
   },
-  { q: '해지는 어떻게 하나요?', a: '카톡 한 줄이면 즉시 됩니다. 첫 14일은 100% 환불을 보장합니다.' },
+  { q: '해지는 어떻게 하나요?', a: '구독 관리 화면에서 다음 결제를 중단할 수 있습니다. 환불은 이메일·전화로 접수합니다. 첫 14일은 100% 환불을 보장합니다.' },
 ];
 
 // 리퀴드 글라스 재질 — 밝은 면/어두운 면 두 벌. 상단 1px 하이라이트가 유리의 스펙큘러.
@@ -374,8 +375,8 @@ export default async function Home({
         <Reveal>
           <div className={`${GLASS_LIGHT} mx-auto max-w-lg px-8 py-14 text-center`}>
             <p className="text-sm font-black tracking-[0.25em] text-gold">얼리버드 특가 · 기간 한정</p>
-            <p className="mt-6 text-5xl font-black tracking-tight">월 24,900원</p>
-            <p className="mt-2 font-bold text-ink2">평생 고정</p>
+            <p className="mt-6 text-5xl font-black tracking-tight">월 {SUBSCRIPTION_PRICE_LABEL}원</p>
+            <p className="mt-2 font-bold text-ink2">구독을 유지하는 동안 월 요금 고정 · 회차별 이용기간 1개월</p>
             <p className="mt-6 text-sm leading-relaxed text-ink3">
               정가 월 34,900원 · 하루로 치면 1,163원
             </p>
@@ -386,7 +387,7 @@ export default async function Home({
               <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
               첫 이야기 무료로 보기
             </Link>
-            <p className="mt-4 text-sm text-ink3">첫 14일 100% 환불 보장 · 해지는 카톡 한 줄로</p>
+            <p className="mt-4 text-sm text-ink3">첫 14일 100% 환불 보장 · 구독 관리에서 해지 · 이메일·전화로 환불 접수</p>
           </div>
         </Reveal>
       </section>

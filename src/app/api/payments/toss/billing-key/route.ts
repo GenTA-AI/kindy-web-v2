@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
+import { liveBillingReady } from '@/lib/billing-readiness';
 import { supabase } from '@/lib/supabase';
 import { getCurrentParentId, isAuthError } from '@/lib/auth';
 import { encryptBillingKey } from '@/lib/billing-crypto';
@@ -34,6 +35,9 @@ import { reportEmailFailure, sendFirstPaymentSuccessEmail } from '@/lib/mailer';
  * customerKey 는 requestBillingAuth 때 parent_id 로 설정했으므로 로그인 사용자와 일치해야 함.
  */
 export async function POST(request: NextRequest) {
+  if (!liveBillingReady()) return NextResponse.json({ error: '정식 결제 준비 중입니다.', code: 'billing_not_ready' }, { status: 503 });
+  const origin = request.headers.get('origin');
+  if (!origin || origin !== process.env.NEXT_PUBLIC_SITE_URL) return NextResponse.json({ error: '허용되지 않은 요청입니다.' }, { status: 403 });
   let parentId: string;
   try {
     parentId = await getCurrentParentId(request);
