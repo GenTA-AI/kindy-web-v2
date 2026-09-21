@@ -6,7 +6,7 @@ import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
 import { SUBSCRIPTION_PRICE_LABEL } from '@/lib/subscription-pricing';
 
 // Public documentation sandbox key, never a merchant live credential.
-const DEMO_CLIENT_KEY = 'test_ck_docs_Ovk5rk1EwkEbP0W43n07xlzm';
+const DEMO_CLIENT_KEY = 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
 
 export default function PaymentReview() {
   const [consent, setConsent] = useState(false);
@@ -25,8 +25,7 @@ export default function PaymentReview() {
         successUrl: `${location.origin}/review/payment/result`,
         failUrl: `${location.origin}/review/payment/result`,
       });
-    } catch (error) {
-      console.error('Toss review window:', error);
+    } catch {
       setError('카드 등록창이 닫혔거나 연결되지 않았어요. 다시 시도할 수 있어요.');
     } finally { setBusy(false); }
   }
