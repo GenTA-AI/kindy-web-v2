@@ -38,7 +38,7 @@ if mode=='candidate':
     assert active[0]['revisionName']=='kindy-00008-krx','Production changed since audit; re-review required'
     env=before['spec']['template']['spec']['containers'][0].get('env',[])
     assert not any(e['name'] in ['TOSS_SECRET_KEY','BILLING_KEY_SECRET'] for e in env)
-    record={'oldRevision':active[0]['revisionName'],'image':image,'sourceCommit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()}
+    record={'oldRevision':active[0]['revisionName'],'image':image,'sourceCommit':subprocess.check_output(['git','rev-parse','d63bcc2'],text=True).strip()}
     OUT.mkdir(exist_ok=True,parents=True)
     (OUT/'release.json').write_text(json.dumps(record,indent=2))
     g('run','services','update',SERVICE,'--region='+REGION,'--image='+image,'--no-traffic','--tag=tossreview','--update-env-vars=KINDY_TOSS_BILLING_ENABLED=0')
