@@ -24,6 +24,7 @@
  *   PUT /api/inngest 로 함수가 등록돼야 cron 이 실제로 돈다.
  */
 import { inngest } from '../client';
+import { liveBillingReady } from '@/lib/billing-readiness';
 import { supabase } from '@/lib/supabase';
 import { chargeBillingKey, TossApiError } from '@/lib/toss';
 import { decryptBillingKey } from '@/lib/billing-crypto';
@@ -209,6 +210,7 @@ export const subscriptionRenewal = inngest.createFunction(
     triggers: [{ cron: 'TZ=Asia/Seoul 0 4 * * *' }], // 매일 04:00 KST
   },
   async ({ step, logger }) => {
+    if (!liveBillingReady()) return { skipped: 'billing_not_ready' }; 
     const due = await step.run('select-due', async () => {
       const nowIso = new Date().toISOString();
       // P1-2: 만료 24시간 전부터 선청구 — 04:00 cron 과 만료 시각 사이의 접근 공백 제거.

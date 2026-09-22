@@ -4,10 +4,12 @@ import { getSubscriptionState } from '@/lib/subscription';
 import { isSupabaseServiceConfigured } from '@/lib/supabase';
 import { createServerClient, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import SubscribeClient from './SubscribeClient';
+import { liveBillingReady } from '@/lib/billing-readiness';
+import { SUBSCRIPTION_PRICE_LABEL } from '@/lib/subscription-pricing';
 
 export const metadata = {
   title: 'Kindy 멤버십 - 월 구독',
-  description: '계속 늘어나는 모리 이야기와 놀이 기록, 보호자 대화 힌트까지. 월 25,000원.',
+  description: `모리 이야기와 놀이 기록, 보호자 대화 힌트까지. 월 ${SUBSCRIPTION_PRICE_LABEL}원.`,
 };
 
 export const dynamic = 'force-dynamic';
@@ -50,6 +52,7 @@ export default async function SubscribePage() {
 
   return (
     <SubscribeClient
+      billingEnabled={liveBillingReady()}
       parentId={parentId}
       email={email}
       initialSubscription={subscription}

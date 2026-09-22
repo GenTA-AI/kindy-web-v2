@@ -206,7 +206,7 @@ kindy-web에서 git으로 넘어오지 않는 파일 목록(2026-07-05 `git stat
 - [ ] `select conname from pg_constraint where conname like 'game_rounds_%_check';` → `game_rounds_event_type_check`, `game_rounds_round_shape_check`, `game_rounds_metric_payload_check` 3건
 - [ ] `select count(*) from c6_axes;` → `6` 유지(기존 무파괴)
 - [ ] `npx tsx --env-file=.env.local scripts/verify-migrations.ts` → 전부 OK
-- [ ] `npx tsx --env-file=.env.local scripts/verify-rls.ts` → 전부 OK
+- [x] `npx tsx --env-file=.env.local scripts/verify-rls.ts` → 전부 OK — **2026-07-06 실행 완료**: anon=0(전 테이블), service_role 읽기 가능, exit 0
 
 **Commit point**: PR `feat/0024-0029-hero-studio-schema` 머지 = **"world_state 스키마 머지" Exit 항목 달성**(HERO v1.1 §0 R0 행).
 
@@ -507,40 +507,47 @@ HERO §3 "사진·카메라 코드 부재를 테스트로 보증(E13-10)". DB �
 
 ## Task 4. 운영 게이트 (사람만 가능 — 00 §8 파운더 게이트 W1–2 행)
 
-### 4.1 Inngest Cloud 연결 (R0 최우선 운영 태스크 — 00 §7 R-6)
+### 4.1 Inngest Cloud 연결 (R0 최우선 운영 태스크 — 00 §7 R-6) — **부분 완료(2026-07-06)**
 
 현재 프로덕션(`kindy` Cloud Run)은 `INNGEST_DEV=1` 상태로 갱신 cron·영상 생성이 조용히 정지해 있다(docs/09 트랙 C P0-5, RUNBOOK §4). 절차는 RUNBOOK §4의 5단계 그대로:
 
-- [ ] Inngest Cloud 가입 → 프로덕션 앱 생성 → `signkey-prod-...`·event key 발급
-- [ ] ```bash
-      printf %s "signkey-prod-..." | gcloud secrets create kindy-inngest-signing-key --data-file=-
-      printf %s "<event-key>"      | gcloud secrets create kindy-inngest-event-key   --data-file=-
+- [x] Inngest Cloud 가입 → 프로덕션 앱 생성 → `signkey-prod-...`·event key 발급 (2026-07-06)
+- [x] ```bash
+      printf %s "signkey-prod-..." | gcloud secrets create kindy-inngest-signing-key --project=kindy-493701 --data-file=-
+      printf %s "<event-key>"      | gcloud secrets create kindy-inngest-event-key   --project=kindy-493701 --data-file=-
+      gcloud secrets add-iam-policy-binding kindy-inngest-signing-key --project=kindy-493701 \
+        --member="serviceAccount:582936546727-compute@developer.gserviceaccount.com" --role="roles/secretmanager.secretAccessor"
+      gcloud secrets add-iam-policy-binding kindy-inngest-event-key --project=kindy-493701 \
+        --member="serviceAccount:582936546727-compute@developer.gserviceaccount.com" --role="roles/secretmanager.secretAccessor"
       bash scripts/deploy-cloud-run.sh    # 시크릿 주입 + INNGEST_DEV 제거 (RUNBOOK §1-③)
       ```
-- [ ] Inngest 대시보드에서 sync URL `https://kindy.kr/api/inngest` 등록(DNS 미해결 시 LB IP 경유 임시 URL — 4.4와 연동)
+      **주의**: gcloud 기본 프로젝트가 `gacs-490805`로 잡혀있으면 서비스가 안 보인다 — 실제 프로덕션은 `kindy-493701`(`gcloud config set project kindy-493701`). 신규 시크릿은 Cloud Run 서비스 계정(`582936546727-compute@developer.gserviceaccount.com`)에 `secretAccessor` 권한이 기본으로 안 붙어있어 `deploy-cloud-run.sh` 1차 실행이 권한 오류로 실패했음 — 위 `add-iam-policy-binding` 2줄 먼저 실행 후 재시도해서 성공(리비전 `kindy-00004-lcc` 배포 확인, `INNGEST_DEV` 제거·시크릿 2종 연결 확인됨).
+- [ ] Inngest 대시보드에서 sync URL `https://kindy.kr/api/inngest` 등록(DNS 미해결 시 LB IP 경유 임시 URL — 4.4와 연동) — **대기 중**: LB의 Google 관리형 인증서가 `kindy.kr` 전용이라 IP 직접 접속은 인증서 불일치로 안 됨 + Cloud Run 직접 URL은 org policy로 비공개. 4.4 DNS 전파 완료 후 진행.
 
 **Verify**
-- [ ] 대시보드에 함수 2개(`subscription-renewal`, `video-generate`) 표시(RUNBOOK §4-4)
-- [ ] `subscription-renewal`(cron `TZ=Asia/Seoul 0 4 * * *`) 수동 트리거 1회 → 성공 로그(RUNBOOK §4-5)
+- [ ] 대시보드에 함수 2개(`subscription-renewal`, `video-generate`) 표시(RUNBOOK §4-4) — DNS 대기
+- [ ] `subscription-renewal`(cron `TZ=Asia/Seoul 0 4 * * *`) 수동 트리거 1회 → 성공 로그(RUNBOOK §4-5) — DNS 대기
 
-### 4.2 LoRA 아티팩트 생존 확인 + 이중 백업 (R0 체크 항목 — DECISIONS_CONTEXT §C-6)
+### 4.2 LoRA 아티팩트 생존 확인 + 이중 백업 (R0 체크 항목 — DECISIONS_CONTEXT §C-6) — **완료(2026-07-06)**
 
-- [ ] 생존 확인(URL은 `tmp/studio/lora-result.json` 실측값):
+- [x] 생존 확인(URL은 `tmp/studio/lora-result.json` 실측값):
       ```bash
       cd /Users/jongwonlee/dev/kindy-web.v2
       LORA_URL=$(grep -o 'https://[^"]*pytorch_lora_weights.safetensors' tmp/studio/lora-result.json | head -1)
       curl -sSfI "$LORA_URL" | head -3     # HTTP/2 200 + content-length 332548896 (332MB) 기대
       ```
-- [ ] 생존 시 즉시 이중 백업(03 §1-3 잔여 리스크 ①):
+      결과: `HTTP/2 200`, `content-length: 332548896` — 기대값과 일치, 생존 확인됨.
+- [x] 생존 시 즉시 이중 백업(03 §1-3 잔여 리스크 ①):
       ```bash
       curl -sSfL "$LORA_URL" -o tmp/studio/kindytoy-v1.safetensors
       shasum -a 256 tmp/studio/kindytoy-v1.safetensors   # 해시를 kindytoy-v1.json 옆 README에 기록
       ```
       + Supabase Storage `videos` 버킷 `studio/lora/kindytoy-v1.safetensors` 업로드(kindy-web.v2 `src/lib/supabase-storage.ts` 경유 1회성 스크립트, service-role)
-- [ ] **실패 시**(404/만료): 재학습 발동 — `kindytoy-dataset.zip` 보존 확인됨(00 §7 R-3) → `mori-studio/scripts/train-lora.ts` 1000스텝 재학습(~$6.4 — 03 §8-1 LoRA 행) → 신규 URL로 `kindytoy-v1.json` 갱신 PR
+      **완료**: 로컬 백업 `tmp/studio/kindytoy-v1.safetensors`(332,548,896 bytes), SHA-256 `76f4caeaaafb877f46cd6368c65116af3bf33637e9fc6e22ebde3667793ea841`(`tmp/studio/README.md`에 기록). Storage 업로드는 2번 막혔다가 해결: ① 버킷 `allowed_mime_types`에 `application/octet-stream`이 없어 실패 → `storage.updateBucket()`으로 추가. ② Supabase 프로젝트 전역 업로드 크기 제한(기본값, 버킷 `file_size_limit` 500MB와 별개 설정)이 332MB보다 작아 "exceeded the maximum allowed size" 에러 → 대시보드 Project Settings → Storage에서 1GB로 상향 후 성공.
+- [ ] **실패 시**(404/만료): 재학습 발동 — `kindytoy-dataset.zip` 보존 확인됨(00 §7 R-3) → `mori-studio/scripts/train-lora.ts` 1000스텝 재학습(~$6.4 — 03 §8-1 LoRA 행) → 신규 URL로 `kindytoy-v1.json` 갱신 PR (해당 없음 — 생존 확인됨)
 
 **Verify**
-- [ ] 로컬 safetensors 파일 332MB + Storage 사본 존재(2사본) — Task 2.3·3.4의 선행 조건 해제
+- [x] 로컬 safetensors 파일 332MB + Storage 사본 존재(2사본) — Task 2.3·3.4의 선행 조건 해제됨
 
 ### 4.3 Supertone Sona 2 아동 보이스 확인 (파운더 게이트 — DECISIONS_CONTEXT §C-7)
 
@@ -550,15 +557,56 @@ HERO §3 "사진·카메라 코드 부재를 테스트로 보증(E13-10)". DB �
 **Verify**
 - [ ] 문의 발송 기록(일자) + 회신/미회신 상태가 W2 말 R0 Exit 표에 기입됨(회신 자체는 R0 Exit 조건 아님 — 외부 의존)
 
-### 4.4 사업자정보·도메인 (결제 CTA·QR 퍼널의 전제)
+**2026-07-06 조사·결정**: Supertone 공개 문서(`docs.supertoneapi.com`) 확인 결과 — voice search가 age(연령) 필터를 지원해 아동/젊은 톤 보이스가 기술적으로 존재할 가능성은 있으나, **아동 음성 사용에 대한 명시적 약관 문구는 공개 문서에 없음**(FAQ엔 클론 보이스 계정 소유권 얘기만 존재). 대표 판단: **일단 기술적으로 진행(Supertone 문의 발송 + 평가 계속)**, 법적 리스크는 아래 별도 트랙으로 보류하고 문제 시 재검토.
 
-- [ ] **kindy.kr DNS**: Cafe24 락 상태(survey-web-code §7 STATUS) → Cloudflare NS 이전 개시(00 §7 R-5). QR 퍼널(W1 랜딩·키오스크)이 도메인에 의존
+**보류된 법률 자문 항목(변호사 확인 필요 — R0 게이트 아님, 별도 트랙)**:
+1. 아동 목소리로 인식되는 음성을 AI TTS로 합성해 **상업적 아동 대상 서비스**에 쓰는 것이 한국법상(개인정보보호법·아동·청소년 보호 관련법·정보통신망법·딥페이크 관련 개정 법령 등) 별도 규제 대상인지.
+2. "아동 캐릭터를 연기하는 성우 목소리"(캐릭터 연기)와 "실제 아동 음성의 학습/복제"(보이스 클로닝)가 법적으로 다르게 취급되는지 — 현재 프로덕션 Gemini 캐스팅(동물마을 캐릭터 22종)은 전자에 가까움.
+3. 해외/국내 TTS 벤더(Supertone·Gemini·ElevenLabs 등) 이용약관 위반이 계약 위반을 넘어 별도의 법적 책임(개인정보보호법 등)으로 이어질 수 있는지.
+4. 합성 음성 사용이 PIPA상 법정대리인(부모) 동의 고지 항목에 별도 명시가 필요한지.
+5. Qwen3-TTS처럼 오픈소스 모델을 셀프호스팅해 벤더 ToS 자체가 적용 안 되는 경우, 리스크가 더 커지는지 작아지는지.
+6. ElevenLabs가 업계 관행상 선제적으로 막은 것인지, 아니면 한국 규제기관(개인정보보호위원회·방통위 등)이 관련 가이드라인을 이미 냈거나 준비 중인지.
+
+**Why:** 대표가 "일단 써보고 문제되면 바꾸자"로 결정(2026-07-06) — 기술 검증을 법률 검토 완료까지 막지 않기로 함.
+**How to apply:** Supertone/Gemini TTS 관련 작업 계속 진행. 위 항목은 변호사 상담 시 그대로 질문지로 사용. 상담 결과가 나오면 이 섹션과 Exit 표를 갱신.
+
+### 4.4 사업자정보·도메인 (결제 CTA·QR 퍼널의 전제) — DNS **진행 중(2026-07-06 착수, 전파 대기)**
+
+- [x] **kindy.kr DNS**: Cafe24 락 상태(survey-web-code §7 STATUS) → Cloudflare NS 이전 개시(00 §7 R-5). QR 퍼널(W1 랜딩·키오스크)이 도메인에 의존
+      **진행 상세(2026-07-06)**: WHOIS 등록대행자는 "메가존(주)"(카페24가 `.kr` 등록 백엔드로 사용하는 공인 등록기관)이지만 실제 도메인 관리 포털은 **`hosting.cafe24.com`**(쇼핑몰 관리자 `cafe24.com`과는 별도 서비스 — 도메인 목록이 쇼핑몰 관리자에서는 안 보임). Cloudflare에 사이트 추가 시 "`.kr` domains aren't supported yet(등록기관 이전 불가)" 경고가 뜨지만 **등록기관 이전이 아니라 DNS만 위임**하는 거라 "Add site anyway"로 진행. 자동 스캔된 기존 CNAME(`*`, `www` → `kindy.kr`, 쇼핑몰용) 대신 `A` 레코드 `@`/`www` → `34.8.67.108`(Proxy: DNS only/회색 구름)로 교체. Cloudflare 발급 네임서버 `hayes.ns.cloudflare.com`·`lovisa.ns.cloudflare.com`을 `hosting.cafe24.com` → 도메인관리 → 네임서버 변경 → "다른 네임서버"로 1차/2차에 입력, 변경 신청 완료(반영까지 24~48시간 안내됨). **2026-07-06 15:43 KST 기준 아직 `ns-*.cafe24.com` 응답 — 전파 대기 중.**
 - [ ] **사업자등록·통신판매신고** 진행 확인 → 완료 시 `NEXT_PUBLIC_BIZ_*` 6종 실값을 cloudbuild substitution으로 주입(RUNBOOK §1-① `^;^` 이스케이프 명령 그대로). 미완이면 `src/lib/business-info.ts` 플레이스홀더(`[사업자등록번호 미설정]` 등)가 푸터에 노출되고 결제 CTA가 잠긴 상태 유지(survey-web-code §7 TODOS 런칭 블로커, 00 §7 R-11)
+      **2026-07-06 상태**: `.env.local`의 `NEXT_PUBLIC_BIZ_*` 6종 중 `NEXT_PUBLIC_BIZ_EMAIL`만 채워짐, 나머지(대표자명·사업자등록번호·통신판매신고번호·주소·전화)는 전부 비어있음. 대표 확인: **사업자등록은 완료**(번호 미기입 상태), **통신판매신고는 정부24(gov24.go.kr) 진행 중**.
+
+      **정정(2026-07-06): PG사는 카페24페이먼츠가 아니라 토스페이먼츠다.** STATUS.md(historical)의 "카페24 PG 연결" 메모는 구식 — 코드 확인 결과(`src/lib/toss.ts`, `/api/payments/toss/billing-key`, `/api/payments/webhook/toss`) 실제 연동은 **토스페이먼츠 billing-key 기반 정기결제**이며 카페24 결제 코드는 존재하지 않음(카페24는 도메인 등록·DNS 용도로만 사용, RUNBOOK §4.4 참조). 통신판매업 신고의 에스크로(구매안전서비스) 확인증도 카페24페이먼츠가 아니라 **토스페이먼츠**에서 발급받아야 함.
+
+      정부24 신고서 작성값(2026-07-06 기입 완료): 홈페이지 구축 방법=**직접 구축**(카페24 쇼핑몰 빌더 아님, Next.js 커스텀 앱+GCP 호스팅) / 호스트서버 소재지=**서울특별시 강남구 테헤란로 152(강남파이낸스센터), 22층**(구글코리아 유한회사 등록주소 — 클라우드 호스팅 관행상 서버 물리주소 대신 제공사 한국 사무소 주소 기재) / 판매방식=**인터넷** / 인터넷도메인이름=**kindy.kr** / 취급품목=**교육/도서/취미/애완**.
+
+      **토스페이먼츠 가맹 신청 완료(2026-07-06)**: 홈페이지 구축방법=직접 구축, 신청 서비스=**빌링(정기결제)**(구독형 자동결제 — billing-key 코드와 일치) 선택. 현재 **가맹심사 대기 중**(`.env.local`의 `TOSS_SECRET_KEY`/`NEXT_PUBLIC_TOSS_CLIENT_KEY`는 아직 `test_sk_`/`test_ck_` 테스트 키 — 00 §8 "Toss 라이브 키는 W3+ 게이트"와 일치). **순서 주의**: 에스크로 확인증은 가맹심사 통과 후에나 발급 가능 — 통신판매업 신고가 이를 요구하면 심사 결과 나올 때까지 대기 필요(구청에 따라 "신청 접수증"으로 임시 접수 가능한 경우도 있음, 확인 필요).
 - [ ] Toss 라이브 키·`BILLING_KEY_SECRET`은 **W3+ 게이트**(00 §8) — R0에서는 착수하지 않음(테스트 키 유지)
 
 **Verify**
-- [ ] `dig +short kindy.kr` → LB IP `34.8.67.108`(survey-web-infra §4) 응답 시 완료; R0 내 미완이면 Exit 표에 이월 사유 기록
+- [x] `dig +short kindy.kr` → LB IP `34.8.67.108`(survey-web-infra §4) 응답 시 완료; R0 내 미완이면 Exit 표에 이월 사유 기록 — **2026-07-06 반영 확인**: NS `hayes.ns.cloudflare.com`/`lovisa.ns.cloudflare.com`, A `34.8.67.108`(apex+www 둘 다, `@8.8.8.8` 기준)
 - [ ] BIZ 주입 후 재빌드 배포 시 `/legal/business`·푸터에 실값 표시, `/subscribe` CTA 활성
+
+**추가 이슈(2026-07-06): LB SSL 인증서 재발급 필요.** DNS 미해결 상태로 오래 대기하던 Google 관리형 인증서(`kindy-cert`)가 `PROVISIONING_FAILED_PERMANENTLY`로 영구 실패 상태였음(관리형 인증서는 수정 불가 리소스라 재시도 안 됨). 조치: 새 인증서 `kindy-cert-2`(도메인 `kindy.kr,www.kindy.kr`) 생성 → `kindy-https-proxy`가 이를 참조하도록 교체(`gcloud compute target-https-proxies update kindy-https-proxy --ssl-certificates=kindy-cert-2`) → 구 인증서 `kindy-cert` 삭제. `kindy-cert-2`는 이후 `ACTIVE`로 전환 완료.
+
+**추가 이슈 2(2026-07-06): GenTA 조직 정책이 공개 접근을 원천 차단하고 있었음.** 인증서가 `ACTIVE`가 된 후에도 `https://kindy.kr`이 `403 Forbidden`(Google Frontend 레벨) 응답. 원인: `kindy` Cloud Run 서비스의 IAM 정책이 완전히 비어있었음(누구에게도 invoker 권한 없음) + GenTA 조직 정책 `iam.allowedPolicyMemberDomains`(2024-11-04 조직 레벨 설정, genta.co.kr 고객 ID만 허용)가 `allUsers` IAM 바인딩 자체를 차단(`FAILED_PRECONDITION: One or more users named in the policy do not belong to a permitted customer`). STATUS.md(2026-04-28)의 "LB 우회로 해결됨(내부 인증)" 메모는 실제로는 미완성 상태였음(IAP도 검토했으나 IAP는 사내 전용 앱 패턴이라 공개 소비자 사이트엔 부적합 — 어차피 `iap.httpsResourceAccessor`도 같은 정책에 막힘).
+
+조치(대표 승인 후 실행, 2026-07-06):
+```bash
+# 1. kindy-493701 프로젝트에 한해 조직 정책 예외 설정(다른 프로젝트엔 영향 없음 — 프로젝트 단위 재정의)
+cat > /tmp/kindy-org-policy-override.yaml << 'EOF'
+constraint: constraints/iam.allowedPolicyMemberDomains
+listPolicy:
+  allValues: ALLOW
+EOF
+gcloud resource-manager org-policies set-policy /tmp/kindy-org-policy-override.yaml --project=kindy-493701
+
+# 2. Cloud Run에 공개 invoker 부여 (정책 전파에 수분 소요 — 실패 시 재시도)
+gcloud run services add-iam-policy-binding kindy --project=kindy-493701 --region=asia-northeast3 \
+  --member="allUsers" --role="roles/run.invoker"
+```
+확인: `https://kindy.kr`, `https://www.kindy.kr`, `https://kindy.kr/api/inngest` 전부 `200` 응답 확인됨(2026-07-06). **주의**: 이 정책 예외는 `kindy-493701` 프로젝트에만 적용되며, GenTA의 다른 GCP 프로젝트(예: `asanlibrary`)는 조직 기본 정책을 그대로 상속받아 영향 없음.
 
 ### 4.5 상위 문서 수령 → 대조 — **전량 완료(2026-07-05)** (R0 체크포인트 종결 — 00 문서 D-D)
 
@@ -571,9 +619,9 @@ HERO §3 "사진·카메라 코드 부재를 테스트로 보증(E13-10)". DB �
 - [x] 대조 결과가 `docs/plan/02_SCHEMA_RECONCILIATION.md` §11 체크리스트에 "대조 완료" 상태로 기록됨(2026-07-05 개정, C6 포함)
 - [ ] `ls docs/research/original/` → PDF 1본 + 현행정본 9본 확인(Task 1 이후)
 
-### 4.6 Phase B 리크루팅 개시 (R0의 숨은 크리티컬 패스 — 00 §4-3)
+### 4.6 Phase B 리크루팅 개시 (R0의 숨은 크리티컬 패스 — 00 §4-3) — 공문 **승인 완료(2026-07-06)**
 
-- [ ] 도서관 협조 공문 발송(00 §8 W1 행) — 대상: Phase B 아동 검증 15–20명, 실행 창 W6–7(8/10–8/23) = Studio T5 키즈 파일럿 통합(DECISIONS_CONTEXT §E)
+- [x] 도서관 협조 공문 발송(00 §8 W1 행) — 대상: Phase B 아동 검증 15–20명, 실행 창 W6–7(8/10–8/23) = Studio T5 키즈 파일럿 통합(DECISIONS_CONTEXT §E). **2026-07-06: 승인 회신 받음** — 리크루팅 진행 가능.
 - [ ] 모집 요건 정본 = **플레이테스트 리포트 v2.1 §6(2026-07-05 수령 완료)**: 15–20명·과업 6·합격선 표 — 과업 스크립트까지 즉시 확정 가능. 동의는 영상 미촬영 원칙(E15-2). **E15-2 재시뮬 러너는 `playtest_sim.py` 실물 확보(Task 2.6 이식) — 재구축 불필요**: Phase B 실측치를 스크립트 상단 "발달 파라미터(가정치 v1)" 블록에 대입해 재시뮬 → 발견 8(v2.1 §3)과 대조
 - [ ] 참가 가정 파이프라인 시트 개설(모집→확정→일정 배정), 주 1회 상태 점검
 
@@ -591,15 +639,17 @@ HERO §3 "사진·카메라 코드 부재를 테스트로 보증(E13-10)". DB �
 **Verify**
 - [ ] 발주 완료 기록, 또는 발주 서류 완성 + W3 발주일 확정 기록(둘 다 없으면 Exit #16 실패)
 
-### 4.8 기업부설연구소/전담부서 신고 [사람] W1–2 (G0 원문 항목 — 통합마스터플랜 §3 W1–2 행)
+### 4.8 기업부설연구소/전담부서 신고 [사람] W1–2 (G0 원문 항목 — 통합마스터플랜 §3 W1–2 행) — **R0 제외, 시드투자 이후로 연기(2026-07-06 대표 결정)**
+
+> **2026-07-06 결정**: 이 항목은 R0 게이트에서 제외한다. TIPS 신청·R&D 세액공제 요건이라 언젠가는 필요하지만, 대표 판단으로 시드투자 이후 트랙으로 이관. 아래 원문 체크리스트는 참고용으로 남겨두되 R0 Exit 판정에는 반영하지 않는다(Exit 표 #1f 갱신 참조).
 
 TIPS 신청·R&D 세액공제의 요건(통합마스터플랜 §3 G3 행 "TIPS 신청 준비"의 선행 조건). 연구 전담 인력은 **대표 포함 2인** 구성으로 신고한다(00 문서 §8 파운더 게이트 W1 행).
 
-- [ ] **W1(D2~)**: 신고 서류 준비 — KOITA(한국산업기술진흥협회) 신고 요건 목록 확인: 연구 공간 구분, 조직도, 연구전담요원 명부(대표 포함 2인), 연구개발 활동 개요
-- [ ] **W2(D8 목표)**: KOITA 온라인 신고 접수 → 접수증 보관. W2 내 접수 불가 시 서류 완성 + 제출일 확정을 Exit #1f에 기록(이월 사유)
+- [ ] **W1(D2~)**: 신고 서류 준비 — KOITA(한국산업기술진흥협회) 신고 요건 목록 확인: 연구 공간 구분, 조직도, 연구전담요원 명부(대표 포함 2인), 연구개발 활동 개요 — **보류(시드 이후)**
+- [ ] **W2(D8 목표)**: KOITA 온라인 신고 접수 → 접수증 보관. W2 내 접수 불가 시 서류 완성 + 제출일 확정을 Exit #1f에 기록(이월 사유) — **보류(시드 이후)**
 
 **Verify**
-- [ ] 신고 접수증 또는 "서류 완성+제출일 확정" 기록 — Exit #1f 판정 입력
+- [ ] 신고 접수증 또는 "서류 완성+제출일 확정" 기록 — Exit #1f 판정 입력 — **해당 없음(R0 제외)**
 
 ---
 
@@ -615,13 +665,13 @@ HERO v1.1 §0 R0 행("G0 전항 + 아바타 발주·world_state 스키마 머지
 | 1c | G0-③: eduvid 배포 = kindy.kr DNS 해소(Task 4.4) | `dig +short kindy.kr` | `34.8.67.108`(미완 시 이월 사유 기록) |
 | 1d | G0-④: Toss E2E — **코드 기구현**(0017–0019, 01 문서 §2 E1-1 행), 라이브 키는 W3+ 게이트(00 §8); G0 통과 기준 "테스트 결제·환불 왕복 ✓" | `ls src/app/api/payments/toss/billing-key/route.ts src/app/api/payments/webhook/toss/route.ts src/app/api/subscription/cancel/route.ts` + 테스트 키 결제·환불 왕복 1회 | route 3본 존재 / 왕복 성공 로그 |
 | 1e | G0-⑤: 퍼널 계측 5종 — **기구현**(0015 + kiosk/events + dashboard — 01 문서 §2 E2 행); G0 통과 기준 "계측 이벤트 대시보드 라이브 ✓" | `ls supabase/migrations/0015_kiosk_funnel.sql src/app/api/kiosk/events/route.ts src/app/api/dashboard/summary/route.ts` + 대시보드 렌더 확인 | 3경로 존재 / 라이브 |
-| 1f | G0-⑥: 기업부설연구소(전담부서) 신고 **[사람]**(Task 4.8 — 대표 포함 2인, TIPS·R&D 공제 요건) | 신고 접수증 또는 서류 완성+제출일 확정 기록 | 기록 존재 |
+| 1f | G0-⑥: 기업부설연구소(전담부서) 신고 **[사람]**(Task 4.8 — 대표 포함 2인, TIPS·R&D 공제 요건) — **2026-07-06: R0 제외, 시드투자 이후로 연기(대표 결정)** | (해당 없음 — R0 게이트 아님) | R0 판정에서 제외 |
 | 1g | G0-⑦: 가격표 반영 — 정가 ₩25,000 · 얼리버드 ₩19,000(P-1: 도서관 ks 경유 한정·12개월 락·200가구 하드캡 — 마스터플랜 v1.1) | `grep -n "SUBSCRIPTION_PRICE_KRW" src/lib/subscription.ts` + `/?ks=smoke-test` 배지(Task 2.5) | `25000` / 배지 조건부 표시 |
 | 1h | G0-⑧: Track P 4항 — 모리 3D 마스터 발주→**D-6 LoRA-first 대체**(Task 2.3·4.2) · 조연 = 승인 캐스트 6인 기확보(불변 ④; E7-2 잔여는 트랙B R1) · 골든셋 확정(Task 3.5) · fal 어댑터 스켈레톤(Task 3.2·3.4) | Task 2.3·3.2·3.4·3.5 Verify 통과 확인 | 전항 통과(골든셋 파일 3본 존재) |
 | 2 | G0 — 새 원격·리뷰 강제 (불변 ⑥·⑧) | `git ls-remote origin main \| head -1` + `gh api repos/{owner}/kindy-web-v2/branches/main/protection --jq .required_pull_request_reviews.required_approving_review_count` | 해시 출력 / `1` |
 | 3 | world_state 스키마 머지 (HERO §0, Task 2.1) | `git log origin/main --oneline -- supabase/migrations \| head` + SQL: `select count(*) from world_states where false; select conname from pg_constraint where conname like 'game_rounds_%_check';` | 0024–0029 커밋 존재 / 쿼리 에러 없음(테이블 존재) + CHECK 3건 |
 | 4 | 005 적용 = 0026 (HERO §4, DECISIONS_CONTEXT §B-3) | `select * from product_defaults order by age_band;` | 3행, 값 = HERO §4 시드(14/17/20분·2/2/3·2/1/0·0.9/1.0/1.0·tap/tap/tap_drag_exp·6/5/5) |
-| 5 | 스키마 검증 스크립트 (Task 2.1) | `npx tsx --env-file=.env.local scripts/verify-migrations.ts && npx tsx --env-file=.env.local scripts/verify-rls.ts` | 전부 OK |
+| 5 | 스키마 검증 스크립트 (Task 2.1) | `npx tsx --env-file=.env.local scripts/verify-migrations.ts && npx tsx --env-file=.env.local scripts/verify-rls.ts` | 전부 OK — **verify-rls 2026-07-06 실행 완료(통과)** |
 | 6 | E13-2 리듀서+골든테스트 CI (HERO §2, 02 §10) | `npm run test:golden` + PR CI 이력 | 12/12 통과, `ci` 체크 그린 |
 | 7 | 아바타 발주 = E13-1 스틸 스펙 (HERO §0·§3, 00 §3) | `test -f docs/hero/E13-1_AVATAR_144_STILL_SPEC.md && echo OK` + 샘플 3장·대표 승인 기록 | OK / 승인 일자 기재 |
 | 8 | E13-10 코드 부재 보증 (HERO §3) | `npx tsx --test src/lib/hero/no-camera.test.ts` | 통과 |
@@ -630,13 +680,13 @@ HERO v1.1 §0 R0 행("G0 전항 + 아바타 발주·world_state 스키마 머지
 | 10a | Studio W1–2: 모리 턴어라운드 승인 (Task 3.5, 마스터플랜 §12) | `src/content/approved-frames/` 턴어라운드 승인 프레임 커밋 이력 + 승인 일자 | 승인 프레임 커밋 존재 |
 | 10b | Studio W1–2: Inngest dev 더미 완주 (Task 3.5, 03 §5) | `npx inngest-cli dev` 완주 로그 | 로그 확인 — **미달 시 W3 이월 허용**(이월 사유 기록) |
 | 11 | Studio W1–2: T3 초기 벤치 (03 §5·§7-4) | `select count(*) from eval_runs;` + `docs/bench/T3-initial.md` | ≥1 / 순위표 존재 |
-| 12 | 운영: Inngest Cloud (RUNBOOK §4) | Inngest 대시보드 함수 2개 + cron 수동 발화 1회 성공 로그 | 확인 |
-| 13 | 운영: LoRA 이중 백업 (DECISIONS_CONTEXT §C-6) | `ls -l tmp/studio/kindytoy-v1.safetensors`(≈332MB) + Storage `studio/lora/` 사본 | 2사본 존재 |
-| 14 | 운영: Phase B 리크루팅 (00 §4-3) | 공문 발송 기록 + 후보 가정 시트 | 발송 완료·후보 ≥5 |
-| 15 | 운영: Supertone 문의·DNS·BIZ 진행 + 원본 문서 보관(Task 4.3·4.4·4.5 — 문서 수령·대조는 종결) | 발송/진행 기록 + `docs/research/original/` 확인 | 상태 기입(완료 또는 이월 사유) |
+| 12 | 운영: Inngest Cloud (RUNBOOK §4) | Inngest 대시보드 함수 2개 + cron 수동 발화 1회 성공 로그 | 확인 — **2026-07-06: 시크릿·배포·DNS·인증서·공개접근(org policy 예외) 전부 완료, sync 등록만 남음** |
+| 13 | 운영: LoRA 이중 백업 (DECISIONS_CONTEXT §C-6) | `ls -l tmp/studio/kindytoy-v1.safetensors`(≈332MB) + Storage `studio/lora/` 사본 | 2사본 존재 — **2026-07-06 완료** |
+| 14 | 운영: Phase B 리크루팅 (00 §4-3) | 공문 발송 기록 + 후보 가정 시트 | 발송 완료·후보 ≥5 — **공문 승인 완료(2026-07-06), 후보 가정 확보는 진행 중** |
+| 15 | 운영: Supertone 문의·DNS·BIZ 진행 + 원본 문서 보관(Task 4.3·4.4·4.5 — 문서 수령·대조는 종결) | 발송/진행 기록 + `docs/research/original/` 확인 | 상태 기입(완료 또는 이월 사유) — **2026-07-06: DNS(Cloudflare NS 이전) 신청 완료·전파 대기, Supertone 문의·BIZ 등록은 미착수** |
 | 16 | 운영: 키오스크 발주 상태 (Task 4.7, 00 §7 R-7) | 발주 기록 또는 발주 서류+W3 발주일 확정 기록 | 발주 완료 또는 W3 발주일 확정 |
 | 17 | 시뮬 스크립트 이식 — `scripts/sim/` 3종·시드 재현 (Task 2.6, 통합마스터플랜 §9) | `ls scripts/sim/playtest_sim.py scripts/sim/simulate.py scripts/sim/build_model.py` + 재현 diff(Task 2.6 명령) | 3종 존재 / `REPRODUCIBLE`·P(M9≥1,000)=2.8% 재현 |
 
-**판정 규칙**: #1–#9는 하드 게이트(하나라도 실패 시 R1 개시 보류 — HERO §9 "게이트 재심 전 다음 릴리즈 배포 보류" 준용). G0 세부(#1a–#1h) 중 **통합마스터플랜 §3 G0 Exit Criteria 3항(#1a IP 계약 서명 · #1d 테스트 결제·환불 왕복 · #1e 계측 대시보드 라이브)은 하드 게이트**, 나머지(#1b·#1c·#1f·#1g·#1h)는 미완 시 이월 사유 기록+캘린더 재박기(운영 게이트 준용 — 00 §8; 단 #1h의 골든셋·어댑터는 Studio 트랙 게이트 준용). #10·#10a·#10b·#11은 Studio 트랙 게이트(미달 시 03 §5 W3–4로 이월하되 E13-5 의존성 경보 — 00 §4-2; #10b는 W3 이월 허용). #12–#16은 운영 게이트(외부 의존 항목은 이월 사유를 기록하고 캘린더 재박기 — 00 §8; #16 키오스크 발주는 바우처 8/31 하드 데드라인 — 이월 시 W3 발주일 확정 필수). #17은 CC 실행 태스크 — 미달 시 늦어도 W3 첫 금요일(7/24) 주간 그로스 루프 가동 전 완료.
+**판정 규칙**: #1–#9는 하드 게이트(하나라도 실패 시 R1 개시 보류 — HERO §9 "게이트 재심 전 다음 릴리즈 배포 보류" 준용). G0 세부(#1a–#1h) 중 **통합마스터플랜 §3 G0 Exit Criteria 3항(#1a IP 계약 서명 · #1d 테스트 결제·환불 왕복 · #1e 계측 대시보드 라이브)은 하드 게이트**, 나머지(#1b·#1c·#1g·#1h)는 미완 시 이월 사유 기록+캘린더 재박기(운영 게이트 준용 — 00 §8; 단 #1h의 골든셋·어댑터는 Studio 트랙 게이트 준용). **#1f(기업부설연구소)는 2026-07-06 대표 결정으로 R0 게이트에서 완전히 제외**(이월도 아니고 판정 대상 자체가 아님 — 시드투자 이후 트랙, Task 4.8 참조). #10·#10a·#10b·#11은 Studio 트랙 게이트(미달 시 03 §5 W3–4로 이월하되 E13-5 의존성 경보 — 00 §4-2; #10b는 W3 이월 허용). #12–#16은 운영 게이트(외부 의존 항목은 이월 사유를 기록하고 캘린더 재박기 — 00 §8; #16 키오스크 발주는 바우처 8/31 하드 데드라인 — 이월 시 W3 발주일 확정 필수). #17은 CC 실행 태스크 — 미달 시 늦어도 W3 첫 금요일(7/24) 주간 그로스 루프 가동 전 완료.
 
 **Exit 후 첫 R1 티켓**(참고): E13-16 연령 기본값 session-config API(0026·session-config.ts가 이미 준비됨 — Task 2.1·2.2 산출), E13-3' A0 탄생 의식(E13-1 스펙 소비 — **웹 구현이 정본, D-14**: HERO v1.1 §1의 아이 iOS 전제는 웹 선행으로 문서화된 수정, iOS 이식은 R3·E14-1 Kids 심사는 R4 — 00 문서 §2·§7 R-14). 백로그 정본은 HERO v1.1 §6 + 통합 제품 마스터플랜 §4.5(E1~E12).

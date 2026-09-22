@@ -21,10 +21,10 @@ export default function SiteFooter() {
     <footer className="mt-auto border-t border-line bg-cream">
       <div className="max-w-[375px] mx-auto px-6 py-8">
         <div className="text-xs text-ink3 space-y-1">
-          <p className="font-semibold text-ink2">{businessInfo.brand}</p>
+          <p className="font-semibold text-ink2">{businessInfo.legalName} · {businessInfo.brand}</p>
           {representative && <p>대표: {representative}</p>}
           {registrationNumber && <p>사업자등록번호: {registrationNumber}</p>}
-          {mailOrderNumber && <p>통신판매업 신고번호: {mailOrderNumber}</p>}
+          <p>통신판매업 신고번호: {mailOrderNumber ?? '확인 중 (정식 결제 준비 중)'}</p>
           {address && <p>주소: {address}</p>}
           <p>
             문의: {phone ? `${phone} | ` : ''}
@@ -37,6 +37,9 @@ export default function SiteFooter() {
           </Link>
           <Link href="/legal/privacy" className="inline-flex min-h-[44px] items-center hover:text-ink">
             개인정보처리방침
+          </Link>
+          <Link href="/legal/refund" className="inline-flex min-h-[44px] items-center hover:text-ink">
+            취소·환불 정책
           </Link>
           <Link href="/legal/business" className="inline-flex min-h-[44px] items-center hover:text-ink">
             사업자정보확인

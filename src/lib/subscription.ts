@@ -7,7 +7,8 @@ import type { SubscriptionRow, EntitlementRow } from '@/lib/subscription-types';
 export type { SubscriptionRow, EntitlementRow, SubscriptionStatus } from '@/lib/subscription-types';
 
 export const SUBSCRIPTION_PLAN = 'kindy_monthly';
-export const SUBSCRIPTION_PRICE_KRW = 25000;
+import { SUBSCRIPTION_PRICE_KRW } from './subscription-pricing';
+export { SUBSCRIPTION_PRICE_KRW };
 export const SUBSCRIPTION_ORDER_NAME = 'Kindy 멤버십 월 구독';
 /** 구독 orderId 접두사 — webhook 에서 구독 결제 식별에 사용. */
 export const SUBSCRIPTION_ORDER_PREFIX = 'sub_';
@@ -126,10 +127,17 @@ export async function getMembershipGateState(parentId: string): Promise<{
   };
 }
 
-/** now → +1개월 결제 주기. (월말 overflow 는 Date.setMonth 규칙을 따름) */
+/** Korea calendar month, clamped to the last day when necessary. */
 export function nextMonthlyPeriod(from: Date = new Date()): { start: Date; end: Date } {
+  if (!Number.isFinite(from.getTime())) throw new Error('Invalid billing date');
   const start = new Date(from);
-  const end = new Date(from);
-  end.setMonth(end.getMonth() + 1);
+  const koreaOffset = 9 * 60 * 60 * 1000;
+  const local = new Date(from.getTime() + koreaOffset);
+  const day = local.getUTCDate();
+  local.setUTCDate(1);
+  local.setUTCMonth(local.getUTCMonth() + 1);
+  const lastDay = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth() + 1, 0)).getUTCDate();
+  local.setUTCDate(Math.min(day, lastDay));
+  const end = new Date(local.getTime() - koreaOffset);
   return { start, end };
 }
