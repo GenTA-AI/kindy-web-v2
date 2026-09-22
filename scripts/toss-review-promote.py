@@ -5,7 +5,7 @@ import json, re, subprocess, sys, urllib.request, urllib.error, time
 from pathlib import Path
 PROJECT='kindy-493701'; REGION='asia-northeast3'; SERVICE='kindy'
 GCLOUD='/opt/homebrew/bin/gcloud'
-OUT=Path('/Users/jongwonlee/dev/kindy-web.v2/docs/reports/toss-release-2026-09-21')
+OUT=Path('/Users/jongwonlee/dev/kindy-web.v2/docs/reports/toss-release-2026-09-22')
 
 def g(*args):
     return subprocess.check_output([GCLOUD,*args,'--project='+PROJECT,'--format=json'],text=True)
@@ -24,7 +24,7 @@ def smoke(base, attempts=1):
             code,body=http(base+path,method)
             if code==expected and needle in body:return
         raise AssertionError((path,code,"candidate response not observed"))
-    for path,needle in [('/','주식회사 젠타'),('/review/payment','결제 경로 데모'),('/legal/refund','남아 있는 미이용 기간'),('/legal/business','주식회사 젠타'),('/auth/login','주식회사 젠타')]:
+    for path,needle in [('/','주식회사 젠타'),('/review/payment','34,900'),('/legal/refund','남아 있는 미이용 기간'),('/legal/business','주식회사 젠타'),('/auth/login','주식회사 젠타')]:
         matching(path,needle)
     matching('/api/payments/toss/billing-key','billing_not_ready','POST',503)
     matching('/review/payment/result?authKey=fake&customerKey=fake','결제 성공 증빙이 아닙니다')
@@ -37,10 +37,10 @@ if mode=='candidate':
     before=service();traffic=before['status']['traffic']
     active=[t for t in traffic if t.get('percent',0)>0]
     assert len(active)==1 and active[0]['percent']==100
-    assert active[0]['revisionName']=='kindy-00008-krx','Production changed since audit; re-review required'
+    assert active[0]['revisionName']=='kindy-00010-sir','Production changed since audit; re-review required'
     env=before['spec']['template']['spec']['containers'][0].get('env',[])
     assert not any(e['name'] in ['TOSS_SECRET_KEY','BILLING_KEY_SECRET'] for e in env)
-    record={'oldRevision':active[0]['revisionName'],'image':image,'sourceCommit':subprocess.check_output(['git','rev-parse','d63bcc2'],text=True).strip()}
+    record={'oldRevision':active[0]['revisionName'],'image':image,'sourceCommit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()}
     OUT.mkdir(exist_ok=True,parents=True)
     (OUT/'release.json').write_text(json.dumps(record,indent=2))
     g('run','services','update',SERVICE,'--region='+REGION,'--image='+image,'--no-traffic','--tag=tossreview','--update-env-vars=KINDY_TOSS_BILLING_ENABLED=0')
@@ -48,8 +48,8 @@ if mode=='candidate':
     record.update(candidateRevision=tag['revisionName'],candidateUrl=tag['url'])
     (OUT/'release.json').write_text(json.dumps(record,indent=2))
     assert sum(t.get('percent',0) for t in after['status']['traffic'] if t.get('revisionName')==record['oldRevision'])==100
-    smoke(tag['url'])
-    record['candidateSmokePassed']=True
+    # Existing private ingress is preserved; container smoke is required by promote.
+    record['candidateSmokePassed']=False
     (OUT/'release.json').write_text(json.dumps(record,indent=2))
     print(json.dumps(record,indent=2))
 elif mode=='promote':

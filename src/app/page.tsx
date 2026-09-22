@@ -46,7 +46,7 @@ const ANCHORS = [
   { name: '미술·피아노 학원', price: '월 12~20만원', limit: '이동 필요, 그리기 기술 중심' },
   { name: '어린이 명작 전집', price: '세트당 29~41만원', limit: '일시불 부담, 아이 혼자 안 읽음' },
   { name: '예술의전당 어린이 아카데미', price: '90분 1회 62,000원', limit: '서울 집중, 예약 경쟁' },
-  { name: 'Kindy', price: `월 34,900원 · 얼리버드 ${SUBSCRIPTION_PRICE_LABEL}원`, limit: '매주 새 작품, 카톡으로 도착' },
+  { name: 'Kindy', price: `월 ${SUBSCRIPTION_PRICE_LABEL}원`, limit: '매주 새 작품, 카톡으로 도착' },
 ];
 
 const SESSION_STEPS = [
@@ -374,11 +374,11 @@ export default async function Home({
       <section className="mx-auto w-full max-w-4xl px-5 pb-28 sm:px-8 sm:pb-36">
         <Reveal>
           <div className={`${GLASS_LIGHT} mx-auto max-w-lg px-8 py-14 text-center`}>
-            <p className="text-sm font-black tracking-[0.25em] text-gold">얼리버드 특가 · 기간 한정</p>
+            <p className="text-sm font-black tracking-[0.25em] text-gold">Kindy 월 구독</p>
             <p className="mt-6 text-5xl font-black tracking-tight">월 {SUBSCRIPTION_PRICE_LABEL}원</p>
-            <p className="mt-2 font-bold text-ink2">구독을 유지하는 동안 월 요금 고정 · 회차별 이용기간 1개월</p>
+            <p className="mt-2 font-bold text-ink2">매월 동일 요금 · 회차별 이용기간 1개월</p>
             <p className="mt-6 text-sm leading-relaxed text-ink3">
-              정가 월 34,900원 · 하루로 치면 1,163원
+              부가세 포함 · 매월 자동결제
             </p>
             <Link
               href={START_HREF}

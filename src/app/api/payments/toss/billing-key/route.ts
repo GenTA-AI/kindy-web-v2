@@ -28,7 +28,7 @@ import { reportEmailFailure, sendFirstPaymentSuccessEmail } from '@/lib/mailer';
  * 토스 v2 빌링 카드 등록 successUrl 콜백(/subscribe/success)에서 호출.
  * 1) authKey → 빌링키 발급 (토스 API)
  * 2) billing_keys 저장
- * 3) 첫 달 즉시 청구 (25,000원) + purchases 기록
+ * 3) 첫 달 즉시 청구 (공통 월 구독료) + purchases 기록
  * 4) subscriptions active (now → +1개월) + sync_entitlement
  *
  * body: { authKey: string, customerKey: string }
